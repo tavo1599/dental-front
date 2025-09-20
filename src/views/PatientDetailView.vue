@@ -30,6 +30,10 @@ import GenerateConsentModal from '@/components/GenerateConsentModal.vue';
 import { useConsentTemplatesStore } from '@/stores/consentTemplates';
 import { generateConsent } from '@/services/consentTemplateService';
 import { useDocumentsStore } from '@/stores/documents';
+import { usePeriodontogramStore } from '@/stores/periodontogram';
+import Periodontogram from '@/components/Periodontogram.vue';
+
+const periodontogramStore = usePeriodontogramStore();
 
 const documentsStore = useDocumentsStore(); // Inicializa el store
 const { documents, isLoading: isDocumentsLoading } = storeToRefs(documentsStore);
@@ -78,6 +82,8 @@ const selectedHistoryEntry = ref<ClinicalHistoryEntry | null>(null);
 const selectedBudgetId = ref<string | null>(null);
 const budgetToPrintId = ref<string | null>(null);
 
+
+
 const age = computed(() => {
   if (!selectedPatient.value?.birthDate) return 'N/A';
   const birthDate = new Date(selectedPatient.value.birthDate);
@@ -109,6 +115,11 @@ function handleUpload() {
   }
 }
 
+function handleClearPlan() {
+  const patientId = route.params.id as string;
+  plannedTreatmentsStore.clearAll(patientId);
+}
+
 const formatGender = (gender?: Gender) => {
   if (!gender) return 'N/A';
   switch (gender) {
@@ -131,6 +142,7 @@ onMounted(() => {
   budgetsStore.fetchBudgets(patientId);
   appointmentsStore.fetchAppointmentsForPatient(patientId);
   plannedTreatmentsStore.fetchAll(patientId);
+  periodontogramStore.fetchPeriodontogram(patientId);
 });
 
 // --- MANEJADORES DE EVENTOS ---
@@ -146,6 +158,9 @@ function handleGenerateBudget(plannedTreatments: PlannedTreatment[]) {
   // 2. Guarda estos datos en el estado y abre el modal
   budgetInitialData.value = { prefilledItems };
   isBudgetModalOpen.value = true;
+
+  const patientId = route.params.id as string;
+  
 }
 
 function handleRegisterHistory(plannedTreatments: PlannedTreatment[]) {
@@ -162,6 +177,9 @@ function handleRegisterHistory(plannedTreatments: PlannedTreatment[]) {
 
   // 3. Abrimos el modal
   isHistoryModalOpen.value = true;
+
+  const patientId = route.params.id as string;
+  
 }
 
 function handleViewHistoryEntry(entry: ClinicalHistoryEntry) {
@@ -245,6 +263,7 @@ async function handleGenerateConsent(templateId: string) {
       <nav class="-mb-px flex space-x-8" aria-label="Tabs">
         <a @click="activeTab = 'info'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Información General</a>
         <a @click="activeTab = 'odontogram'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'odontogram' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Odontograma</a>
+        <a @click="activeTab = 'periodontogram'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'periodontogram' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Periodontograma</a>
         <a @click="activeTab = 'history'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Historial Clínico</a>
         <a @click="activeTab = 'budgets'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'budgets' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Presupuestos</a>
         <a @click="activeTab = 'appointments'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'appointments' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Citas</a>
@@ -285,6 +304,10 @@ async function handleGenerateConsent(templateId: string) {
     </div>
     </div>
 
+    <div v-if="activeTab === 'periodontogram'">
+    <Periodontogram />
+  </div>
+
     <div class="mt-6">
       <div v-if="activeTab === 'info'" class="bg-white p-6 rounded-lg shadow-md">
         <div class="flex justify-between items-center mb-4">
@@ -317,7 +340,7 @@ async function handleGenerateConsent(templateId: string) {
          <TreatmentPlan 
             @generate-budget="handleGenerateBudget"
             @register-history="handleRegisterHistory" 
-          />
+            @clear-plan="handleClearPlan" />
       </div>
 
       <div v-if="activeTab === 'history'">

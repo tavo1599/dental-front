@@ -104,7 +104,7 @@ function handleDeleteTreatment() {
   @cancel="isConfirmModalOpen = false"
 >
   <template #icon>
-    <img src="@/assets/diente-eliminar.png" alt="Advertencia" class="h-19 w-19" />
+    <img src="@/assets/diente-eliminar.png" alt="Advertencia de eliminacion" class="h-19 w-19" />
   </template>
 </ConfirmationModal>
 

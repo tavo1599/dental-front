@@ -43,7 +43,7 @@ onMounted(() => {
     <div class="flex flex-1 overflow-hidden">
       <aside class="w-64 flex-shrink-0 bg-slate-800 flex flex-col">
         <div class="py-6 flex flex-col items-center justify-center border-b border-slate-700">
-          <LogoDental class="h-12 w-auto text-white mb-2" />
+          <LogoDental alt="Logo del sistema" class="h-12 w-auto text-white mb-2" />
           <p v-if="authStore.user?.tenant" class="text-lg text-slate-300 font-semibold text-center px-2">{{ authStore.user.tenant.name }}</p>
         </div>
         
@@ -54,6 +54,7 @@ onMounted(() => {
           <RouterLink to="/treatments" class="flex items-center px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white rounded-lg" active-class="bg-slate-700 text-white font-semibold">Tratamientos</RouterLink>
           <RouterLink to="/expenses"  class="flex items-center px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white rounded-lg" active-class="bg-slate-700 text-white font-semibold">Gastos</RouterLink>
           <RouterLink to="/cash-management"  class="flex items-center px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white rounded-lg" active-class="bg-slate-700 text-white font-semibold">Caja Diaria</RouterLink>
+          <RouterLink v-if="authStore.user?.role === 'admin'" to="/reports"  class="flex items-center px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white rounded-lg" active-class="bg-slate-700 text-white font-semibold">Reportes</RouterLink>
           <RouterLink v-if="authStore.user?.role === 'admin'" to="/settings" class="flex items-center px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white rounded-lg" active-class="bg-slate-700 text-white font-semibold">Configuración</RouterLink>
         </nav>
 
@@ -63,7 +64,7 @@ onMounted(() => {
             <p class="text-xs text-slate-400 capitalize">{{ authStore.user?.role }}</p>
           </div>
           <button @click="authStore.logout()" class="p-2 rounded-md text-slate-300 hover:bg-slate-700 hover:text-white" title="Cerrar Sesión">
-            <IconLogout class="h-6 w-6" />
+            <IconLogout alt="Cierre de sesion" class="h-6 w-6" />
           </button>
         </div>
       </aside>

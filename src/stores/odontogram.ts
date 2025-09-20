@@ -69,38 +69,34 @@ export const useOdontogramStore = defineStore('odontogram', () => {
     let finalUpdates: { toothNumber: number, surface: string, status: ToothStatus }[] = [];
     const toothNumbersToUpdate = new Map<number, ToothStatus>();
 
-    // Identifica qué dientes completos necesitan ser actualizados
     updates.forEach(update => {
       if (wholeToothStatuses.includes(update.status)) {
         toothNumbersToUpdate.set(update.toothNumber, update.status);
       }
     });
     
-    // Añade las actualizaciones que no son de diente completo
     finalUpdates.push(...updates.filter(upd => !toothNumbersToUpdate.has(upd.toothNumber)));
     
-    // Expande las actualizaciones para cada diente completo
     toothNumbersToUpdate.forEach((status, toothNumber) => {
       surfaces.forEach(s => finalUpdates.push({ toothNumber, surface: s, status }));
     });
 
     try {
-      await updateApi(patientId, finalUpdates);
+      // 1. Llamamos a la API. El backend nos devuelve la lista completa y actualizada.
+      const response = await updateApi(patientId, finalUpdates);
+      const updatedStates: ToothSurfaceState[] = response.data;
       
-      // Actualiza el estado local para cada cambio
-      finalUpdates.forEach(update => {
-        const { toothNumber, surface, status } = update;
-        if (!toothStates.value[toothNumber]) {
-          toothStates.value[toothNumber] = {};
+      // 2. Reconstruimos nuestro objeto de estado local desde cero con los datos frescos.
+      const nestedObject = updatedStates.reduce((acc, state) => {
+        const { toothNumber, surface } = state;
+        if (!acc[toothNumber]) {
+          acc[toothNumber] = {};
         }
-        toothStates.value[toothNumber][surface] = {
-          ...toothStates.value[toothNumber]?.[surface],
-          id: toothStates.value[toothNumber]?.[surface]?.id || '',
-          toothNumber,
-          surface,
-          status,
-        };
-      });
+        acc[toothNumber][surface] = state;
+        return acc;
+      }, {} as Record<number, Record<string, ToothSurfaceState>>);
+      
+      toothStates.value = nestedObject; // <-- Actualización completa y segura
 
       toast.success(`${updates.length} superficie(s) actualizada(s).`);
       return true;

@@ -228,7 +228,7 @@ onMounted(async () => {
   @cancel="cancelReschedule"
 >
   <template #icon>
-    <img src="@/assets/diente-calendario.png" alt="Advertencia" class="h-19 w-19" />
+    <img src="@/assets/diente-calendario.png" alt="Icono de calendario y diente" class="h-19 w-19" />
   </template>
 </ConfirmationModal>
   </div>

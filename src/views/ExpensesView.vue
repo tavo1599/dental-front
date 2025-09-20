@@ -100,7 +100,7 @@ const formatDate = (dateString: string) => new Date(dateString).toLocaleDateStri
       </template>
     </Modal>
     <ConfirmationModal :isOpen="isConfirmModalOpen" title="Confirmar Eliminación" :message="`¿Seguro que deseas eliminar '${expenseToDelete?.description}'?`" confirmButtonText="Sí, Eliminar" @confirm="handleDelete" @cancel="isConfirmModalOpen = false">
-      <template #icon><img src="@/assets/warning-icon.png" alt="Advertencia" /></template>
+      <template #icon><img src="@/assets/warning-icon.png" alt="Icono de advertencia" /></template>
     </ConfirmationModal>
   </div>
 </template>

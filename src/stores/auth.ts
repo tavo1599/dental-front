@@ -114,6 +114,23 @@ export const useAuthStore = defineStore('auth', () => {
   user.value = jwtDecode<UserPayload>(newToken);
 }
 
+async function refreshUserProfile() {
+  try {
+    const response = await authService.getProfile();
+    // La respuesta ahora es el objeto User completo y actualizado
+    const freshUser = response.data;
+
+    // Actualizamos el estado local del usuario con los nuevos datos
+    if (user.value) {
+      user.value.tenant = freshUser.tenant;
+    }
+
+    toast.info('Estado de la conexión verificado.');
+  } catch (error) {
+    toast.error('No se pudo actualizar el perfil.');
+  }
+}
+
   return { 
     token, 
     user, 
@@ -125,6 +142,7 @@ export const useAuthStore = defineStore('auth', () => {
     stopImpersonation,
     handleForgotPassword, 
     handleResetPassword,
-    updateToken
+    updateToken,
+    refreshUserProfile
   };
 });

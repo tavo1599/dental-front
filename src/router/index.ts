@@ -1,31 +1,16 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-// Vistas y Layouts
+// Solo importamos los layouts y la vista de login de forma estática
 import LoginView from '../views/LoginView.vue'
-import DashboardView from '../views/DashboardView.vue'
 import MainLayout from '@/layouts/MainLayout.vue'
-import PatientsView from '../views/PatientsView.vue';
-import PatientDetailView from '../views/PatientDetailView.vue';
-import TreatmentsView from '../views/TreatmentsView.vue';
-import AppointmentsView from '../views/AppointmentsView.vue';
-import ForgotPasswordView from '../views/ForgotPasswordView.vue';
-import ResetPasswordView from '../views/ResetPasswordView.vue';
-import PrintLayout from '@/layouts/PrintLayout.vue';
-import BudgetPrintView from '@/views/BudgetPrintView.vue';
-import SuperAdminLayout from '@/layouts/SuperAdminLayout.vue';
-import SuperAdminDashboard from '@/views/super-admin/Dashboard.vue';
-import SuperAdminDiagnosesView from '@/views/super-admin/DiagnosesView.vue';
-import ExpensesView from '../views/ExpensesView.vue';
-import CashManagementView from '../views/CashManagementView.vue';
-import SettingsView from '../views/SettingsView.vue';
-import UserManagementView from '../views/settings/UserManagementView.vue';
-import SuperAdminConsentTemplatesView from '@/views/super-admin/ConsentTemplatesView.vue';
+import SuperAdminLayout from '@/layouts/SuperAdminLayout.vue'
+import PrintLayout from '@/layouts/PrintLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    // --- GRUPO 1: RUTAS PÚBLICAS (Cualquiera puede acceder) ---
+    // --- RUTAS PÚBLICAS ---
     {
       path: '/login',
       name: 'login',
@@ -34,15 +19,15 @@ const router = createRouter({
     {
       path: '/forgot-password',
       name: 'forgot-password',
-      component: ForgotPasswordView,
+      component: () => import('../views/ForgotPasswordView.vue'),
     },
     {
       path: '/reset-password',
       name: 'reset-password',
-      component: ResetPasswordView,
+      component: () => import('../views/ResetPasswordView.vue'),
     },
 
-    // --- GRUPO 2: RUTAS DE SUPER ADMIN (Protegidas) ---
+    // --- RUTAS DE SUPER ADMIN ---
     {
       path: '/super-admin',
       component: SuperAdminLayout,
@@ -52,36 +37,36 @@ const router = createRouter({
         { 
           path: 'dashboard', 
           name: 'super-admin-dashboard', 
-          component: SuperAdminDashboard 
+          component: () => import('../views/super-admin/Dashboard.vue') 
         },
         {
           path: 'diagnoses',
           name: 'super-admin-diagnoses',
-          component: SuperAdminDiagnosesView,
+          component: () => import('../views/super-admin/DiagnosesView.vue'),
         },
         {
           path: 'consent-templates',
           name: 'super-admin-consent-templates',
-          component: SuperAdminConsentTemplatesView,
+          component: () => import('../views/super-admin/ConsentTemplatesView.vue'),
         },
       ],
     },
 
-    // --- GRUPO 3: RUTA DE IMPRESIÓN (Layout especial) ---
+    // --- RUTA DE IMPRESIÓN ---
     {
       path: '/print',
       component: PrintLayout,
-      meta: { requiresAuth: true }, // Requiere login, pero no un layout específico
+      meta: { requiresAuth: true },
       children: [
         {
           path: 'budget/:id',
           name: 'print-budget',
-          component: BudgetPrintView,
+          component: () => import('../views/BudgetPrintView.vue'),
         },
       ],
     },
 
-    // --- GRUPO 4: RUTAS DE CLÍNICA (Protegidas y con MainLayout) ---
+    // --- RUTAS DE CLÍNICA ---
     {
       path: '/',
       component: MainLayout,
@@ -91,48 +76,66 @@ const router = createRouter({
         {
           path: 'dashboard',
           name: 'dashboard',
-          component: DashboardView,
+          component: () => import('../views/DashboardView.vue'),
         },
         {
           path: 'patients',
           name: 'patients',
-          component: PatientsView,
+          component: () => import('../views/PatientsView.vue'),
         },
         { 
           path: 'patients/:id', 
           name: 'patient-detail',
-          component: PatientDetailView,
+          component: () => import('../views/PatientDetailView.vue'),
         },
         {
           path: 'treatments',
           name: 'treatments',
-          component: TreatmentsView,
+          component: () => import('../views/TreatmentsView.vue'),
         },
         {
           path: 'appointments',
           name: 'appointments',
-          component: AppointmentsView,
+          component: () => import('../views/AppointmentsView.vue'),
         },
         {
           path: 'expenses',
           name: 'expenses',
-          component: ExpensesView,
+          component: () => import('../views/ExpensesView.vue'),
         },
         {
           path: 'cash-management',
           name: 'cash-management',
-          component: CashManagementView,
+          component: () => import('../views/CashManagementView.vue'),
+        },
+        {
+          path: 'reports',
+          name: 'reports',
+          component: () => import('../views/ReportsView.vue'),
+          meta: { requiresAdmin: true },
         },
         {
           path: 'settings',
-          component: SettingsView,
+          component: () => import('../views/SettingsView.vue'),
           redirect: '/settings/users',
           children: [
             {
               path: 'users',
               name: 'settings-users',
-              component: UserManagementView,
+              component: () => import('../views/settings/UserManagementView.vue'),
             },
+            {
+              path: 'integrations',
+              name: 'settings-integrations',
+              component: () => import('../views/settings/IntegrationsView.vue'),
+              meta: { requiresAdmin: true },
+            },
+            {
+              path: 'audit',
+              name: 'settings-audit',
+              component: () => import('../views/settings/AuditLogView.vue'),
+              meta: { requiresAdmin: true },
+            }
           ]
         },
       ],
@@ -140,7 +143,7 @@ const router = createRouter({
   ],
 })
 
-// Navigation Guard para proteger las rutas
+// Navigation Guard (sin cambios)
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
   const isAuthenticated = authStore.isAuthenticated;

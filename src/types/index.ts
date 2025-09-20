@@ -74,7 +74,9 @@ export interface Tenant {
   users: User[];
   patientCount?: number;
   createdAt: string;
-  // Las propiedades del tema han sido eliminadas
+  googleAccessToken: string | null;
+  googleRefreshToken: string | null;
+  googleCalendarId: string | null;
 }
 
 export interface Patient {
@@ -201,4 +203,34 @@ export interface PatientDocument {
   fileName: string;
   filePath: string;
   fileType: string;
+}
+
+export enum SiteLocation {
+  MESIOBUCCAL = 'mesiobuccal',
+  BUCCAL = 'buccal',
+  DISTOBUCCAL = 'distobuccal',
+  MESIOLINGUAL = 'mesiolingual',
+  LINGUAL = 'lingual',
+  DISTOLINGUAL = 'distolingual',
+}
+
+export interface PeriodontalMeasurement {
+  id: string;
+  date: string;
+  toothNumber: number;
+  site: SiteLocation;
+  probingDepth: number | null;
+  gingivalMargin: number | null;
+  bleedingOnProbing: boolean;
+  suppuration: boolean;
+}
+
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  action: string;
+  user: {
+    id: string;
+    fullName: string;
+  };
 }

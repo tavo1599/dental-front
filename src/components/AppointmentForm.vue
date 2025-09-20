@@ -78,6 +78,7 @@ function handleSubmit() {
         v-model="formData.patientId"
         :items="patients"
         placeholder="Buscar paciente por nombre..."
+        display-key="fullName"
         class="mt-1"
       />
     </div>
@@ -88,6 +89,7 @@ function handleSubmit() {
         v-model="formData.doctorId"
         :items="doctors"
         placeholder="Buscar doctor por nombre..."
+        display-key="fullName"
         class="mt-1"
       />
     </div>

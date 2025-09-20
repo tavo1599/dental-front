@@ -12,3 +12,7 @@ export const createPlannedTreatment = (data: any) => {
 export const deletePlannedTreatment = (id: string) => {
   return apiClient.delete(`/planned-treatments/${id}`);
 };
+
+export const clearAllPlannedTreatments = (patientId: string) => {
+  return apiClient.delete(`/planned-treatments/patient/${patientId}`);
+};

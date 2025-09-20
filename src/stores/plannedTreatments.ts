@@ -39,5 +39,15 @@ export const usePlannedTreatmentsStore = defineStore('plannedTreatments', () => 
     }
   }
 
-  return { plannedTreatments, isLoading, fetchAll, create, remove };
+  async function clearAll(patientId: string) {
+  try {
+    await service.clearAllPlannedTreatments(patientId);
+    // Limpiamos el estado local al instante
+    plannedTreatments.value = [];
+  } catch (error) {
+    toast.error('No se pudo limpiar el plan de tratamiento.');
+  }
+}
+
+  return { plannedTreatments, isLoading, fetchAll, create, remove, clearAll };
 });
