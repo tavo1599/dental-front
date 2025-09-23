@@ -18,13 +18,12 @@ export const useSuperAdminStore = defineStore('superAdmin', () => {
   const tenants = ref<Tenant[]>([]);
   const isLoading = ref(false);
   const tenantGrowthData = ref<{ labels: string[], data: number[] }>({ labels: [], data: [] });
-  const kpis = ref<any>({}); // Estado para los KPIs globales
-  const activeAnnouncement = ref<Announcement | null>(null); // Estado para el anuncio activo
+  const kpis = ref<any>({});
+  const activeAnnouncement = ref<Announcement | null>(null);
 
   async function fetchAllSuperAdminData() {
     isLoading.value = true;
     try {
-      // Hacemos todas las llamadas a la API en paralelo
       const [tenantsRes, growthRes, kpisRes, announcementRes] = await Promise.all([
         getTenants(),
         getTenantGrowth(),
@@ -49,7 +48,7 @@ export const useSuperAdminStore = defineStore('superAdmin', () => {
     try {
       await createTenantApi(data);
       toast.success('Clínica creada con éxito.');
-      await fetchAllSuperAdminData(); // Llama a la función que recarga todo
+      await fetchAllSuperAdminData();
       return true;
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al crear la clínica.';
@@ -95,7 +94,8 @@ export const useSuperAdminStore = defineStore('superAdmin', () => {
 
   return { 
     tenants, 
-    isLoading, 
+    isLoading,
+    // La función 'fetchTenants' se elimina porque fue reemplazada por 'fetchAllSuperAdminData'
     fetchAllSuperAdminData, 
     createTenant, 
     updateTenantStatus, 
