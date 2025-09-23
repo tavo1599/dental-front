@@ -21,6 +21,18 @@ export const useSuperAdminStore = defineStore('superAdmin', () => {
   const kpis = ref<any>({});
   const activeAnnouncement = ref<Announcement | null>(null);
 
+  async function fetchTenants() {
+    isLoading.value = true;
+    try {
+      const response = await getTenants();
+      tenants.value = response.data;
+    } catch (error) {
+      toast.error('No se pudo cargar la lista de clínicas.');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   async function fetchAllSuperAdminData() {
     isLoading.value = true;
     try {
@@ -42,7 +54,7 @@ export const useSuperAdminStore = defineStore('superAdmin', () => {
       isLoading.value = false;
     }
   }
-
+  
   async function createTenant(data: any) {
     isLoading.value = true;
     try {
@@ -95,7 +107,7 @@ export const useSuperAdminStore = defineStore('superAdmin', () => {
   return { 
     tenants, 
     isLoading,
-    // La función 'fetchTenants' se elimina porque fue reemplazada por 'fetchAllSuperAdminData'
+    fetchTenants,
     fetchAllSuperAdminData, 
     createTenant, 
     updateTenantStatus, 
