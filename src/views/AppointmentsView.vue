@@ -192,11 +192,7 @@ onMounted(async () => {
       </div>
     </div>
     <div class="bg-white rounded-lg shadow-md p-6">
-      <FullCalendar
-        :key="calendarEvents.length"
-        :options="calendarOptions"
-        :events="calendarEvents"
-      />
+      <FullCalendar ref="calendarRef" :options="calendarOptions" />
     </div>
 
     <Modal :isOpen="isFormModalOpen" @close="isFormModalOpen = false">
