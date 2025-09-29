@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import { useBudgetsStore } from '@/stores/budgets';
 import LogoDental from '@/components/icons/LogoDental.vue';
@@ -21,6 +21,12 @@ onMounted(async () => {
   if (fetchedBudget) {
     budget.value = fetchedBudget;
     isLoading.value = false;
+    
+    // 2. Esperamos que Vue actualice la vista
+    await nextTick();
+    
+    // 3. Activamos la impresión
+    window.print();
   }
 });
 

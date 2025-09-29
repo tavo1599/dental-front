@@ -4,6 +4,7 @@ import { useAppointmentsStore } from '@/stores/appointments';
 import type { Appointment } from '@/types';
 import { AppointmentStatus } from '@/types';
 import IconWhatsapp from './icons/IconWhatsapp.vue';
+import { translateAppointmentStatus } from '@/utils/formatters'; // Importa la nueva función
 
 const props = defineProps<{
   appointment: Appointment | null;
@@ -32,12 +33,12 @@ function openWhatsApp(phone: string, message: string) {
 function sendConfirmationRequest() {
   if (!props.appointment) return;
   const { patient, doctor, startTime } = props.appointment;
-  const clinicName = doctor.tenant.name ;
+  const clinicName = doctor.tenant.name;
   const appointmentDate = new Date(startTime).toLocaleDateString('es-PE', { day: '2-digit', month: 'long' });
   const appointmentTime = new Date(startTime).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
 
   const message = `Hola ${patient.fullName}, te contactamos de ${clinicName} para tu cita agendada el ${appointmentDate} a las ${appointmentTime} con el Dr(a). ${doctor.fullName}. Por favor, responde para CONFIRMAR tu asistencia. ¡Gracias!`;
-  
+
   openWhatsApp(patient.phone, message);
 }
 
@@ -48,7 +49,7 @@ function sendDayOfReminder() {
   const appointmentTime = new Date(startTime).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
 
   const message = `¡Hola ${patient.fullName}! Te recordamos tu cita en ${clinicName} el día de HOY a las ${appointmentTime} con el Dr(a). ${doctor.fullName}. ¡Te esperamos!`;
-  
+
   openWhatsApp(patient.phone, message);
 }
 </script>
@@ -71,7 +72,7 @@ function sendDayOfReminder() {
     <div>
       <label for="status" class="block text-sm font-medium text-text-light">Cambiar Estado</label>
       <select v-model="selectedStatus" id="status" class="mt-1 block w-full input-style">
-        <option v-for="s in AppointmentStatus" :key="s" :value="s" class="capitalize">{{ s.replace('_', ' ') }}</option>
+        <option v-for="s in AppointmentStatus" :key="s" :value="s">{{ translateAppointmentStatus(s) }}</option>
       </select>
     </div>
 
@@ -86,7 +87,7 @@ function sendDayOfReminder() {
           <span>Enviar Recordatorio</span>
         </button>
       </div>
-      
+
       <div class="flex space-x-4">
         <button @click="emit('close')" type="button" class="btn-secondary">Cerrar</button>
         <button @click="handleUpdateStatus" type="button" class="btn-primary" :disabled="appointmentsStore.isLoading">

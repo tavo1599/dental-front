@@ -1,4 +1,4 @@
-import { ToothStatus } from '@/types';
+import { ToothStatus, AppointmentStatus } from '@/types';
 
 export const translateStatus = (status: ToothStatus) => {
   const translations: Record<string, string> = {
@@ -43,4 +43,15 @@ export const getStatusButtonClass = (status: ToothStatus) => {
     case ToothStatus.SEALANT_DEFECTIVE: return 'bg-teal-defective text-white';
     default: return 'bg-gray-200 text-black';
   }
+};
+
+export const translateAppointmentStatus = (status: AppointmentStatus) => {
+  const translations: Record<AppointmentStatus, string> = {
+    [AppointmentStatus.SCHEDULED]: 'Agendada',
+    [AppointmentStatus.CONFIRMED]: 'Confirmada',
+    [AppointmentStatus.COMPLETED]: 'Completada',
+    [AppointmentStatus.CANCELLED]: 'Cancelada',
+    [AppointmentStatus.NO_SHOW]: 'No se presentó',
+  };
+  return translations[status] || status;
 };
