@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed, ref, watch } from 'vue';
+import { onMounted, computed, ref } from 'vue';
 import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -7,7 +7,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import { useAuthStore } from '@/stores/auth';
 import { useAppointmentsStore } from '@/stores/appointments';
 import { storeToRefs } from 'pinia';
-import type { CalendarOptions, EventClickArg } from '@fullcalendar/core';
+import type { CalendarOptions } from '@fullcalendar/core';
 import Modal from '@/components/Modal.vue';
 import AppointmentForm from '@/components/AppointmentForm.vue';
 import AppointmentDetailModal from '@/components/AppointmentDetailModal.vue';
@@ -16,7 +16,6 @@ import type { Appointment, User } from '@/types';
 import { AppointmentStatus } from '@/types';
 import { getDoctors } from '@/services/userService';
 
-const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null);
 const appointmentsStore = useAppointmentsStore();
 const { appointments, isLoading } = storeToRefs(appointmentsStore);
 const authStore = useAuthStore();
@@ -35,64 +34,33 @@ const filteredAppointments = computed(() => {
   return appointments.value.filter(appt => appt.doctor.id === selectedDoctorId.value);
 });
 
-// Lógica de colores por estado de la cita
 const getStatusStyle = (status: AppointmentStatus) => {
   switch (status) {
-    case AppointmentStatus.CONFIRMED:
-      return { color: '#10B981', className: '' };
-    case AppointmentStatus.COMPLETED:
-      return { color: '#6B7280', className: 'event-completed' };
+    case AppointmentStatus.CONFIRMED: return { color: '#10B981', className: '' };
+    case AppointmentStatus.COMPLETED: return { color: '#6B7280', className: 'event-completed' };
     case AppointmentStatus.CANCELLED:
-    case AppointmentStatus.NO_SHOW:
-      return { color: '#EF4444', className: 'event-cancelled' };
-    default:
-      return { color: '#2563EB', className: '' };
+    case AppointmentStatus.NO_SHOW: return { color: '#EF4444', className: 'event-cancelled' };
+    default: return { color: '#2563EB', className: '' };
   }
 };
 
 const calendarEvents = computed(() => {
   return filteredAppointments.value.map(appt => {
     const style = getStatusStyle(appt.status);
-    
-    // 1. Creamos objetos Date a partir de los strings UTC del backend.
-    // El navegador los convierte automáticamente a la zona horaria local.
-    const startDate = new Date(appt.startTime);
-    const endDate = new Date(appt.endTime);
-
-    // 2. Creamos una función para formatear la fecha a "YYYY-MM-DDTHH:mm:ss"
-    // Esto crea un string de fecha local sin información de zona horaria.
-    const toLocalISOString = (date: Date) => {
-      const pad = (num: number) => num.toString().padStart(2, '0');
-      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
-             `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-    };
-
     return {
       id: appt.id,
       title: appt.patient.fullName,
-      // 3. Le pasamos al calendario el string de fecha local.
-      start: toLocalISOString(startDate),
-      end: toLocalISOString(endDate),
+      start: appt.startTime,
+      end: appt.endTime,
       backgroundColor: style.color,
       borderColor: style.color,
       className: style.className,
       extendedProps: { 
-        notes: appt.notes, 
-        doctor: appt.doctor.fullName 
+        appointmentData: appt
       }
     }
   });
 });
-
-watch(calendarEvents, (newEvents) => {
-  const calendarApi = calendarRef.value?.getApi();
-  if (calendarApi) {
-    calendarApi.removeAllEvents();
-    calendarApi.addEventSource(newEvents);
-  }
-});
-
-// --- MANEJADORES DE EVENTOS ---
 
 function handleTimeSelect(selectInfo: any) {
   const compatibleData = { date: selectInfo.start, dateStr: selectInfo.startStr };
@@ -101,11 +69,8 @@ function handleTimeSelect(selectInfo: any) {
 }
 
 function handleEventClick(clickInfo: any) {
-  const appt = appointments.value.find(a => a.id === clickInfo.event.id);
-  if (appt) {
-    selectedAppointment.value = appt;
-    isDetailModalOpen.value = true;
-  }
+  selectedAppointment.value = clickInfo.event.extendedProps.appointmentData;
+  isDetailModalOpen.value = true;
 }
 
 function handleEventDrop(dropInfo: any) {
@@ -115,28 +80,23 @@ function handleEventDrop(dropInfo: any) {
 
 async function handleSaveAppointment(data: any) {
   const success = await appointmentsStore.createAppointment(data);
-  if (success) {
-    isFormModalOpen.value = false;
-  }
+  if (success) isFormModalOpen.value = false;
 }
 
 function confirmReschedule() {
   if (dropEventInfo.value) {
     const { event } = dropEventInfo.value;
-    const payload = { startTime: event.startStr, endTime: event.endStr || undefined };
+    const payload: { startTime: string; endTime?: string } = { startTime: event.startStr };
+    if (event.endStr) payload.endTime = event.endStr;
     appointmentsStore.updateAppointmentTime(event.id, payload);
   }
   isDropConfirmModalOpen.value = false;
 }
 
 function cancelReschedule() {
-  if (dropEventInfo.value) {
-    dropEventInfo.value.revert();
-  }
+  if (dropEventInfo.value) dropEventInfo.value.revert();
   isDropConfirmModalOpen.value = false;
 }
-
-// --- CONFIGURACIÓN DE FULLCALENDAR ---
 
 const calendarOptions: CalendarOptions = {
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
@@ -148,10 +108,10 @@ const calendarOptions: CalendarOptions = {
   },
   locale: 'es',
   buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día' },
-  allDaySlot: false,
   timeZone: 'America/Lima',
+  allDaySlot: false,
   slotMinTime: '07:00:00',
-  slotMaxTime: '21:00:00',
+  slotMaxTime: '20:00:00',
   selectable: true,
   select: handleTimeSelect,
   eventClick: handleEventClick,
@@ -179,7 +139,7 @@ onMounted(async () => {
     <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
       <h1 class="text-3xl font-bold text-text-dark">Agenda de Citas</h1>
       <div class="w-full md:w-auto">
-        <select v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'assistant'" v-model="selectedDoctorId" id="doctorFilter" class="input-style w-full md:w-64">
+        <select v-if="authStore.user?.role === 'assistant' || authStore.user?.role === 'admin'" v-model="selectedDoctorId" id="doctorFilter" class="input-style w-full md:w-64">
           <option value="all">Todos los Doctores</option>
           <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">
             {{ doctor.fullName }}
@@ -192,8 +152,12 @@ onMounted(async () => {
       </div>
     </div>
     <div class="bg-white rounded-lg shadow-md p-6">
-      <FullCalendar ref="calendarRef" :options="calendarOptions" />
-    </div>
+      <FullCalendar
+        :key="calendarEvents.length"
+        :options="calendarOptions"
+        :events="calendarEvents"
+      />
+      </div>
 
     <Modal :isOpen="isFormModalOpen" @close="isFormModalOpen = false">
       <template #header>Agendar Nueva Cita</template>
@@ -207,7 +171,6 @@ onMounted(async () => {
         />
       </template>
     </Modal>
-
     <Modal :isOpen="isDetailModalOpen" @close="isDetailModalOpen = false">
       <template #header>Detalles de la Cita</template>
       <template #default>
@@ -219,35 +182,36 @@ onMounted(async () => {
         />
       </template>
     </Modal>
-
     <ConfirmationModal 
-  :isOpen="isDropConfirmModalOpen"
-  title="Reprogramar Cita"
-  message="¿Estás seguro de que deseas mover esta cita al nuevo horario?"
-  confirmButtonText="Sí, Reprogramar" @confirm="confirmReschedule"
-  @cancel="cancelReschedule"
->
-  <template #icon>
-    <img src="@/assets/diente-calendario.png" alt="Icono de calendario y diente" class="h-19 w-19" />
-  </template>
-</ConfirmationModal>
+      :isOpen="isDropConfirmModalOpen"
+      title="Reprogramar Cita"
+      message="¿Estás seguro de que deseas mover esta cita al nuevo horario?"
+      confirmButtonText="Sí, Reprogramar" 
+      @confirm="confirmReschedule"
+      @cancel="cancelReschedule"
+    >
+      <template #icon>
+        <img src="@/assets/diente-calendario.png" alt="Icono de calendario y diente" class="h-10 w-10" />
+      </template>
+    </ConfirmationModal>
   </div>
 </template>
 
 <style>
-/* Estilo para hacer los eventos del calendario un poco más estrechos */
+/* Estilos */
 .custom-event {
-  width: 85% !important;
+  width: 90% !important;
   margin: 0 auto !important;
+  font-size: 0.75rem;
+  padding: 2px;
 }
-
-/* Estilo para citas canceladas o no asistidas */
 .event-cancelled .fc-event-title {
   text-decoration: line-through;
 }
-
-/* Estilo para citas completadas (un poco transparente) */
 .event-completed {
   opacity: 0.7;
+}
+.input-style { 
+  @apply border border-gray-300 rounded-md shadow-sm px-4 py-2 focus:outline-none focus:ring-primary focus:border-primary; 
 }
 </style>
