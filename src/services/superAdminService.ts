@@ -38,3 +38,11 @@ export const getSystemKpis = () => {
 export const getActiveAnnouncement = () => {
   return apiClient.get('/announcements/active');
 };
+
+export const updateTenantPlan = (tenantId: string, data: { plan: string; maxUsers: number }) => {
+  return apiClient.patch(`/super-admin/tenants/${tenantId}/plan`, data);
+};
+
+export const renewSubscription = (tenantId: string) => {
+  return apiClient.patch(`/super-admin/tenants/${tenantId}/renew`);
+};

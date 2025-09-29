@@ -20,3 +20,7 @@ export const createUser = (data: any) => {
 export const updateUser = (id: string, data: any) => {
   return apiClient.patch<User>(`/users/${id}`, data);
 };
+
+export const changePassword = (data: any) => {
+  return apiClient.patch('/users/change-password', data);
+};

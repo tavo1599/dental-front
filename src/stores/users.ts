@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { useToast } from 'vue-toastification';
 import { getUsers as getApi, createUser as createApi, updateUser as updateApi } from '@/services/userService';
+import { changePassword as changePasswordApi } from '@/services/userService';
 import type { User } from '@/types';
 
 export const useUsersStore = defineStore('users', () => {
@@ -28,8 +29,11 @@ export const useUsersStore = defineStore('users', () => {
       toast.success('Usuario creado con éxito.');
       await fetchUsers();
       return true;
-    } catch (error) {
-      toast.error('Error al crear el usuario.');
+    } catch (error: any) {
+      // 1. Leemos el mensaje específico del backend.
+      const errorMessage = error.response?.data?.message || 'Error al crear el usuario.';
+      // 2. Mostramos ese mensaje en la notificación.
+      toast.error(errorMessage);
       return false;
     } finally {
       isLoading.value = false;
@@ -59,5 +63,20 @@ export const useUsersStore = defineStore('users', () => {
   }
 }
 
-  return { users, isLoading, fetchUsers, createUser, updateUser };
+  async function changePassword(data: any) {
+    isLoading.value = true;
+    try {
+      const response = await changePasswordApi(data);
+      toast.success(response.data.message || 'Contraseña actualizada con éxito.');
+      return true;
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'No se pudo cambiar la contraseña.');
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+
+  return { users, isLoading, fetchUsers, createUser, updateUser, changePassword };
 });

@@ -1,24 +1,21 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ToothStatus } from '@/types';
+import { ToothStatus, type ToothSurfaceState } from '@/types';
 
 const props = defineProps<{
   toothNumber: number;
-  surfaces: Record<string, any>;
-  isSelected: (surface: string) => boolean;
+  wholeStatus?: ToothStatus; 
+  surfaceStates?: Record<string, ToothSurfaceState>;
 }>();
 
-const emit = defineEmits(['surface-click']);
+const emit = defineEmits(['surface-click', 'surface-double-click']);
 
-// --- LÓGICA PARA DETECTAR ESTADO DE DIENTE COMPLETO ---
 const wholeToothStatus = computed(() => {
-  const oclusalStatus = props.surfaces?.['occlusal']?.status;
-  const statuses = [
-    ToothStatus.CROWN,
-    ToothStatus.ENDODONTICS,
-    ToothStatus.IMPLANT,
-    ToothStatus.EXTRACTION_NEEDED,
-    ToothStatus.EXTRACTED,
+  const oclusalStatus = props.surfaceStates?.['occlusal']?.status;
+  const statuses = [ 
+    ToothStatus.CROWN, ToothStatus.TEMPORARY_CROWN, ToothStatus.ENDODONTICS,
+    ToothStatus.IMPLANT, ToothStatus.PONTIC, ToothStatus.EXTRACTION_NEEDED,
+    ToothStatus.EXTRACTED, ToothStatus.SUPERNUMERARY 
   ];
   if (oclusalStatus && statuses.includes(oclusalStatus)) {
     return oclusalStatus;
@@ -26,64 +23,95 @@ const wholeToothStatus = computed(() => {
   return null;
 });
 
-const getStatusClass = (surface: string) => {
-  const surfaceName = (props.toothNumber < 30 && props.toothNumber > 10) || (props.toothNumber > 50 && props.toothNumber < 70) ? 
-    (surface === 'lingual' ? 'palatal' : surface) : surface;
-  const status = props.surfaces?.[surfaceName]?.status;
-  
+const getFillClass = (surface: string) => {
+  const surfaceName = getSurfaceName(surface);
+  const status = props.surfaceStates?.[surfaceName]?.status;
   if (!status) return 'fill-gray-200 hover:fill-gray-300';
   switch (status) {
-    case 'healthy': return 'fill-white hover:fill-gray-100';
-    case 'caries': return 'fill-red-500';
-    case 'filled': return 'fill-blue-500';
-    case 'sealant': return 'fill-yellow-400';
-    case 'fracture': return 'fill-orange-fracture';
-    case 'crown': return 'fill-primary';
-    case 'endodontics': return 'fill-purple-endo';
-    case 'extraction_needed':
-    case 'extracted':
-      return 'fill-black';
-    case 'implant': return 'fill-gray-implant';
-    default: return 'fill-gray-200 hover:fill-gray-300';
+    case ToothStatus.HEALTHY: return 'fill-white';
+    case ToothStatus.CARIES: return 'fill-red-500';
+    case ToothStatus.FILLED: return 'fill-blue-500';
+    case ToothStatus.SEALANT: return 'fill-yellow-sealant';
+    case ToothStatus.FRACTURE: return 'fill-orange-fracture';
+    case ToothStatus.DISCHROMIA: return 'fill-brown-dischromia';
+    case ToothStatus.FILLED_DEFECTIVE: return 'fill-purple-defective';
+    case ToothStatus.SEALANT_DEFECTIVE: return 'fill-teal-defective';
+    default: return 'fill-transparent';
+  }
+};
+
+const getStrokeClass = (status: ToothStatus | undefined) => {
+  if (!status) return 'stroke-gray-600';
+  switch (status) {
+    case ToothStatus.CROWN: return 'stroke-primary';
+    case ToothStatus.TEMPORARY_CROWN: return 'stroke-pink-temp';
+    case ToothStatus.ENDODONTICS: return 'stroke-purple-endo';
+    case ToothStatus.IMPLANT: return 'stroke-gray-implant';
+    case ToothStatus.PONTIC: return 'stroke-gray-400';
+    case ToothStatus.EXTRACTION_NEEDED: return 'stroke-red-800';
+    case ToothStatus.EXTRACTED: return 'stroke-black';
+    case ToothStatus.SUPERNUMERARY: return 'stroke-teal-super';
+    case ToothStatus.CROWN_DEFECTIVE: return 'stroke-red-500';
+    default: return 'stroke-gray-600';
   }
 };
 
 function onSurfaceClick(surface: string, event: MouseEvent) {
-  const surfaceName = (props.toothNumber < 30 && props.toothNumber > 10) || (props.toothNumber > 50 && props.toothNumber < 70) ? 
-    (surface === 'lingual' ? 'palatal' : surface) : surface;
+  const surfaceName = getSurfaceName(surface);
   emit('surface-click', { surface: surfaceName, event });
+}
+
+function onSurfaceDoubleClick(surface: string, event: MouseEvent) {
+  const surfaceName = getSurfaceName(surface);
+  emit('surface-double-click', { surface: surfaceName, event });
+}
+
+function getSurfaceName(surface: string) {
+  const isUpper = (props.toothNumber > 10 && props.toothNumber < 30) || (props.toothNumber > 50 && props.toothNumber < 70);
+  return isUpper && surface === 'lingual' ? 'palatal' : surface;
 }
 </script>
 
 <template>
-  <div class="flex flex-col items-center">
+  <div class="flex flex-col items-center select-none">
     <span class="text-xs text-text-light mb-1">{{ toothNumber }}</span>
-    
-    <svg v-if="wholeToothStatus" class="w-full h-full cursor-pointer" viewBox="0 0 100 100" @click="onSurfaceClick('occlusal', $event)">
-      <circle 
-        :class="[getStatusClass('occlusal'), { 'ring-2 ring-blue-500 ring-inset': isSelected('occlusal') }]" 
-        cx="45" cy="45" r="43" 
-        stroke="#6B7280" 
-        stroke-width="1.5" 
-      />
-      <template v-if="wholeToothStatus === ToothStatus.EXTRACTED || wholeToothStatus === ToothStatus.EXTRACTION_NEEDED">
-        <line x1="22" y1="22" x2="72" y2="72" stroke="#EF4444" stroke-width="8" stroke-linecap="round" />
-        <line x1="22" y1="72" x2="72" y2="22" stroke="#EF4444" stroke-width="8" stroke-linecap="round" />
-      </template>
-    </svg>
+    <svg class="w-full h-full" viewBox="-10 -15 120 130">
+      
+      <g stroke="#333" stroke-width="2" class="cursor-pointer">
+        <path d="M 30 90 C 30 110, 70 110, 70 90 L 50 48 Z" fill="#F3EADF" stroke-width="1.5" />
+        
+        <g transform="translate(0, -10)">
+          <path :class="getFillClass('vestibular')" @click="onSurfaceClick('vestibular', $event)" @dblclick="onSurfaceDoubleClick('vestibular', $event)" d="M 35.8,35.8 L 22.5,22.5 A 48 48 0 0 1 77.5,22.5 L 64.2,35.8 A 22 22 0 0 0 35.8,35.8 Z" transform="rotate(180 50 50)" />
+          <path :class="getFillClass('distal')" @click="onSurfaceClick('distal', $event)" @dblclick="onSurfaceDoubleClick('distal', $event)" d="M 35.8,35.8 L 22.5,22.5 A 48 48 0 0 1 77.5,22.5 L 64.2,35.8 A 22 22 0 0 0 35.8,35.8 Z" transform="rotate(270 50 50)" />
+          <path :class="getFillClass('lingual')" @click="onSurfaceClick('lingual', $event)" @dblclick="onSurfaceDoubleClick('lingual', $event)" d="M 35.8,35.8 L 22.5,22.5 A 48 48 0 0 1 77.5,22.5 L 64.2,35.8 A 22 22 0 0 0 35.8,35.8 Z" />
+          <path :class="getFillClass('mesial')" @click="onSurfaceClick('mesial', $event)" @dblclick="onSurfaceDoubleClick('mesial', $event)" d="M 35.8,35.8 L 22.5,22.5 A 48 48 0 0 1 77.5,22.5 L 64.2,35.8 A 22 22 0 0 0 35.8,35.8 Z" transform="rotate(90 50 50)" />
+          <circle :class="getFillClass('occlusal')" @click="onSurfaceClick('occlusal', $event)" cx="50" cy="50" r="22" />
+          
+          <circle :class="getFillClass('occlusal')" @click="onSurfaceClick('occlusal', $event)" @dblclick="onSurfaceDoubleClick('occlusal', $event)" cx="50" cy="50" r="22" />
 
-    <svg v-else class="w-full h-full" viewBox="0 0 100 100">
-      <defs>
-        <path id="surface-path" d="M 35.8,35.8 L 22.5,22.5 A 48 48 0 0 1 77.5,22.5 L 64.2,35.8 A 22 22 0 0 0 35.8,35.8 Z" />
-      </defs>
-      <g stroke="#6B7280" stroke-width="1.5" class="cursor-pointer">
-        <use href="#surface-path" :class="[getStatusClass('vestibular'), { 'ring-2 ring-blue-500 ring-inset': isSelected('vestibular') }]" @click="onSurfaceClick('vestibular', $event)" />
-        <use href="#surface-path" :class="[getStatusClass('distal'), { 'ring-2 ring-blue-500 ring-inset': isSelected('distal') }]" @click="onSurfaceClick('distal', $event)" transform="rotate(90 50 50)" />
-        <use href="#surface-path" :class="[getStatusClass('lingual'), { 'ring-2 ring-blue-500 ring-inset': isSelected('lingual') }]" @click="onSurfaceClick('lingual', $event)" transform="rotate(180 50 50)" />
-        <use href="#surface-path" :class="[getStatusClass('mesial'), { 'ring-2 ring-blue-500 ring-inset': isSelected('mesial') }]" @click="onSurfaceClick('mesial', $event)" transform="rotate(270 50 50)" />
-        <circle @click="onSurfaceClick('occlusal', $event)" :class="[getStatusClass('occlusal'), { 'ring-2 ring-blue-500 ring-inset': isSelected('occlusal') }]" cx="50" cy="50" r="22" />
-        <line x1="35.8" y1="35.8" x2="64.2" y2="64.2" />
-        <line x1="35.8" y1="64.2" x2="64.2" y2="35.8" />
+          <circle cx="50" cy="50" r="48" fill="none" stroke="#333" stroke-width="1.5" />
+          <line x1="35.8" y1="35.8" x2="64.2" y2="64.2" stroke="#333" stroke-width="1.5" />
+          <line x1="35.8" y1="64.2" x2="64.2" y2="35.8" stroke="#333" stroke-width="1.5" />
+        </g>
+      </g>
+      
+      <g v-if="wholeStatus" :class="getStrokeClass(wholeStatus)" stroke-width="8" fill="none" stroke-linecap="round">
+        <circle v-if="wholeStatus === ToothStatus.CROWN || wholeStatus === ToothStatus.CROWN_DEFECTIVE || wholeStatus === ToothStatus.TEMPORARY_CROWN" cx="50" cy="40" r="48" />
+        <line v-if="wholeStatus === ToothStatus.ENDODONTICS" x1="50" y1="40" x2="50" y2="100" />
+        <g v-if="wholeStatus === ToothStatus.EXTRACTION_NEEDED || wholeStatus === ToothStatus.EXTRACTED">
+          <line x1="10" y1="0" x2="90" y2="100" />
+          <line x1="10" y1="100" x2="90" y2="0" />
+        </g>
+        <g v-if="wholeStatus === ToothStatus.IMPLANT" class="stroke-current">
+          <line x1="50" y1="50" x2="50" y2="100" />
+          <line x1="30" y1="60" x2="70" y2="60" />
+          <line x1="35" y1="75" x2="65" y2="75" />
+        </g>
+        <line v-if="wholeStatus === ToothStatus.PONTIC" x1="20" y1="110" x2="80" y2="110" />
+        <g v-if="wholeStatus === ToothStatus.SUPERNUMERARY">
+          <line x1="50" y1="15" x2="50" y2="65" />
+          <line x1="25" y1="40" x2="75" y2="40" />
+        </g>
       </g>
     </svg>
   </div>

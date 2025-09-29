@@ -59,7 +59,7 @@ const patientsStore = usePatientsStore();
 const { selectedPatient, isLoading: isPatientLoading } = storeToRefs(patientsStore);
 
 const odontogramStore = useOdontogramStore();
-const { toothStates, isLoading: isOdontogramLoading } = storeToRefs(odontogramStore);
+const { wholeTeeth, surfaces, isLoading: isOdontogramLoading } = storeToRefs(odontogramStore);
 
 const clinicalHistoryStore = useClinicalHistoryStore();
 const { entries: historyEntries, isLoading: isHistoryLoading } = storeToRefs(clinicalHistoryStore);
@@ -334,13 +334,12 @@ async function handleGenerateConsent(templateId: string) {
         </div>
       </div>
 
+      <div class="mt-6">
       <div v-if="activeTab === 'odontogram'">
-         <div v-if="isOdontogramLoading" class="text-center py-8">Cargando odontograma...</div>
-         <Odontogram v-else :states="toothStates" :patient-age="typeof age === 'number' ? age : 0" :user-role="authStore.user?.role" />
-         <TreatmentPlan 
-            @generate-budget="handleGenerateBudget"
-            @register-history="handleRegisterHistory" 
-            @clear-plan="handleClearPlan" />
+         <div v-if="isOdontogramLoading" class="text-center py-10">Cargando odontograma...</div>
+         <Odontogram v-else :whole-teeth="wholeTeeth" :surfaces="surfaces" :patient-age="typeof age === 'number' ? age : 0" :user-role="authStore.user?.role" />
+         <TreatmentPlan @generate-budget="handleGenerateBudget" @register-history="handleRegisterHistory" @clear-plan="handleClearPlan" />
+      </div>
       </div>
 
       <div v-if="activeTab === 'history'">

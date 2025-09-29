@@ -135,6 +135,12 @@ const router = createRouter({
               name: 'settings-audit',
               component: () => import('../views/settings/AuditLogView.vue'),
               meta: { requiresAdmin: true },
+            },
+            {
+              path: 'security',
+              name: 'settings-security',
+              component: () => import('../views/settings/SecuritySettingsView.vue'),
+              meta: { requiresAdmin: true },
             }
           ]
         },

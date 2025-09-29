@@ -8,10 +8,14 @@ import ClinicCreateForm from '@/components/ClinicCreateForm.vue';
 import BarChart from '@/components/charts/BarChart.vue';
 import { type Tenant, type User, TenantStatus } from '@/types';
 import { impersonateUser } from '@/services/superAdminService';
+import PlanManagementForm from '@/components/PlanManagementForm.vue';
 
 const superAdminStore = useSuperAdminStore();
 const { tenants, isLoading, tenantGrowthData, kpis, activeAnnouncement } = storeToRefs(superAdminStore);
 const authStore = useAuthStore();
+
+const isPlanModalOpen = ref(false); // <-- Nuevo estado para el modal de planes
+const selectedTenant = ref<Tenant | null>(null);
 
 const isModalOpen = ref(false);
 const searchQuery = ref('');
@@ -92,6 +96,45 @@ function handlePostAnnouncement() {
 }
 function handleClearAnnouncement() {
   superAdminStore.clearAnnouncement();
+}
+
+function openPlanModal(tenant: Tenant) {
+  selectedTenant.value = tenant;
+  isPlanModalOpen.value = true;
+}
+
+async function handleSavePlan(data: any) {
+  if (selectedTenant.value) {
+    const success = await superAdminStore.updateTenantPlan(selectedTenant.value.id, data);
+    if (success) {
+      isPlanModalOpen.value = false;
+    }
+  }
+}
+
+const getPaymentStatusClass = (dateString: string | null): string => {
+  if (!dateString) return 'text-gray-400';
+
+  const paymentDate = new Date(dateString);
+  const today = new Date();
+  const sevenDaysFromNow = new Date();
+  sevenDaysFromNow.setDate(today.getDate() + 7);
+
+  // Ponemos la hora a cero para comparar solo las fechas
+  paymentDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  if (paymentDate <= today) {
+    return 'text-red-400 font-bold animate-pulse'; // Vencido o vence hoy
+  }
+  if (paymentDate <= sevenDaysFromNow) {
+    return 'text-yellow-400 font-semibold'; // Vence pronto
+  }
+  return 'text-gray-300'; // Normal
+};
+
+function handleRenew(tenantId: string) {
+  superAdminStore.renewSubscription(tenantId);
 }
 </script>
 
@@ -179,13 +222,19 @@ function handleClearAnnouncement() {
               <td class="p-3 text-center font-medium">{{ tenant.users?.length || 0 }}</td>
               <td class="p-3 text-center font-medium">{{ tenant.patientCount || 0 }}</td>
               <td class="p-3">{{ formatDate(tenant.createdAt) }}</td>
-              <td class="p-3">{{ formatDate(tenant.nextPaymentDate) }}</td>
+              <td class="p-3" :class="getPaymentStatusClass(tenant.nextPaymentDate)">
+                {{ formatDate(tenant.nextPaymentDate) }}
+              </td>
               <td class="p-3">
                 <select :value="tenant.status" @change="handleStatusChange(tenant.id, $event)" class="bg-gray-700 border-gray-600 text-white rounded-md p-1.5 text-sm focus:outline-none focus:ring-primary focus:border-primary w-full">
                   <option v-for="s in TenantStatus" :key="s" :value="s" class="capitalize">{{ s }}</option>
                 </select>
               </td>
-              <td class="p-3 text-center">
+              <td class="p-3 text-center space-x-2">
+                <button @click="openPlanModal(tenant)" class="text-sky-400 hover:underline text-xs">
+                  Gestionar Plan
+                </button>
+                <button @click="handleRenew(tenant.id)" class="text-green-400 hover:underline text-xs font-semibold">Renovar</button>
                 <button v-if="getAdminUser(tenant.users)" @click="impersonate(getAdminUser(tenant.users)!.id)" class="bg-yellow-500 text-yellow-900 px-2 py-1 text-xs font-bold rounded hover:bg-yellow-400" title="Iniciar sesión como este usuario">
                   Personificar
                 </button>
@@ -206,6 +255,19 @@ function handleClearAnnouncement() {
         <ClinicCreateForm v-if="isModalOpen" :loading="isLoading" @submit="handleSaveClinic" @cancel="isModalOpen = false" />
       </template>
     </Modal>
+
+    <Modal :isOpen="isPlanModalOpen" @close="isPlanModalOpen = false">
+    <template #header>Gestionar Plan de {{ selectedTenant?.name }}</template>
+    <template #default>
+      <PlanManagementForm 
+        v-if="isPlanModalOpen"
+        :tenant="selectedTenant"
+        :loading="isLoading"
+        @submit="handleSavePlan"
+        @cancel="isPlanModalOpen = false"
+      />
+    </template>
+  </Modal>
   </div>
 </template>
 

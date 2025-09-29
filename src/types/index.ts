@@ -23,16 +23,32 @@ export enum AppointmentStatus {
 }
 
 export enum ToothStatus {
+  // Estados de Superficie
   HEALTHY = 'healthy',
   CARIES = 'caries',
   FILLED = 'filled',
+  FILLED_DEFECTIVE = 'filled_defective',
   SEALANT = 'sealant',
+  SEALANT_DEFECTIVE = 'sealant_defective',
   FRACTURE = 'fracture',
+  DISCHROMIA = 'dischromia',
+
+  // Estados de Diente Completo
   CROWN = 'crown',
+  CROWN_DEFECTIVE = 'crown_defective',
+  TEMPORARY_CROWN = 'temporary_crown',
   ENDODONTICS = 'endodontics',
   IMPLANT = 'implant',
+  PONTIC = 'pontic',
   EXTRACTION_NEEDED = 'extraction_needed',
   EXTRACTED = 'extracted',
+  SUPERNUMERARY = 'supernumerary',
+}
+
+export interface Tooth {
+  id: string;
+  toothNumber: number;
+  status: ToothStatus;
 }
 
 export enum PaymentMethod {
@@ -77,6 +93,8 @@ export interface Tenant {
   googleAccessToken: string | null;
   googleRefreshToken: string | null;
   googleCalendarId: string | null;
+  plan: string;
+  maxUsers: number;
 }
 
 export interface Patient {
@@ -123,7 +141,7 @@ export interface ToothSurfaceState {
   id: string;
   toothNumber: number;
   surface: string;
-  status: string;
+  status: ToothStatus;
 }
 
 export interface ClinicalHistoryEntry {

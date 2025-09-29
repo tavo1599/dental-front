@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { useToast } from 'vue-toastification';
+import { updateTenantPlan as updatePlanApi } from '@/services/superAdminService';
+
+
 import { 
   getTenants, 
   createTenant as createTenantApi, 
@@ -10,6 +13,7 @@ import {
   clearAnnouncement as clearAnnouncementApi,
   getSystemKpis,
   getActiveAnnouncement,
+  renewSubscription as renewApi
 } from '@/services/superAdminService';  
 import type { Tenant, TenantStatus, Announcement } from '@/types';
 
@@ -104,6 +108,37 @@ export const useSuperAdminStore = defineStore('superAdmin', () => {
     }
   }
 
+  async function updateTenantPlan(tenantId: string, data: { plan: string; maxUsers: number }) {
+    isLoading.value = true;
+    try {
+      await updatePlanApi(tenantId, data);
+      toast.success('Plan de la clínica actualizado.');
+      await fetchAllSuperAdminData(); // Recarga los datos para ver el cambio
+      return true;
+    } catch (error) {
+      toast.error('No se pudo actualizar el plan.');
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function renewSubscription(tenantId: string) {
+    if (!confirm('¿Estás seguro de que deseas renovar la suscripción por un mes para esta clínica?')) {
+      return;
+    }
+    isLoading.value = true;
+    try {
+      await renewApi(tenantId);
+      toast.success('Suscripción renovada con éxito.');
+      await fetchAllSuperAdminData(); // Recarga todo para ver la nueva fecha
+    } catch (error) {
+      toast.error('No se pudo renovar la suscripción.');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   return { 
     tenants, 
     isLoading,
@@ -115,6 +150,8 @@ export const useSuperAdminStore = defineStore('superAdmin', () => {
     postAnnouncement, 
     clearAnnouncement,
     kpis,
-    activeAnnouncement 
+    activeAnnouncement,
+    updateTenantPlan,
+    renewSubscription
   };
 });

@@ -1,25 +1,40 @@
 <script setup lang="ts">
-import { ToothStatus } from '@/types'; // Importamos los estados posibles
+import { ToothStatus } from '@/types';
+import { translateStatus, getStatusButtonClass } from '@/utils/formatters';
 
 const emit = defineEmits(['select', 'close']);
+
+const surfaceStatuses = [ 
+  ToothStatus.HEALTHY, ToothStatus.CARIES, ToothStatus.FILLED, 
+  ToothStatus.FILLED_DEFECTIVE, ToothStatus.SEALANT, 
+  ToothStatus.SEALANT_DEFECTIVE, ToothStatus.FRACTURE, ToothStatus.DISCHROMIA // <-- AÑADIDO AQUÍ
+];
+const wholeToothStatuses = [ 
+  ToothStatus.CROWN, ToothStatus.CROWN_DEFECTIVE, ToothStatus.TEMPORARY_CROWN,
+  ToothStatus.ENDODONTICS, ToothStatus.IMPLANT, ToothStatus.PONTIC, 
+  ToothStatus.EXTRACTION_NEEDED, ToothStatus.EXTRACTED, ToothStatus.SUPERNUMERARY
+];
 </script>
 <template>
-  <div class="fixed bg-white rounded-lg shadow-xl border p-2 z-10">
-    <div class="grid grid-cols-2 gap-1">
-      <button @click="emit('select', ToothStatus.HEALTHY)" class="status-button">Sano</button>
-      <button @click="emit('select', ToothStatus.CARIES)" class="status-button bg-red-500 text-white">Caries</button>
-      <button @click="emit('select', ToothStatus.FILLED)" class="status-button bg-blue-500 text-white">Obturado</button>
-      <button @click="emit('select', ToothStatus.SEALANT)" class="status-button bg-yellow-400">Sellante</button>
-      <button @click="emit('select', ToothStatus.FRACTURE)" class="status-button bg-orange-fracture text-white">Fractura</button>
-      <button @click="emit('select', ToothStatus.CROWN)" class="status-button bg-primary text-white">Corona</button>
-      <button @click="emit('select', ToothStatus.ENDODONTICS)" class="status-button bg-purple-endo text-white">Endodoncia</button>
-      <button @click="emit('select', ToothStatus.EXTRACTION_NEEDED)" class="status-button bg-black text-white">Extracción</button>
+  <div class="fixed bg-white rounded-lg shadow-xl border p-2 z-50 w-96">
+    <div class="grid grid-cols-2 gap-2">
+      <div>
+        <h4 class="text-xs font-bold text-gray-400 px-2 py-1 border-b">Superficies</h4>
+        <button v-for="status in surfaceStatuses" :key="status" @click="emit('select', status)"
+          class="w-full px-3 py-1.5 text-sm text-left rounded-md whitespace-nowrap transition-colors"
+          :class="getStatusButtonClass(status)">
+          {{ translateStatus(status) }}
+        </button>
       </div>
+      <div>
+        <h4 class="text-xs font-bold text-gray-400 px-2 py-1 border-b">Diente Completo</h4>
+        <button v-for="status in wholeToothStatuses" :key="status" @click="emit('select', status)"
+          class="w-full px-3 py-1.5 text-sm text-left rounded-md whitespace-nowrap transition-colors"
+          :class="getStatusButtonClass(status)">
+          {{ translateStatus(status) }}
+        </button>
+      </div>
+    </div>
     <button @click="emit('close')" class="w-full mt-2 text-xs text-text-light hover:underline">Cerrar</button>
   </div>
 </template>
-<style scoped>
-.status-button {
-  @apply px-3 py-1 rounded-md text-sm font-semibold border;
-}
-</style>
