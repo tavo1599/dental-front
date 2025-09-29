@@ -42,10 +42,18 @@ onMounted(() => {
 
     <div class="flex flex-1 overflow-hidden">
       <aside class="w-64 flex-shrink-0 bg-slate-800 flex flex-col">
-        <div class="py-6 flex flex-col items-center justify-center border-b border-slate-700">
-          <LogoDental alt="Logo del sistema" class="h-12 w-auto text-white mb-2" />
-          <p v-if="authStore.user?.tenant" class="text-lg text-slate-300 font-semibold text-center px-2">{{ authStore.user.tenant.name }}</p>
-        </div>
+        <div class="py-6 flex flex-col justify-center border-b border-slate-700">
+    
+    <p v-if="authStore.user?.tenant" class="text-xl text-white font-bold text-center px-2">
+      {{ authStore.user.tenant.name }}
+    </p>
+
+    <div class="mt-2 flex items-center justify-center gap-2">
+      <img src="/logo.svg" class="h-5 w-5" alt="Logo de SonriAndes" />
+      <span class="text-xs text-slate-400 font-semibold">SonriAndes</span>
+    </div>
+
+  </div>
         
         <nav class="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
           <RouterLink to="/dashboard" class="flex items-center px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white rounded-lg" active-class="bg-slate-700 text-white font-semibold">Dashboard</RouterLink>
