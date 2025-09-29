@@ -5,9 +5,11 @@ import { computed } from 'vue';
 const authStore = useAuthStore();
 const tenantId = authStore.user?.tenant?.id;
 
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
+
 const googleAuthUrl = computed(() => {
   if (!tenantId) return '#';
-  return `http://localhost:3000/google-calendar/auth?tenantId=${tenantId}`;
+  return `${baseUrl}/google-calendar/auth?tenantId=${tenantId}`;
 });
 
 const isConnected = computed(() => !!authStore.user?.tenant?.googleRefreshToken);
