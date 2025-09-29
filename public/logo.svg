@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" role="img" aria-label="Sonriandes emblema">
+  <defs>
+    <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#19A7CE"/>
+      <stop offset="1" stop-color="#0B4F6C"/>
+    </linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="78" fill="url(#g1)"/>
+  <!-- Montañas blancas dentro -->
+  <polygon points="30,110 60,50 80,78 100,40 130,110" fill="#ffffff" opacity="0.95"/>
+  <!-- sonrisa sobrepuesta -->
+  <path d="M40 95 C60 115, 100 115, 120 95" fill="none" stroke="#FFB86B" stroke-width="6" stroke-linecap="round"/>
+  <!-- inicial 's' -->
+  <text x="50" y="85" font-family="Poppins, Arial, sans-serif" font-size="28" fill="#0B4F6C" font-weight="700" opacity="0.0">s</text>
+</svg>

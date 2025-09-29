@@ -21,9 +21,9 @@ async function handleLogin() {
   <div class="flex items-stretch min-h-screen">
     <div class="hidden lg:flex w-1/2 bg-primary items-center justify-center p-12 text-white text-center">
       <div class="text-center">
-        <LogoDental alt="Logo de sistema" class="mx-auto h-24 w-auto text-white" />
+        <LogoDental alt="Logo de sistema" class="mx-auto h-24 w-auto text-white text-center" />
         
-        <h1 class="mt-6 text-4xl font-bold">Bienvenido a DentalSoft</h1>
+        <h1 class="text-3xl font-bold text-center text-text-dark">Bienvenido a SonriAndes</h1>
         <p class="mt-4 text-lg opacity-80">Gestiona tu clínica con una sonrisa.</p>
       </div>
     </div>
