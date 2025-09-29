@@ -3,10 +3,13 @@ import { useAuthStore } from '@/stores/auth';
 import { computed } from 'vue';
 
 const authStore = useAuthStore();
+const tenantId = computed(() => authStore.user?.tenant?.id);
 
-// Leemos la URL base del backend desde las variables de entorno del frontend
 const baseUrl = import.meta.env.VITE_API_BASE_URL;
-const googleAuthUrl = `${baseUrl}/google-calendar/auth`;
+const googleAuthUrl = computed(() => {
+  if (!tenantId.value) return '#';
+  return `${baseUrl}/google-calendar/auth?tenantId=${tenantId.value}`;
+});
 
 const isConnected = computed(() => !!authStore.user?.tenant?.googleRefreshToken);
 
