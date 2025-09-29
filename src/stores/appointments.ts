@@ -30,24 +30,16 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     }
   }
 
-  async function fetchAppointmentsForPatient(patientId: string) {
-    isLoading.value = true;
-    try {
-      const response = await getForPatientApi(patientId);
-      patientAppointments.value = response.data;
-    } catch (error) {
-      toast.error('No se pudo cargar las citas del paciente.');
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
   async function createAppointment(data: any) {
     isLoading.value = true;
     try {
-      await createApi(data);
+      const response = await createApi(data);
+      const newAppointment = response.data;
+      
+      // Añadimos la nueva cita directamente a la lista local para una actualización instantánea
+      appointments.value.push(newAppointment); 
+      
       toast.success('Cita creada con éxito.');
-      await fetchAppointments();
       return true;
     } catch (error) {
       toast.error('Error al crear la cita.');
@@ -57,20 +49,13 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     }
   }
 
-  // --- LÓGICA DE 'updateAppointmentTime' CORREGIDA Y SIMPLIFICADA ---
   async function updateAppointmentTime(id: string, data: { startTime: string; endTime?: string }) {
     try {
-      const response = await updateTimeApi(id, data);
-      const updatedAppointment = response.data;
-
-      const index = appointments.value.findIndex(a => a.id === id);
-      if (index !== -1) {
-        appointments.value[index] = { ...appointments.value[index], ...updatedAppointment };
-      }
+      await updateTimeApi(id, data);
       toast.success('Cita reprogramada con éxito.');
+      await fetchAppointments(); // Refrescamos la lista completa después de reprogramar
     } catch (error) {
-      toast.error('No se pudo reprogramar la cita. Revirtiendo cambio.');
-      await fetchAppointments();
+      toast.error('No se pudo reprogramar la cita.');
     }
   }
 
@@ -84,6 +69,18 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     } catch (error) {
       toast.error('No se pudo actualizar el estado.');
       return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function fetchAppointmentsForPatient(patientId: string) {
+    isLoading.value = true;
+    try {
+      const response = await getForPatientApi(patientId);
+      patientAppointments.value = response.data;
+    } catch (error) {
+      toast.error('No se pudo cargar las citas del paciente.');
     } finally {
       isLoading.value = false;
     }

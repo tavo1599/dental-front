@@ -56,11 +56,15 @@ onMounted(async () => {
 });
 
 function handleSubmit() {
-  // 3. Construimos el payload final desde el formData y las horas
+  // Combinamos la fecha y las horas en un formato ISO LOCAL (sin la 'Z' al final).
+  // Esto le dice al backend: "Guarda esta hora tal como la ves, sin conversiones".
+  const finalStartTime = `${datePart}T${startTime.value}:00`;
+  const finalEndTime = `${datePart}T${endTime.value}:00`;
+
   const dataToSend = {
     ...formData.value,
-    startTime: `${datePart}T${startTime.value}:00`,
-    endTime: `${datePart}T${endTime.value}:00`,
+    startTime: finalStartTime,
+    endTime: finalEndTime,
   };
   emit('submit', dataToSend);
 }
