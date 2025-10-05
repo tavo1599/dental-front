@@ -18,9 +18,9 @@ interface UserPayload {
 
 export const useAuthStore = defineStore('auth', () => {
   const toast = useToast();
-  const token = ref(localStorage.getItem('token') || null);
+  const token = ref(sessionStorage.getItem('token') || null);
   const user = ref<UserPayload | null>(null);
-  const isImpersonating = ref(localStorage.getItem('superAdminToken') ? true : false);
+  const isImpersonating = ref(sessionStorage.getItem('superAdminToken') ? true : false);
 
   const isAuthenticated = computed(() => !!token.value);
 
@@ -44,7 +44,7 @@ export const useAuthStore = defineStore('auth', () => {
       const newToken = response.data.access_token;
 
       token.value = newToken;
-      localStorage.setItem('token', newToken);
+      sessionStorage.setItem('token', newToken);
       user.value = jwtDecode<UserPayload>(newToken);
       
       toast.success('¡Inicio de sesión exitoso!');
@@ -82,8 +82,8 @@ export const useAuthStore = defineStore('auth', () => {
   function logout() {
     token.value = null;
     user.value = null;
-    localStorage.removeItem('token');
-    localStorage.removeItem('superAdminToken');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('superAdminToken');
     isImpersonating.value = false;
     router.push('/login');
     toast.info('Has cerrado la sesión.');

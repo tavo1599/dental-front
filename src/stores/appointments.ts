@@ -36,8 +36,8 @@ export const useAppointmentsStore = defineStore('appointments', () => {
       const response = await createApi(data);
       const newAppointment = response.data;
       
-      // Añadimos la nueva cita directamente a la lista local para una actualización instantánea
-      appointments.value.push(newAppointment); 
+      appointments.value.push(newAppointment);
+      await fetchNextDayPending();
       
       toast.success('Cita creada con éxito.');
       return true;
