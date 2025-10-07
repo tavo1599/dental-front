@@ -141,7 +141,12 @@ const router = createRouter({
               name: 'settings-security',
               component: () => import('../views/settings/SecuritySettingsView.vue'),
               meta: { requiresAdmin: true },
-            }
+            },
+            { 
+              path: 'appearance',
+              name: 'settings-appearance',
+              component: () => import('../views/settings/AppearanceView.vue'),
+              meta: { requiresAdmin: true } },
           ]
         },
       ],

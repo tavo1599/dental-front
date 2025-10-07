@@ -95,6 +95,7 @@ export interface Tenant {
   googleCalendarId: string | null;
   plan: string;
   maxUsers: number;
+  logoUrl: string | null;
 }
 
 export interface Patient {

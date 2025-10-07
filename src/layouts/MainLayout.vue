@@ -3,12 +3,19 @@ import { useAuthStore } from '@/stores/auth';
 import { useAppointmentsStore } from '@/stores/appointments';
 import { onMounted, computed } from 'vue';
 import { storeToRefs } from 'pinia';
-import LogoDental from '@/components/icons/LogoDental.vue';
 import IconLogout from '@/components/icons/IconLogout.vue';
 import ImpersonationBanner from '@/components/ImpersonationBanner.vue';
 import AnnouncementBanner from '@/components/AnnouncementBanner.vue';
 
 const authStore = useAuthStore();
+
+const logoSrc = computed(() => {
+  if (authStore.user?.tenant?.logoUrl) {
+    // Usa la variable de entorno para construir la URL
+    return `${import.meta.env.VITE_API_BASE_URL}${authStore.user.tenant.logoUrl}`;
+  }
+  return null;
+});
 const appointmentsStore = useAppointmentsStore();
 const { nextDayPending } = storeToRefs(appointmentsStore);
 
@@ -42,7 +49,11 @@ onMounted(() => {
 
     <div class="flex flex-1 overflow-hidden">
       <aside class="w-64 flex-shrink-0 bg-slate-800 flex flex-col">
-        <div class="py-6 flex flex-col justify-center border-b border-slate-700">
+        <div class="py-2 flex flex-col justify-center border-b border-slate-700 text-center">
+
+          <div v-if="logoSrc" class="">
+    <img :src="logoSrc" alt="Logo de la Clínica" class="max-h-32 w-auto mx-auto" />
+  </div>
     
     <p v-if="authStore.user?.tenant" class="text-xl text-white font-bold text-center px-2">
       {{ authStore.user.tenant.name }}

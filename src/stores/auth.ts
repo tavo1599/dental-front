@@ -4,6 +4,7 @@ import { ref, computed } from 'vue';
 import { jwtDecode } from 'jwt-decode';
 import { useToast } from 'vue-toastification';
 import * as authService from '@/services/authService';
+import { uploadLogo as uploadLogoApi } from '@/services/tenantService';
 import type { Tenant } from '@/types';
 
 // Interfaz para la información decodificada del token
@@ -61,21 +62,25 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function startImpersonation(impersonationToken: string) {
-    localStorage.setItem('superAdminToken', token.value!);
+    // 1. Guarda el token de Super Admin en sessionStorage
+    sessionStorage.setItem('superAdminToken', token.value!);
+    // 2. Establece el nuevo token de la clínica
     token.value = impersonationToken;
-    localStorage.setItem('token', impersonationToken);
+    sessionStorage.setItem('token', impersonationToken);
     isImpersonating.value = true;
+    // 3. Recarga la página para ir al dashboard de la clínica
     window.location.href = '/dashboard';
   }
 
   function stopImpersonation() {
-    const superAdminToken = localStorage.getItem('superAdminToken');
+    const superAdminToken = sessionStorage.getItem('superAdminToken');
     if (superAdminToken) {
       token.value = superAdminToken;
-      localStorage.setItem('token', superAdminToken);
-      localStorage.removeItem('superAdminToken');
+      sessionStorage.setItem('token', superAdminToken);
+      sessionStorage.removeItem('superAdminToken');
       isImpersonating.value = false;
-      window.location.href = '/super-admin';
+      // Recarga la página para volver al dashboard de Super Admin
+      window.location.href = '/super-admin/dashboard';
     }
   }
 
@@ -128,6 +133,18 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function uploadClinicLogo(file: File) {
+    try {
+      const response = await uploadLogoApi(file);
+      if (user.value && user.value.tenant) {
+        user.value.tenant.logoUrl = response.data.logoUrl;
+        toast.success('Logo actualizado con éxito.');
+      }
+    } catch (error) {
+      toast.error('No se pudo subir el logo.');
+    }
+  }
+
   return { 
     token, 
     user, 
@@ -140,6 +157,7 @@ export const useAuthStore = defineStore('auth', () => {
     handleForgotPassword, 
     handleResetPassword,
     updateToken,
-    refreshUserProfile
+    refreshUserProfile,
+    uploadClinicLogo
   };
 });
