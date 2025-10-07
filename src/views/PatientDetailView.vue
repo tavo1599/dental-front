@@ -215,7 +215,7 @@ async function handleSaveBudget(data: any) {
   const patientId = route.params.id as string;
   const doctorId = authStore.user?.sub;
   const payload = { ...data, patientId, doctorId };
-  const success = await budgetsStore.createBudget(payload);
+  const success = await budgetsStore.createBudget(patientId, payload);
   if (success) {
     isBudgetModalOpen.value = false;
   }
@@ -336,9 +336,9 @@ async function handleGenerateConsent(templateId: string) {
 
       <div class="mt-6">
       <div v-if="activeTab === 'odontogram'">
-         <div v-if="isOdontogramLoading" class="text-center py-10">Cargando odontograma...</div>
-         <Odontogram v-else :whole-teeth="wholeTeeth" :surfaces="surfaces" :patient-age="typeof age === 'number' ? age : 0" :user-role="authStore.user?.role" />
-         <TreatmentPlan @generate-budget="handleGenerateBudget" @register-history="handleRegisterHistory" @clear-plan="handleClearPlan" />
+        <div v-if="isOdontogramLoading" class="text-center py-10">Cargando odontograma...</div>
+        <Odontogram v-else :whole-teeth="wholeTeeth" :surfaces="surfaces" :patient-age="typeof age === 'number' ? age : 0" :user-role="authStore.user?.role" />
+        <TreatmentPlan @generate-budget="handleGenerateBudget" @register-history="handleRegisterHistory" @clear-plan="handleClearPlan" />
       </div>
       </div>
 
