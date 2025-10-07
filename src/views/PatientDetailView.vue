@@ -215,7 +215,7 @@ async function handleSaveBudget(data: any) {
   const patientId = route.params.id as string;
   const doctorId = authStore.user?.sub;
   const payload = { ...data, patientId, doctorId };
-  const success = await budgetsStore.createBudget(patientId, payload);
+  const success = await budgetsStore.createBudget(payload);
   if (success) {
     isBudgetModalOpen.value = false;
   }

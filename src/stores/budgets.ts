@@ -26,20 +26,20 @@ export const useBudgetsStore = defineStore('budgets', () => {
     }
   }
 
-  async function createBudget(patientId: string, data: any) {
-    isLoading.value = true;
-    try {
-      await createApi({ ...data, patientId });
-      toast.success('Presupuesto creado con éxito.');
-      await fetchBudgets(patientId);
-      return true;
-    } catch (error) {
-      toast.error('Error al crear el presupuesto.');
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
+async function createBudget(payload: any) { // Ahora acepta un solo objeto 'payload'
+  isLoading.value = true;
+  try {
+    await createApi(payload); // Le pasamos el payload directamente a la API
+    toast.success('Presupuesto creado con éxito.');
+    await fetchBudgets(payload.patientId);
+    return true;
+  } catch (error) {
+    toast.error('Error al crear el presupuesto.');
+    return false;
+  } finally {
+    isLoading.value = false;
   }
+}
 
   async function fetchBudgetForPrint(id: string) {
     isLoading.value = true;
