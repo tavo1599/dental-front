@@ -10,9 +10,10 @@ import AnnouncementBanner from '@/components/AnnouncementBanner.vue';
 const authStore = useAuthStore();
 
 const logoSrc = computed(() => {
-  if (authStore.user?.tenant?.logoUrl) {
-    // Usa la variable de entorno para construir la URL
-    return `${import.meta.env.VITE_API_BASE_URL}${authStore.user.tenant.logoUrl}`;
+  // Ahora lee la URL directamente del tenant en el store
+  const logoPath = authStore.user?.tenant?.logoUrl;
+  if (logoPath) {
+    return `${import.meta.env.VITE_API_BASE_URL}${logoPath}`;
   }
   return null;
 });
