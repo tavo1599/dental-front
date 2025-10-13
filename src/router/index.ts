@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { jwtDecode } from 'jwt-decode';
 
 // Solo importamos los layouts y la vista de login de forma estática
 import LoginView from '../views/LoginView.vue'
@@ -62,6 +63,11 @@ const router = createRouter({
           path: 'budget/:id',
           name: 'print-budget',
           component: () => import('../views/BudgetPrintView.vue'),
+        },
+        {
+          path: 'payment/:id',
+          name: 'print-payment-receipt',
+          component: () => import('../views/PaymentReceiptView.vue'),
         },
       ],
     },
@@ -157,16 +163,26 @@ const router = createRouter({
 // Navigation Guard (sin cambios)
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
-  const isAuthenticated = authStore.isAuthenticated;
-  const isSuperAdmin = authStore.user?.isSuperAdmin;
 
+  // La clave: Si el usuario no está cargado en el store,
+  // pero sí existe un token en el navegador,
+  // se ejecuta checkToken() para cargar al usuario.
+  if (!authStore.user && sessionStorage.getItem('token')) {
+    authStore.checkToken();
+  }
+
+  const isAuthenticated = authStore.isAuthenticated;
+
+  // Si la ruta requiere autenticación Y el usuario no está autenticado...
   if (to.meta.requiresAuth && !isAuthenticated) {
-    next({ name: 'login' });
-  } else if (to.meta.requiresSuperAdmin && !isSuperAdmin) {
-    next({ name: 'dashboard' });
-  } else if (to.meta.requiresClinicUser && isSuperAdmin) {
-    next({ name: 'super-admin-dashboard' });
+    // ...y no estamos ya yendo al login (para evitar un bucle)...
+    if (to.name !== 'login') {
+      next({ name: 'login' });
+    } else {
+      next(); // Si ya va al login, déjalo pasar.
+    }
   } else {
+    // Si estás autenticado o la ruta no lo requiere, déjalo pasar.
     next();
   }
 });

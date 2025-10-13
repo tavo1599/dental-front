@@ -6,13 +6,15 @@ import {
   createBudget as createApi, 
   getBudgetById as getByIdApi 
 } from '@/services/budgetService';
-import type { Budget } from '@/types';
+import type { Budget, Payment } from '@/types';
+import { getPaymentById } from '@/services/paymentService';
 
 export const useBudgetsStore = defineStore('budgets', () => {
   const toast = useToast();
   const budgets = ref<Budget[]>([]);
   const selectedBudget = ref<Budget | null>(null);
   const isLoading = ref(false);
+  const selectedPayment = ref<Payment | null>(null);
 
   async function fetchBudgets(patientId: string) {
     isLoading.value = true;
@@ -54,12 +56,27 @@ async function createBudget(payload: any) { // Ahora acepta un solo objeto 'payl
     }
   }
 
+  async function fetchPaymentForReceipt(paymentId: string) {
+    isLoading.value = true;
+    selectedPayment.value = null;
+    try {
+      const response = await getPaymentById(paymentId);
+      selectedPayment.value = response.data;
+    } catch (error) {
+      toast.error('No se pudo cargar el pago para la boleta.');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   return { 
     budgets, 
     isLoading, 
     selectedBudget,
     fetchBudgets, 
     createBudget, 
-    fetchBudgetForPrint
+    fetchBudgetForPrint,
+    selectedPayment,
+    fetchPaymentForReceipt,
   };
 });

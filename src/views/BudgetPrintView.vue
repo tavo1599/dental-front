@@ -63,7 +63,10 @@ const formatDate = (dateString: string) => {
         <header class="flex justify-between items-start pb-6 border-b-2 border-primary">
           <div>
             <h1 class="text-3xl font-bold text-primary">{{ selectedBudget.tenant.name }}</h1>
-            </div>
+            <p class="text-sm text-gray-500 mt-1">{{ selectedBudget.tenant.address }}</p>
+            <p class="text-sm text-gray-500">{{ selectedBudget.tenant.phone }}</p>
+            <p class="text-sm text-gray-500">{{ selectedBudget.tenant.email }}</p>
+          </div>
           <div v-if="logoSrc" class="w-24 h-24 flex-shrink-0">
             <img :src="logoSrc" @load="isLogoLoaded = true" alt="Logo de la Clínica" class="max-h-24 max-w-24 object-contain" />
           </div>
@@ -114,7 +117,7 @@ const formatDate = (dateString: string) => {
                 <span>S/. {{ Number(selectedBudget.totalAmount).toFixed(2) }}</span>
               </div>
             </div>
-             <p class="text-xs text-gray-500 mt-6">Presupuesto válido por 30 días.</p>
+            <p class="text-xs text-gray-500 mt-6">Presupuesto válido por 30 días.</p>
           </div>
         </footer>
       </div>

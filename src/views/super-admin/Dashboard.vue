@@ -53,6 +53,7 @@ async function handleSaveClinic(data: any) {
   }
 }
 
+
 async function impersonate(userId: string) {
   if (!userId) return;
   if (confirm('¿Estás seguro de que quieres iniciar sesión como este usuario? Serás redirigido.')) {

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useToast } from 'vue-toastification';
 import { 
   getAppointments,
@@ -13,16 +13,25 @@ import type { Appointment, AppointmentStatus } from '@/types';
 
 export const useAppointmentsStore = defineStore('appointments', () => {
   const toast = useToast();
-  const appointments = ref<Appointment[]>([]);
+  const allAppointments = ref<Appointment[]>([]); // Lista original sin filtrar
   const patientAppointments = ref<Appointment[]>([]);
   const isLoading = ref(false);
   const nextDayPending = ref<Appointment[]>([]);
+  const selectedStatus = ref<AppointmentStatus | 'all'>('all'); // Estado para el filtro
+
+  // 'appointments' ahora devuelve la lista filtrada
+  const appointments = computed(() => {
+    if (selectedStatus.value === 'all') {
+      return allAppointments.value;
+    }
+    return allAppointments.value.filter(a => a.status === selectedStatus.value);
+  });
 
   async function fetchAppointments() {
     isLoading.value = true;
     try {
       const response = await getAppointments();
-      appointments.value = response.data;
+      allAppointments.value = response.data; // Guarda en la lista original
     } catch (error) {
       toast.error('No se pudo cargar la agenda.');
     } finally {
@@ -36,7 +45,7 @@ export const useAppointmentsStore = defineStore('appointments', () => {
       const response = await createApi(data);
       const newAppointment = response.data;
       
-      appointments.value.push(newAppointment);
+      allAppointments.value.push(newAppointment); // Añade a la lista original
       await fetchNextDayPending();
       
       toast.success('Cita creada con éxito.');
@@ -53,7 +62,7 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     try {
       await updateTimeApi(id, data);
       toast.success('Cita reprogramada con éxito.');
-      await fetchAppointments(); // Refrescamos la lista completa después de reprogramar
+      await fetchAppointments();
     } catch (error) {
       toast.error('No se pudo reprogramar la cita.');
     }
@@ -95,5 +104,23 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     }
   }
 
-  return { appointments, patientAppointments, isLoading, nextDayPending, fetchAppointments, fetchAppointmentsForPatient, createAppointment, updateAppointmentTime, updateAppointmentStatus, fetchNextDayPending };
+  // Nueva función para aplicar el filtro
+  function filterByStatus(status: AppointmentStatus | 'all') {
+    selectedStatus.value = status;
+  }
+
+  return { 
+    appointments, 
+    patientAppointments, 
+    isLoading, 
+    nextDayPending,
+    selectedStatus,
+    fetchAppointments, 
+    fetchAppointmentsForPatient, 
+    createAppointment, 
+    updateAppointmentTime, 
+    updateAppointmentStatus, 
+    fetchNextDayPending,
+    filterByStatus
+  };
 });

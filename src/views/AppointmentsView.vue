@@ -14,11 +14,12 @@ import AppointmentDetailModal from '@/components/AppointmentDetailModal.vue';
 import ConfirmationModal from '@/components/ConfirmationModal.vue';
 import type { Appointment, User } from '@/types';
 import { AppointmentStatus } from '@/types';
+import { translateAppointmentStatus } from '@/utils/formatters';
 import { getDoctors } from '@/services/userService';
 
 const calendarRef = ref<InstanceType<typeof FullCalendar> | null>(null);
 const appointmentsStore = useAppointmentsStore();
-const { appointments, isLoading } = storeToRefs(appointmentsStore);
+const { appointments, isLoading, selectedStatus } = storeToRefs(appointmentsStore);
 const authStore = useAuthStore();
 
 const doctors = ref<User[]>([]);
@@ -26,9 +27,11 @@ const selectedDoctorId = ref<string>('all');
 const isFormModalOpen = ref(false);
 const isDetailModalOpen = ref(false);
 const isDropConfirmModalOpen = ref(false);
+const isResizeConfirmModalOpen = ref(false);
 const selectedDateInfo = ref<any>(null);
 const selectedAppointment = ref<Appointment | null>(null);
 const dropEventInfo = ref<any>(null);
+const resizeEventInfo = ref<any>(null);
 
 const filteredAppointments = computed(() => {
   if (selectedDoctorId.value === 'all') return appointments.value;
@@ -64,7 +67,7 @@ const calendarEvents = computed(() => {
     const toLocalISOString = (date: Date) => {
       const pad = (num: number) => num.toString().padStart(2, '0');
       return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
-             `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+            `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
     };
 
     return {
@@ -113,6 +116,11 @@ function handleEventDrop(dropInfo: any) {
   isDropConfirmModalOpen.value = true;
 }
 
+function handleEventResize(resizeInfo: any) {
+  resizeEventInfo.value = resizeInfo;
+  isResizeConfirmModalOpen.value = true;
+}
+
 async function handleSaveAppointment(data: any) {
   const success = await appointmentsStore.createAppointment(data);
   if (success) {
@@ -136,6 +144,25 @@ function cancelReschedule() {
   isDropConfirmModalOpen.value = false;
 }
 
+function confirmResize() {
+  if (resizeEventInfo.value) {
+    const { event } = resizeEventInfo.value;
+    const payload = { startTime: event.startStr, endTime: event.endStr };
+    appointmentsStore.updateAppointmentTime(event.id, payload);
+  }
+  isResizeConfirmModalOpen.value = false;
+}
+
+function cancelResize() {
+  if (resizeEventInfo.value) resizeEventInfo.value.revert();
+  isResizeConfirmModalOpen.value = false;
+}
+
+function handleStatusFilterChange(event: Event) {
+  const newStatus = (event.target as HTMLSelectElement).value as AppointmentStatus | 'all';
+  appointmentsStore.filterByStatus(newStatus);
+}
+
 // --- CONFIGURACIÓN DE FULLCALENDAR ---
 
 const calendarOptions: CalendarOptions = {
@@ -157,6 +184,8 @@ const calendarOptions: CalendarOptions = {
   eventClick: handleEventClick,
   editable: true,
   eventDrop: handleEventDrop,
+  eventResizableFromStart: true, // Permite estirar desde el inicio
+  eventResize: handleEventResize, // <-- Conecta el nuevo manejador
   eventClassNames: 'custom-event',
 };
 
@@ -178,19 +207,31 @@ onMounted(async () => {
   <div>
     <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
       <h1 class="text-3xl font-bold text-text-dark">Agenda de Citas</h1>
-      <div class="w-full md:w-auto">
-        <select v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'assistant'" v-model="selectedDoctorId" id="doctorFilter" class="input-style w-full md:w-64">
+      
+      <div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+        
+        <select @change="handleStatusFilterChange" :value="selectedStatus" class="input-style w-full sm:w-48">
+          <option value="all">Todos los Estados</option>
+          <option v-for="status in AppointmentStatus" :key="status" :value="status">
+            {{ translateAppointmentStatus(status) }}
+          </option>
+        </select>
+        
+        <select v-if="authStore.user?.role === 'assistant' || authStore.user?.role === 'admin'" v-model="selectedDoctorId" class="input-style w-full sm:w-64">
           <option value="all">Todos los Doctores</option>
           <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">
             {{ doctor.fullName }}
           </option>
         </select>
+        
         <div v-else class="text-right">
           <p class="font-semibold text-text-dark">{{ authStore.user?.fullName }}</p>
           <p class="text-sm text-text-light">Mi Agenda</p>
         </div>
+
       </div>
     </div>
+    
     <div class="bg-white rounded-lg shadow-md p-6">
       <FullCalendar ref="calendarRef" :options="calendarOptions" />
     </div>
@@ -231,6 +272,19 @@ onMounted(async () => {
     <img src="@/assets/diente-calendario.png" alt="Icono de calendario y diente" class="h-19 w-19" />
   </template>
 </ConfirmationModal>
+
+<ConfirmationModal 
+      :isOpen="isResizeConfirmModalOpen"
+      title="Actualizar Duración"
+      message="¿Estás seguro de que deseas cambiar la duración de esta cita?"
+      confirmButtonText="Sí, Actualizar" 
+      @confirm="confirmResize"
+      @cancel="cancelResize"
+    >
+    <template #icon>
+    <img src="@/assets/diente-calendario.png" alt="Icono de calendario y diente" class="h-19 w-19" />
+  </template>
+  </ConfirmationModal>
   </div>
 </template>
 

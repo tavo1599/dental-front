@@ -53,6 +53,7 @@ export interface Tooth {
 
 export enum PaymentMethod {
   CASH = 'cash',
+  YAPE = 'yape',
   CARD = 'card',
   TRANSFER = 'transfer',
   OTHER = 'other',
@@ -96,6 +97,9 @@ export interface Tenant {
   plan: string;
   maxUsers: number;
   logoUrl: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
 }
 
 export interface Patient {
@@ -111,6 +115,22 @@ export interface Patient {
   province?: string;
   district?: string;
   gender?: Gender;
+  medicalHistory: MedicalHistory | null;
+  category?: string;
+  fileCode?: string;
+}
+
+export interface MedicalHistory {
+  id: string;
+  mainComplaint: string;
+  isUnderMedicalTreatment: boolean;
+  medicalTreatmentDescription: string;
+  currentMedications: string;
+  systemicDiseases: string;
+  hasBleedingIssues: boolean;
+  isPregnant: boolean | null;
+  lastDentalVisit: Date | null;
+  reasonForLastVisit: string;
 }
 
 export interface Treatment {
@@ -180,7 +200,7 @@ export interface Payment {
   paymentDate: string;
   paymentMethod: PaymentMethod;
   notes?: string;
-  budget?: Budget;
+  budget: Budget;
 }
 
 export interface Cie10Code {

@@ -9,6 +9,7 @@ import { useAppointmentsStore } from '@/stores/appointments';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/stores/auth';
 import { Gender } from '@/types'; // Importamos el enum Gender
+import { translateStatus } from '@/utils/formatters';
 
 // Importación de Componentes
 import Odontogram from '@/components/Odontogram.vue';
@@ -18,6 +19,7 @@ import AppointmentList from '@/components/AppointmentList.vue';
 import Modal from '@/components/Modal.vue';
 import ClinicalHistoryForm from '@/components/ClinicalHistoryForm.vue';
 import BudgetForm from '@/components/BudgetForm.vue';
+import MedicalHistoryForm from '@/components/MedicalHistoryForm.vue';
 import PatientForm from '@/components/PatientForm.vue';
 import ClinicalHistoryDetail from '@/components/ClinicalHistoryDetail.vue';
 import PaymentHistory from '@/components/PaymentHistory.vue';
@@ -45,7 +47,6 @@ const consentTemplatesStore = useConsentTemplatesStore();
 const isConsentModalOpen = ref(false);
 
 const historyInitialData = ref<any>({});
-
 const budgetInitialData = ref<any>({});
 
 const plannedTreatmentsStore = usePlannedTreatmentsStore();
@@ -56,7 +57,7 @@ const router = useRouter(); // Inicializa el router
 
 // Inicialización de Stores
 const patientsStore = usePatientsStore();
-const { selectedPatient, isLoading: isPatientLoading } = storeToRefs(patientsStore);
+const { selectedPatient, medicalHistory, isLoading: isPatientLoading } = storeToRefs(patientsStore);
 
 const odontogramStore = useOdontogramStore();
 const { wholeTeeth, surfaces, isLoading: isOdontogramLoading } = storeToRefs(odontogramStore);
@@ -143,9 +144,26 @@ onMounted(() => {
   appointmentsStore.fetchAppointmentsForPatient(patientId);
   plannedTreatmentsStore.fetchAll(patientId);
   periodontogramStore.fetchPeriodontogram(patientId);
+  patientsStore.fetchMedicalHistory(patientId);
 });
 
 // --- MANEJADORES DE EVENTOS ---
+
+function openNewHistoryModal() {
+  historyInitialData.value = {}; // Limpia los datos anteriores
+  isHistoryModalOpen.value = true;
+}
+
+function openNewBudgetModal() {
+  budgetInitialData.value = {}; // Limpia los datos anteriores
+  isBudgetModalOpen.value = true;
+}
+
+async function handleSaveMedicalHistory(data: any) {
+  if (selectedPatient.value) {
+    await patientsStore.updateMedicalHistory(selectedPatient.value.id, data);
+  }
+}
 
 function handleGenerateBudget(plannedTreatments: PlannedTreatment[]) {
   // 1. Transforma los datos del plan al formato que espera el BudgetForm
@@ -164,22 +182,30 @@ function handleGenerateBudget(plannedTreatments: PlannedTreatment[]) {
 }
 
 function handleRegisterHistory(plannedTreatments: PlannedTreatment[]) {
-  // 1. Formateamos los tratamientos en un texto descriptivo
-  const treatmentsText = plannedTreatments.map(p => 
-    `${p.treatment.name} (Diente #${p.toothSurfaceState.toothNumber})`
-  ).join(', ');
+  // Tomamos el primer tratamiento planificado de la lista para el ejemplo
+  const plan = plannedTreatments[0]; 
+  if (!plan) return;
 
-  // 2. Preparamos los datos para el formulario
+  // 1. Extraemos los datos del diagnóstico (el problema original)
+  const diagnosis = translateStatus(plan.toothSurfaceState.status);
+  const tooth = plan.toothSurfaceState.toothNumber;
+  const surface = plan.toothSurfaceState.surface;
+
+  // 2. Extraemos los datos del tratamiento realizado
+  const treatment = plan.treatment.name;
+
+  // 3. Construimos los textos descriptivos
+  const descriptionText = `Paciente presenta ${diagnosis} en el diente #${tooth} (superficie ${surface}).`;
+  const treatmentText = `${treatment} en el diente #${tooth}.`;
+
+  // 4. Pasamos los datos pre-rellenados al formulario del historial
   historyInitialData.value = {
-    treatmentPerformed: treatmentsText,
-    description: `Se realizaron los siguientes tratamientos planificados: ${treatmentsText}.`
+    description: descriptionText,
+    treatmentPerformed: treatmentText,
+    diagnosis: diagnosis, // También podemos pre-rellenar el campo de diagnóstico
   };
 
-  // 3. Abrimos el modal
   isHistoryModalOpen.value = true;
-
-  const patientId = route.params.id as string;
-  
 }
 
 function handleViewHistoryEntry(entry: ClinicalHistoryEntry) {
@@ -249,6 +275,14 @@ async function handleGenerateConsent(templateId: string) {
 
   isConsentModalOpen.value = false;
 }
+
+function handlePrintReceipt(paymentId: string) {
+  const routeData = router.resolve({
+    name: 'print-payment-receipt',
+    params: { id: paymentId }
+  });
+  window.open(routeData.href, '_blank');
+}
 </script>
 
 <template>
@@ -262,6 +296,7 @@ async function handleGenerateConsent(templateId: string) {
     <div class="border-b border-gray-200">
       <nav class="-mb-px flex space-x-8" aria-label="Tabs">
         <a @click="activeTab = 'info'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Información General</a>
+        <a @click="activeTab = 'medical-history'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'medical-history' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Antecedentes</a>
         <a @click="activeTab = 'odontogram'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'odontogram' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Odontograma</a>
         <a @click="activeTab = 'periodontogram'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'periodontogram' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Periodontograma</a>
         <a @click="activeTab = 'history'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Historial Clínico</a>
@@ -317,6 +352,8 @@ async function handleGenerateConsent(templateId: string) {
           </button>
         </div>
         <div v-if="!isEditing" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div><strong class="text-text-light">Categoría:</strong> <span class="font-mono text-primary font-bold">{{ selectedPatient.category || 'N/A' }}</span></div>
+          <div><strong class="text-text-light">Código Archivo:</strong> <span class="font-mono text-primary font-bold">{{ selectedPatient.fileCode || 'N/A' }}</span></div>
           <div><strong class="text-text-light">DNI:</strong> {{ selectedPatient.dni }}</div>
           <div><strong class="text-text-light">Teléfono:</strong> {{ selectedPatient.phone }}</div>
           <div><strong class="text-text-light">Email:</strong> {{ selectedPatient.email || 'N/A' }}</div>
@@ -340,12 +377,19 @@ async function handleGenerateConsent(templateId: string) {
         <Odontogram v-else :whole-teeth="wholeTeeth" :surfaces="surfaces" :patient-age="typeof age === 'number' ? age : 0" :user-role="authStore.user?.role" />
         <TreatmentPlan @generate-budget="handleGenerateBudget" @register-history="handleRegisterHistory" @clear-plan="handleClearPlan" />
       </div>
+      <div v-if="activeTab === 'medical-history'">
+        <MedicalHistoryForm 
+          :initial-data="medicalHistory"
+          :loading="isPatientLoading"
+          @submit="handleSaveMedicalHistory"
+        />
+      </div>
       </div>
 
       <div v-if="activeTab === 'history'">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-bold text-text-dark">Evolución del Paciente</h2>
-          <button v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'dentist'" @click="isHistoryModalOpen = true" class="btn-primary">
+          <button v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'dentist'" @click="openNewHistoryModal" class="btn-primary">
       + Nueva Entrada
     </button>
         </div>
@@ -356,7 +400,7 @@ async function handleGenerateConsent(templateId: string) {
       <div v-if="activeTab === 'budgets'">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-bold text-text-dark">Planes de Tratamiento</h2>
-          <button @click="isBudgetModalOpen = true" class="btn-primary">
+          <button @click="openNewBudgetModal" class="btn-primary">
             + Nuevo Presupuesto
           </button>
         </div>
@@ -398,7 +442,8 @@ async function handleGenerateConsent(templateId: string) {
     <PaymentHistory 
       v-if="isPaymentModalOpen" 
       :budget-id="selectedBudgetId!" 
-      @payment-saved="closePaymentModal" />
+      @payment-saved="closePaymentModal"
+      @print-receipt="handlePrintReceipt" />
   </template>
 </Modal>
 

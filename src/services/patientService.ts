@@ -21,3 +21,12 @@ export const getPatientById = (id: string) => {
 export const lookupDni = (dni: string) => {
   return apiClient.get<{ fullName: string }>(`/utils/dni/${dni}`);
 };
+
+export const getMedicalHistory = (patientId: string) => {
+  return apiClient.get(`/patients/${patientId}/medical-history`);
+};
+
+export const updateMedicalHistory = (patientId: string, data: any) => {
+  return apiClient.patch(`/patients/${patientId}/medical-history`, data);
+};
+

@@ -18,6 +18,16 @@ const patient = ref<Partial<Patient>>({});
 const isLookingUpDni = ref(false); // Estado de carga para la búsqueda de DNI
 const toast = useToast();
 
+const showCategorization = ref(false);
+
+// Observa el checkbox. Si se desmarca, limpia los campos.
+watch(showCategorization, (newValue) => {
+  if (!newValue) {
+    patient.value.category = '';
+    patient.value.fileCode = '';
+  }
+});
+
 async function handleDniLookup() {
   if (!patient.value.dni || patient.value.dni.length !== 8) {
     toast.warning('Por favor, ingrese un DNI válido de 8 dígitos.');
@@ -115,6 +125,20 @@ async function handleSubmit() {
   <form @submit.prevent="handleSubmit" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
     <!-- Columna Izquierda: Datos Personales y Contacto -->
     <div class="space-y-6">
+      <div class="flex items-center gap-3 border-b pb-4">
+        <input v-model="showCategorization" type="checkbox" id="showCategorization" class="h-4 w-4 rounded text-primary focus:ring-primary">
+        <label for="showCategorization" class="font-medium text-text-dark">Categorizar Paciente (para archivo físico)</label>
+      </div>
+      <div v-if="showCategorization" class="grid grid-cols-2 gap-4 animate-fade-in">
+        <div>
+          <label for="category" class="block text-sm font-medium text-text-light">Categoría</label>
+          <input v-model="patient.category" type="text" id="category" class="mt-1 block w-full input-style" placeholder="Ej: O, OI, R...">
+        </div>
+        <div>
+          <label for="fileCode" class="block text-sm font-medium text-text-light">Código de Archivo</label>
+          <input v-model="patient.fileCode" type="text" id="fileCode" class="mt-1 block w-full input-style" placeholder="Ej: 00123">
+        </div>
+      </div>
       <div>
         <label for="fullName" class="block text-sm font-medium text-text-light">Nombre Completo</label>
         <input v-model="patient.fullName" type="text" id="fullName" class="mt-1 block w-full input-style" required />
@@ -142,7 +166,7 @@ async function handleSubmit() {
           <option :value="Gender.OTHER">Otro</option>
         </select>
       </div>
-       <div>
+      <div>
         <label for="phone" class="block text-sm font-medium text-text-light">Teléfono</label>
         <input v-model="patient.phone" type="tel" id="phone" class="mt-1 block w-full input-style" required />
       </div>
@@ -154,7 +178,7 @@ async function handleSubmit() {
 
     <!-- Columna Derecha: Dirección y Datos Clínicos -->
     <div class="space-y-6">
-       <div>
+      <div>
         <label for="department" class="block text-sm font-medium text-text-light">Departamento</label>
         <select v-model="selectedDepartment" id="department" class="mt-1 block w-full input-style">
           <option disabled value="">Seleccione...</option>
@@ -198,6 +222,13 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
 /* Estilo base para los inputs para no repetir clases */
 .input-style {
   @apply border border-gray-300 rounded-md shadow-sm px-4 py-2 focus:outline-none focus:ring-primary focus:border-primary;

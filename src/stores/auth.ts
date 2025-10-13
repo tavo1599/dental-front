@@ -4,7 +4,10 @@ import { ref, computed } from 'vue';
 import { jwtDecode } from 'jwt-decode';
 import { useToast } from 'vue-toastification';
 import * as authService from '@/services/authService';
-import { uploadLogo as uploadLogoApi } from '@/services/tenantService';
+import { 
+  uploadLogo as uploadLogoApi, 
+  updateTenantProfile as updateTenantProfileApi 
+} from '@/services/tenantService';
 import type { Tenant } from '@/types';
 
 // Interfaz para la información decodificada del token
@@ -19,59 +22,89 @@ interface UserPayload {
 
 export const useAuthStore = defineStore('auth', () => {
   const toast = useToast();
-  const token = ref(sessionStorage.getItem('token') || null);
-  const user = ref<UserPayload | null>(null);
-  const isImpersonating = ref(sessionStorage.getItem('superAdminToken') ? true : false);
 
-  const isAuthenticated = computed(() => !!token.value);
+  // Token principal
+  const token = ref<string | null>(sessionStorage.getItem('token') || null);
 
-  function checkToken() {
-    if (token.value) {
-      try {
-        user.value = jwtDecode<UserPayload>(token.value);
-      } catch (e) {
-        // Si el token es inválido o ha expirado, limpiamos todo
-        logout();
+  // Usuario decodificado
+  const user = ref<UserPayload | null>(
+    token.value ? jwtDecode<UserPayload>(token.value) : null
+  );
+
+  // Si existe token de impersonación (modo SuperAdmin suplantando)
+  const isImpersonating = ref(!!sessionStorage.getItem('superAdminToken'));
+
+  // Autenticación: se considera activo si hay token en memoria o sessionStorage
+  const isAuthenticated = computed(() => {
+    return !!token.value || !!sessionStorage.getItem('token');
+  });
+
+  /**
+   * Verifica si hay un token válido y actualiza el usuario.
+   */
+function checkToken() {
+  const storedToken = sessionStorage.getItem('token');
+  if (storedToken) {
+    try {
+      token.value = storedToken;
+      user.value = jwtDecode<UserPayload>(storedToken);
+
+      // Si el usuario está autenticado y la ruta actual es /login
+      if (router.currentRoute.value.path === '/login') {
+        if (user.value?.isSuperAdmin) {
+          router.push('/super-admin');
+        } else {
+          router.push('/boleta'); // 👈 ajusta aquí si tu ruta es /boleta/:id
+        }
       }
+    } catch (error) {
+      logout(); // token inválido o expirado
     }
   }
+}
 
-  // Revisa el token al cargar la aplicación
   checkToken();
 
-  async function login(email: string, password: string) {
+  /**
+   * Iniciar sesión
+   */
+async function login(email: string, password: string) {
     try {
       const response = await authService.login(email, password);
       const newToken = response.data.access_token;
-
       token.value = newToken;
       sessionStorage.setItem('token', newToken);
       user.value = jwtDecode<UserPayload>(newToken);
-      
       toast.success('¡Inicio de sesión exitoso!');
-
       if (user.value.isSuperAdmin) {
-        router.push('/super-admin');
+        await router.push('/super-admin/dashboard');
       } else {
-        router.push('/dashboard');
+        await router.push('/dashboard');
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Credenciales inválidas o error de conexión.';
+      const errorMessage = err.response?.data?.message || 'Credenciales inválidas.';
       toast.error(errorMessage);
     }
   }
 
+
+  /**
+   * Iniciar impersonación (SuperAdmin actuando como clínica)
+   */
   function startImpersonation(impersonationToken: string) {
-    // 1. Guarda el token de Super Admin en sessionStorage
+    // Guardar el token del SuperAdmin
     sessionStorage.setItem('superAdminToken', token.value!);
-    // 2. Establece el nuevo token de la clínica
+    // Reemplazar token por el de la clínica
     token.value = impersonationToken;
     sessionStorage.setItem('token', impersonationToken);
     isImpersonating.value = true;
-    // 3. Recarga la página para ir al dashboard de la clínica
+    // Recargar para aplicar cambios de entorno
     window.location.href = '/dashboard';
   }
 
+  /**
+   * Detener impersonación (volver al SuperAdmin)
+   */
   function stopImpersonation() {
     const superAdminToken = sessionStorage.getItem('superAdminToken');
     if (superAdminToken) {
@@ -79,11 +112,13 @@ export const useAuthStore = defineStore('auth', () => {
       sessionStorage.setItem('token', superAdminToken);
       sessionStorage.removeItem('superAdminToken');
       isImpersonating.value = false;
-      // Recarga la página para volver al dashboard de Super Admin
       window.location.href = '/super-admin/dashboard';
     }
   }
 
+  /**
+   * Cerrar sesión
+   */
   function logout() {
     token.value = null;
     user.value = null;
@@ -94,6 +129,9 @@ export const useAuthStore = defineStore('auth', () => {
     toast.info('Has cerrado la sesión.');
   }
 
+  /**
+   * Recuperar contraseña
+   */
   async function handleForgotPassword(email: string) {
     try {
       const response = await authService.forgotPassword(email);
@@ -103,9 +141,12 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function handleResetPassword(token: string, password: string) {
+  /**
+   * Restablecer contraseña
+   */
+  async function handleResetPassword(tokenParam: string, password: string) {
     try {
-      const response = await authService.resetPassword(token, password);
+      const response = await authService.resetPassword(tokenParam, password);
       toast.success(response.data.message);
       router.push('/login');
     } catch (error: any) {
@@ -113,12 +154,18 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Actualizar token manualmente (si se renueva)
+   */
   function updateToken(newToken: string) {
-  token.value = newToken;
-  localStorage.setItem('token', newToken);
-  user.value = jwtDecode<UserPayload>(newToken);
-}
+    token.value = newToken;
+    sessionStorage.setItem('token', newToken); // Usa sessionStorage
+    user.value = jwtDecode<UserPayload>(newToken);
+  }
 
+  /**
+   * Actualizar perfil del usuario actual (desde API)
+   */
   async function refreshUserProfile() {
     try {
       const response = await authService.getProfile();
@@ -127,12 +174,16 @@ export const useAuthStore = defineStore('auth', () => {
       if (user.value) {
         user.value.tenant = freshUser.tenant;
       }
+
       toast.info('Estado de la conexión verificado.');
     } catch (error) {
       toast.error('No se pudo actualizar el perfil.');
     }
   }
 
+  /**
+   * Subir logo de la clínica
+   */
   async function uploadClinicLogo(file: File) {
     try {
       const response = await uploadLogoApi(file);
@@ -145,19 +196,36 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Actualizar información del tenant (clínica)
+   */
+  async function updateTenantProfile(data: any) {
+    try {
+      const response = await updateTenantProfileApi(data);
+      if (user.value && user.value.tenant) {
+        user.value.tenant = { ...user.value.tenant, ...response.data };
+        toast.success('Información de la clínica actualizada.');
+      }
+    } catch (error) {
+      toast.error('No se pudo actualizar la información.');
+    }
+  }
+
   return { 
     token, 
     user, 
     isAuthenticated, 
     isImpersonating,
     login, 
-    logout, 
+    logout,
+    checkToken,
     startImpersonation, 
     stopImpersonation,
     handleForgotPassword, 
     handleResetPassword,
     updateToken,
     refreshUserProfile,
-    uploadClinicLogo
+    uploadClinicLogo,
+    updateTenantProfile
   };
 });

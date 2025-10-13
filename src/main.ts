@@ -1,18 +1,15 @@
 import './assets/main.css'
-
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import Toast from 'vue-toastification'
 import 'vue-toastification/dist/index.css'
-
 import App from './App.vue'
 import router from './router'
+import { useAuthStore } from '@/stores/auth'
 
 const app = createApp(App)
-
 app.use(createPinia())
 app.use(router)
-
 app.use(Toast, {
   position: 'top-right',
   timeout: 5000,
@@ -30,5 +27,9 @@ app.use(Toast, {
   maxToasts: 5,
   newestOnTop: true,
 })
+
+// ✅ Llamamos al store DESPUÉS de registrar Pinia
+const authStore = useAuthStore()
+authStore.checkToken() // <-- MUY IMPORTANTE
 
 app.mount('#app')

@@ -2,12 +2,14 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { useToast } from 'vue-toastification';
 import { getPatients, createPatient as createPatientApi, updatePatient as updatePatientApi, getPatientById as getByIdApi } from '@/services/patientService';
-import type { Patient } from '@/types';
+import type { Patient, MedicalHistory } from '@/types';
+import * as service from '@/services/patientService';
 
 export const usePatientsStore = defineStore('patients', () => {
   const toast = useToast();
   const patients = ref<Patient[]>([]);
   const selectedPatient = ref<Patient | null>(null);
+  const medicalHistory = ref<MedicalHistory | null>(null);
   const isLoading = ref(false);
 
   async function fetchPatients() {
@@ -76,5 +78,32 @@ export const usePatientsStore = defineStore('patients', () => {
     }
   }
 
-  return { patients, selectedPatient, isLoading, fetchPatients, createPatient, updatePatient, fetchPatientById };
+  async function fetchMedicalHistory(patientId: string) {
+    isLoading.value = true;
+    try {
+      const response = await service.getMedicalHistory(patientId);
+      medicalHistory.value = response.data;
+    } catch (error) {
+      toast.error('No se pudo cargar el historial médico.');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function updateMedicalHistory(patientId: string, data: MedicalHistory) {
+    isLoading.value = true;
+    try {
+      const response = await service.updateMedicalHistory(patientId, data);
+      medicalHistory.value = response.data;
+      toast.success('Antecedentes actualizados con éxito.');
+    } catch (error) {
+      toast.error('No se pudo actualizar el historial médico.');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+
+  return { patients, selectedPatient, medicalHistory, isLoading, fetchPatients, createPatient, updatePatient, fetchPatientById, fetchMedicalHistory,
+    updateMedicalHistory, };
 });

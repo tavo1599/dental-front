@@ -10,3 +10,8 @@ export const uploadLogo = (file: File) => {
     },
   });
 };
+
+export const updateTenantProfile = (data: any) => {
+  return apiClient.patch('/tenants/profile', data);
+};
+
