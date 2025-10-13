@@ -4,13 +4,9 @@ import { ref, computed } from 'vue';
 import { jwtDecode } from 'jwt-decode';
 import { useToast } from 'vue-toastification';
 import * as authService from '@/services/authService';
-import { 
-  uploadLogo as uploadLogoApi, 
-  updateTenantProfile as updateTenantProfileApi 
-} from '@/services/tenantService';
+import { uploadLogo as uploadLogoApi, updateTenantProfile as updateTenantProfileApi } from '@/services/tenantService';
 import type { Tenant } from '@/types';
 
-// Interfaz para la información decodificada del token
 interface UserPayload {
   sub: string;
   email: string;
@@ -22,33 +18,20 @@ interface UserPayload {
 
 export const useAuthStore = defineStore('auth', () => {
   const toast = useToast();
-
-  // Token principal
-  const token = ref<string | null>(sessionStorage.getItem('token') || null);
-
-  // Usuario decodificado
-  const user = ref<UserPayload | null>(
-    token.value ? jwtDecode<UserPayload>(token.value) : null
-  );
-
-  // Si existe token de impersonación (modo SuperAdmin suplantando)
+  const token = ref(sessionStorage.getItem('token') || null);
+  const user = ref<UserPayload | null>(null);
   const isImpersonating = ref(!!sessionStorage.getItem('superAdminToken'));
 
-  // Autenticación: se considera activo si hay token en memoria o sessionStorage
-  const isAuthenticated = computed(() => {
-    return !!token.value || !!sessionStorage.getItem('token');
-  });
+  // Esta promesa se resuelve cuando la sesión inicial está verificada
+  let sessionChecked: Promise<void> | null = null;
 
-  /**
-   * Verifica si hay un token válido y actualiza el usuario.
-   */
-async function checkToken() {
+  const isAuthenticated = computed(() => !!token.value);
+
+  async function checkToken() {
     const storedToken = sessionStorage.getItem('token');
-    if (storedToken) {
+    if (storedToken && !user.value) { // Solo ejecuta si el usuario no está ya cargado
       token.value = storedToken;
       try {
-        // Decodifica el token para tener una info de usuario básica inicial
-        user.value = jwtDecode<UserPayload>(storedToken);
         // Pide el perfil completo y actualizado al backend
         await refreshUserProfile();
       } catch (e) {
@@ -56,19 +39,37 @@ async function checkToken() {
       }
     }
   }
+  
+  async function refreshUserProfile() {
+    if (!token.value) return;
+    try {
+      const response = await authService.getProfile();
+      const freshUser = response.data;
+      
+      // La clave: decodificamos el token actual y lo fusionamos con los datos frescos
+      const decodedUser = jwtDecode<UserPayload>(token.value);
+      user.value = {
+        ...decodedUser,
+        tenant: freshUser.tenant,
+      };
 
-  /**
-   * Iniciar sesión
-   */
-async function login(email: string, password: string) {
+    } catch (error) {
+      toast.error('No se pudo sincronizar el perfil con el servidor.');
+      logout();
+    }
+  }
+
+  async function login(email: string, password: string) {
     try {
       const response = await authService.login(email, password);
       const newToken = response.data.access_token;
       token.value = newToken;
       sessionStorage.setItem('token', newToken);
-      user.value = jwtDecode<UserPayload>(newToken);
+      await refreshUserProfile(); // Usamos refresh para obtener todos los datos
+      
       toast.success('¡Inicio de sesión exitoso!');
-      if (user.value.isSuperAdmin) {
+
+      if (user.value?.isSuperAdmin) {
         await router.push('/super-admin/dashboard');
       } else {
         await router.push('/dashboard');
@@ -79,24 +80,14 @@ async function login(email: string, password: string) {
     }
   }
 
-
-  /**
-   * Iniciar impersonación (SuperAdmin actuando como clínica)
-   */
   function startImpersonation(impersonationToken: string) {
-    // Guardar el token del SuperAdmin
     sessionStorage.setItem('superAdminToken', token.value!);
-    // Reemplazar token por el de la clínica
     token.value = impersonationToken;
     sessionStorage.setItem('token', impersonationToken);
     isImpersonating.value = true;
-    // Recargar para aplicar cambios de entorno
     window.location.href = '/dashboard';
   }
 
-  /**
-   * Detener impersonación (volver al SuperAdmin)
-   */
   function stopImpersonation() {
     const superAdminToken = sessionStorage.getItem('superAdminToken');
     if (superAdminToken) {
@@ -108,9 +99,6 @@ async function login(email: string, password: string) {
     }
   }
 
-  /**
-   * Cerrar sesión
-   */
   function logout() {
     token.value = null;
     user.value = null;
@@ -121,9 +109,6 @@ async function login(email: string, password: string) {
     toast.info('Has cerrado la sesión.');
   }
 
-  /**
-   * Recuperar contraseña
-   */
   async function handleForgotPassword(email: string) {
     try {
       const response = await authService.forgotPassword(email);
@@ -133,9 +118,6 @@ async function login(email: string, password: string) {
     }
   }
 
-  /**
-   * Restablecer contraseña
-   */
   async function handleResetPassword(tokenParam: string, password: string) {
     try {
       const response = await authService.resetPassword(tokenParam, password);
@@ -146,36 +128,12 @@ async function login(email: string, password: string) {
     }
   }
 
-  /**
-   * Actualizar token manualmente (si se renueva)
-   */
   function updateToken(newToken: string) {
     token.value = newToken;
-    sessionStorage.setItem('token', newToken); // Usa sessionStorage
+    sessionStorage.setItem('token', newToken);
     user.value = jwtDecode<UserPayload>(newToken);
   }
 
-  /**
-   * Actualizar perfil del usuario actual (desde API)
-   */
- async function refreshUserProfile() {
-    try {
-      const response = await authService.getProfile();
-      const freshUser = response.data;
-
-      // Actualiza la información del 'tenant' en el store con los datos frescos
-      if (user.value) {
-        user.value.tenant = freshUser.tenant;
-      }
-      toast.info('Estado de la conexión verificado.');
-    } catch (error) {
-      toast.error('No se pudo actualizar el perfil.');
-    }
-  }
-
-  /**
-   * Subir logo de la clínica
-   */
   async function uploadClinicLogo(file: File) {
     try {
       const response = await uploadLogoApi(file);
@@ -188,9 +146,6 @@ async function login(email: string, password: string) {
     }
   }
 
-  /**
-   * Actualizar información del tenant (clínica)
-   */
   async function updateTenantProfile(data: any) {
     try {
       const response = await updateTenantProfileApi(data);
@@ -202,12 +157,16 @@ async function login(email: string, password: string) {
       toast.error('No se pudo actualizar la información.');
     }
   }
+  
+  // Inicia la sesión al crear el store
+  sessionChecked = checkToken();
 
   return { 
     token, 
     user, 
     isAuthenticated, 
     isImpersonating,
+    sessionChecked, // Exporta la promesa
     login, 
     logout,
     checkToken,
