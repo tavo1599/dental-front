@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth';
 import { computed, onMounted, ref } from 'vue';
-import { getGoogleCalendarStatus, unlinkGoogleCalendar } from '@/services/googleCalendarService'; // Asume que creaste este servicio
+import { getGoogleCalendarStatus, unlinkGoogleCalendar } from '@/services/googleCalendarService';
 import { useToast } from 'vue-toastification';
 
 const authStore = useAuthStore();
 const toast = useToast();
 
-const isConnected = ref(false);
+// La vista ahora depende 100% del estado del store.
+const isConnected = computed(() => !!authStore.user?.tenant?.googleRefreshToken);
+
 const connectedEmail = ref('');
 const isLoading = ref(true);
 
@@ -22,9 +24,14 @@ const googleAuthUrl = computed(() => {
 async function checkStatus() {
   isLoading.value = true;
   try {
-    const response = await getGoogleCalendarStatus();
-    isConnected.value = response.data.isConnected;
-    connectedEmail.value = response.data.email || '';
+    // Primero, refrescamos el perfil para obtener los datos más recientes
+    await authStore.refreshUserProfile();
+    
+    // Si después de refrescar está conectado, obtenemos el email
+    if (isConnected.value) {
+      const response = await getGoogleCalendarStatus();
+      connectedEmail.value = response.data.email || '';
+    }
   } catch (error) {
     toast.error('No se pudo verificar el estado de la conexión.');
   } finally {
@@ -39,11 +46,9 @@ async function handleUnlink() {
     try {
       await unlinkGoogleCalendar();
       toast.success('Cuenta desvinculada con éxito.');
-      // Actualiza la UI
-      isConnected.value = false;
-      connectedEmail.value = '';
-      // Refresca el estado del usuario en el store para reflejar el cambio
+      // Refrescamos el perfil para que isConnected se vuelva 'false'
       await authStore.refreshUserProfile();
+      connectedEmail.value = '';
     } catch (error) {
       toast.error('No se pudo desvincular la cuenta.');
     }
@@ -59,7 +64,7 @@ async function handleUnlink() {
     <div v-else-if="isConnected" class="space-y-4">
       <div class="p-4 bg-green-100 text-green-800 rounded-md">
         <p class="font-semibold">¡Conectado!</p>
-        <p class="text-sm">Sincronizado con la cuenta: <strong>{{ connectedEmail }}</strong></p>
+        <p v-if="connectedEmail" class="text-sm">Sincronizado con: <strong>{{ connectedEmail }}</strong></p>
       </div>
       <button @click="handleUnlink" class="btn-secondary !bg-red-100 !text-danger">
         Desvincular Cuenta
@@ -67,12 +72,19 @@ async function handleUnlink() {
     </div>
 
     <div v-else class="space-y-4">
-      <p class="text-text-light">Conecta tu cuenta para que las citas se añadan automáticamente a tu Google Calendar.</p>
+      <p class="text-text-light">Conecta tu cuenta para sincronizar tu agenda con Google Calendar.</p>
       <a :href="googleAuthUrl" target="_blank" rel="noopener noreferrer" class="inline-block btn-primary">
-        Conectar con Google
+        1. Conectar con Google
       </a>
-      <p class="text-xs text-text-light">Después de autorizar en la nueva pestaña, recarga esta página o haz clic en "Refrescar" para ver el estado.</p>
-      <button @click="checkStatus" class="btn-secondary">Refrescar Estado</button>
+      <p class="text-xs text-text-light">Después de autorizar, cierra la pestaña y haz clic en "Verificar Conexión".</p>
+      <button @click="checkStatus" class="btn-secondary">
+        2. Verificar Conexión
+      </button>
     </div>
   </div>
 </template>
+
+<style scoped>
+.btn-primary { @apply px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-80 font-semibold; }
+.btn-secondary { @apply px-4 py-2 bg-gray-200 text-text-dark rounded-lg hover:bg-gray-300 font-semibold; }
+</style>

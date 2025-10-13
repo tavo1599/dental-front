@@ -166,15 +166,15 @@ async function login(email: string, password: string) {
   /**
    * Actualizar perfil del usuario actual (desde API)
    */
-  async function refreshUserProfile() {
+ async function refreshUserProfile() {
     try {
       const response = await authService.getProfile();
       const freshUser = response.data;
 
+      // Actualiza la información del 'tenant' en el store con los datos frescos
       if (user.value) {
         user.value.tenant = freshUser.tenant;
       }
-
       toast.info('Estado de la conexión verificado.');
     } catch (error) {
       toast.error('No se pudo actualizar el perfil.');
