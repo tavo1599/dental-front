@@ -161,28 +161,19 @@ const router = createRouter({
 })
 
 // Navigation Guard (sin cambios)
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
 
-  // La clave: Si el usuario no está cargado en el store,
-  // pero sí existe un token en el navegador,
-  // se ejecuta checkToken() para cargar al usuario.
+  // Si no hay usuario pero sí hay token, espera a que se verifique
   if (!authStore.user && sessionStorage.getItem('token')) {
-    authStore.checkToken();
+    await authStore.checkToken();
   }
 
   const isAuthenticated = authStore.isAuthenticated;
 
-  // Si la ruta requiere autenticación Y el usuario no está autenticado...
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    // ...y no estamos ya yendo al login (para evitar un bucle)...
-    if (to.name !== 'login') {
-      next({ name: 'login' });
-    } else {
-      next(); // Si ya va al login, déjalo pasar.
-    }
+  if (to.meta.requiresAuth && !isAuthenticated && to.name !== 'login') {
+    next({ name: 'login' });
   } else {
-    // Si estás autenticado o la ruta no lo requiere, déjalo pasar.
     next();
   }
 });

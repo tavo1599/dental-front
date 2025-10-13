@@ -42,28 +42,20 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * Verifica si hay un token válido y actualiza el usuario.
    */
-function checkToken() {
-  const storedToken = sessionStorage.getItem('token');
-  if (storedToken) {
-    try {
+async function checkToken() {
+    const storedToken = sessionStorage.getItem('token');
+    if (storedToken) {
       token.value = storedToken;
-      user.value = jwtDecode<UserPayload>(storedToken);
-
-      // Si el usuario está autenticado y la ruta actual es /login
-      if (router.currentRoute.value.path === '/login') {
-        if (user.value?.isSuperAdmin) {
-          router.push('/super-admin');
-        } else {
-          router.push('/boleta'); // 👈 ajusta aquí si tu ruta es /boleta/:id
-        }
+      try {
+        // Decodifica el token para tener una info de usuario básica inicial
+        user.value = jwtDecode<UserPayload>(storedToken);
+        // Pide el perfil completo y actualizado al backend
+        await refreshUserProfile();
+      } catch (e) {
+        logout();
       }
-    } catch (error) {
-      logout(); // token inválido o expirado
     }
   }
-}
-
-  checkToken();
 
   /**
    * Iniciar sesión
