@@ -1,12 +1,16 @@
 import apiClient from './api';
 import type { Budget } from '@/types';
 
-export const getBudgetsForPatient = (patientId: string) => {
-  return apiClient.get<Budget[]>(`/patients/${patientId}/budgets`);
+// Ahora solo pide los presupuestos de un paciente, sin más filtros.
+export const getBudgetsForPatient = (patientId: string, doctorId?: string) => {
+  let url = `/budgets/patient/${patientId}`;
+  if (doctorId) {
+    url += `?doctorId=${doctorId}`;
+  }
+  return apiClient.get<Budget[]>(url);
 };
 
-// --- AÑADE ESTA FUNCIÓN ---
-export const createBudget = (data: { patientId: string; items: any[] }) => {
+export const createBudget = (data: any) => {
   return apiClient.post('/budgets', data);
 };
 

@@ -7,7 +7,9 @@ import * as authService from '@/services/authService';
 import { uploadLogo as uploadLogoApi, updateTenantProfile as updateTenantProfileApi } from '@/services/tenantService';
 import type { Tenant } from '@/types';
 
+// 1. Añadimos 'id' a la interfaz para que TypeScript no se queje
 interface UserPayload {
+  id: string;
   sub: string;
   email: string;
   role: string;
@@ -22,42 +24,23 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<UserPayload | null>(null);
   const isImpersonating = ref(!!sessionStorage.getItem('superAdminToken'));
 
-  // Esta promesa se resuelve cuando la sesión inicial está verificada
-  let sessionChecked: Promise<void> | null = null;
-
   const isAuthenticated = computed(() => !!token.value);
 
-  async function checkToken() {
+  function checkToken() {
     const storedToken = sessionStorage.getItem('token');
-    if (storedToken && !user.value) { // Solo ejecuta si el usuario no está ya cargado
+    if (storedToken) {
       token.value = storedToken;
       try {
-        // Pide el perfil completo y actualizado al backend
-        await refreshUserProfile();
+        const decoded = jwtDecode<UserPayload>(storedToken);
+        // 2. Mapeamos 'sub' a 'id' para que el resto de la app lo entienda
+        user.value = { ...decoded, id: decoded.sub };
       } catch (e) {
         logout();
       }
     }
   }
-  
-  async function refreshUserProfile() {
-    if (!token.value) return;
-    try {
-      const response = await authService.getProfile();
-      const freshUser = response.data;
-      
-      // La clave: decodificamos el token actual y lo fusionamos con los datos frescos
-      const decodedUser = jwtDecode<UserPayload>(token.value);
-      user.value = {
-        ...decodedUser,
-        tenant: freshUser.tenant,
-      };
 
-    } catch (error) {
-      toast.error('No se pudo sincronizar el perfil con el servidor.');
-      logout();
-    }
-  }
+  checkToken(); // Se ejecuta al iniciar para cargar la sesión
 
   async function login(email: string, password: string) {
     try {
@@ -65,11 +48,14 @@ export const useAuthStore = defineStore('auth', () => {
       const newToken = response.data.access_token;
       token.value = newToken;
       sessionStorage.setItem('token', newToken);
-      await refreshUserProfile(); // Usamos refresh para obtener todos los datos
-      
+
+      const decoded = jwtDecode<UserPayload>(newToken);
+      // 3. Hacemos lo mismo aquí al iniciar sesión
+      user.value = { ...decoded, id: decoded.sub };
+
       toast.success('¡Inicio de sesión exitoso!');
 
-      if (user.value?.isSuperAdmin) {
+      if (user.value.isSuperAdmin) {
         await router.push('/super-admin/dashboard');
       } else {
         await router.push('/dashboard');
@@ -77,6 +63,31 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Credenciales inválidas.';
       toast.error(errorMessage);
+    }
+  }
+
+  function logout() {
+    token.value = null;
+    user.value = null;
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('superAdminToken');
+    isImpersonating.value = false;
+    router.push('/login');
+  }
+
+  async function refreshUserProfile() {
+    if (!token.value) return;
+    try {
+      const response = await authService.getProfile();
+      const freshUser = response.data;
+
+      if (user.value) {
+        user.value.tenant = freshUser.tenant;
+      }
+
+    } catch (error) {
+      toast.error('No se pudo sincronizar el perfil.');
+      logout();
     }
   }
 
@@ -97,16 +108,6 @@ export const useAuthStore = defineStore('auth', () => {
       isImpersonating.value = false;
       window.location.href = '/super-admin/dashboard';
     }
-  }
-
-  function logout() {
-    token.value = null;
-    user.value = null;
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('superAdminToken');
-    isImpersonating.value = false;
-    router.push('/login');
-    toast.info('Has cerrado la sesión.');
   }
 
   async function handleForgotPassword(email: string) {
@@ -131,7 +132,8 @@ export const useAuthStore = defineStore('auth', () => {
   function updateToken(newToken: string) {
     token.value = newToken;
     sessionStorage.setItem('token', newToken);
-    user.value = jwtDecode<UserPayload>(newToken);
+    const decoded = jwtDecode<UserPayload>(newToken);
+    user.value = { ...decoded, id: decoded.sub };
   }
 
   async function uploadClinicLogo(file: File) {
@@ -157,16 +159,12 @@ export const useAuthStore = defineStore('auth', () => {
       toast.error('No se pudo actualizar la información.');
     }
   }
-  
-  // Inicia la sesión al crear el store
-  sessionChecked = checkToken();
 
   return { 
     token, 
     user, 
     isAuthenticated, 
     isImpersonating,
-    sessionChecked, // Exporta la promesa
     login, 
     logout,
     checkToken,

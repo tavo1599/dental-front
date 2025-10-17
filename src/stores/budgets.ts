@@ -16,10 +16,11 @@ export const useBudgetsStore = defineStore('budgets', () => {
   const isLoading = ref(false);
   const selectedPayment = ref<Payment | null>(null);
 
-  async function fetchBudgets(patientId: string) {
+ async function fetchBudgets(patientId: string, doctorId?: string) { // <-- Acepta un 'doctorId' opcional
     isLoading.value = true;
     try {
-      const response = await getBudgetsForPatient(patientId);
+      // Pasa ambos argumentos al servicio
+      const response = await getBudgetsForPatient(patientId, doctorId);
       budgets.value = response.data;
     } catch (error) {
       toast.error('No se pudo cargar los presupuestos.');
@@ -28,20 +29,21 @@ export const useBudgetsStore = defineStore('budgets', () => {
     }
   }
 
-async function createBudget(payload: any) { // Ahora acepta un solo objeto 'payload'
-  isLoading.value = true;
-  try {
-    await createApi(payload); // Le pasamos el payload directamente a la API
-    toast.success('Presupuesto creado con éxito.');
-    await fetchBudgets(payload.patientId);
-    return true;
-  } catch (error) {
-    toast.error('Error al crear el presupuesto.');
-    return false;
-  } finally {
-    isLoading.value = false;
+async function createBudget(payload: any) {
+    isLoading.value = true;
+    try {
+      await createApi(payload);
+      toast.success('Presupuesto creado con éxito.');
+      // Llama a fetchBudgets de forma simple, el filtro se aplicará desde la vista si es necesario
+      await fetchBudgets(payload.patientId);
+      return true;
+    } catch (error) {
+      toast.error('Error al crear el presupuesto.');
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
   }
-}
 
   async function fetchBudgetForPrint(id: string) {
     isLoading.value = true;

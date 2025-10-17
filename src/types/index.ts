@@ -192,6 +192,7 @@ export interface Budget {
   items: BudgetItem[];
   patient: Patient;
   tenant: Tenant;
+  doctor?: User;
 }
 
 export interface Payment {
@@ -235,6 +236,8 @@ export interface ConsentTemplate {
   title: string;
   content: string;
   forMinor: boolean;
+  category?: string;
+  tenant?: Tenant | null
 }
 
 export interface PatientDocument {

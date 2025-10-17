@@ -137,6 +137,13 @@ const router = createRouter({
               meta: { requiresAdmin: true },
             },
             {
+              path: 'consents',
+              name: 'settings-consents',
+              // --- RUTA CORREGIDA ---
+              component: () => import('@/views/settings/ConsentManagementView.vue'),
+              meta: { requiresAdmin: true },
+            },
+            {
               path: 'audit',
               name: 'settings-audit',
               component: () => import('../views/settings/AuditLogView.vue'),

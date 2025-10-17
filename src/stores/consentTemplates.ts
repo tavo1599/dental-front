@@ -1,12 +1,7 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useToast } from 'vue-toastification';
-import { 
-  getConsentTemplates, 
-  createConsentTemplate,
-  updateConsentTemplate as updateApi, // <-- Importa la función de actualizar
-  deleteConsentTemplate as deleteApi  // <-- Importa la función de eliminar
-} from '@/services/consentTemplateService';
+import * as service from '@/services/consentTemplateService';
 import type { ConsentTemplate } from '@/types';
 
 export const useConsentTemplatesStore = defineStore('consentTemplates', () => {
@@ -14,40 +9,52 @@ export const useConsentTemplatesStore = defineStore('consentTemplates', () => {
   const templates = ref<ConsentTemplate[]>([]);
   const isLoading = ref(false);
 
-  async function fetchAll() {
+  const systemTemplates = computed(() => templates.value.filter(t => !t.tenant));
+  const clinicTemplates = computed(() => templates.value.filter(t => !!t.tenant));
+
+  async function fetchAllTemplates() {
     isLoading.value = true;
     try {
-      const response = await getConsentTemplates();
+      const response = await service.getConsentTemplates();
       templates.value = response.data;
     } catch (error) {
-      toast.error('No se pudieron cargar las plantillas.');
+      toast.error('No se pudo cargar las plantillas.');
     } finally {
       isLoading.value = false;
     }
   }
 
-  async function create(data: Omit<ConsentTemplate, 'id'>) {
+  async function createTemplate(data: Partial<ConsentTemplate>) {
     isLoading.value = true;
     try {
-      await createConsentTemplate(data);
+      // Aseguramos que todos los campos requeridos se envíen
+      const payload = {
+        title: data.title,
+        content: data.content,
+        category: data.category,
+        forMinor: data.forMinor || false,
+      };
+
+      console.log('Enviando payload para crear plantilla:', payload); // Para depuración
+      
+      await service.createConsentTemplate(payload);
       toast.success('Plantilla creada con éxito.');
-      await fetchAll();
+      await fetchAllTemplates();
       return true;
-    } catch(error) {
+    } catch (error) {
       toast.error('Error al crear la plantilla.');
       return false;
     } finally {
       isLoading.value = false;
     }
   }
-  
-  // --- FUNCIÓN 'update' AÑADIDA ---
-  async function update(id: string, data: Omit<ConsentTemplate, 'id'>) {
+
+  async function updateTemplate(id: string, data: Partial<ConsentTemplate>) {
     isLoading.value = true;
     try {
-      await updateApi(id, data);
+      await service.updateConsentTemplate(id, data);
       toast.success('Plantilla actualizada con éxito.');
-      await fetchAll();
+      await fetchAllTemplates();
       return true;
     } catch (error) {
       toast.error('Error al actualizar la plantilla.');
@@ -57,19 +64,25 @@ export const useConsentTemplatesStore = defineStore('consentTemplates', () => {
     }
   }
 
-  // --- FUNCIÓN 'remove' AÑADIDA ---
-  async function remove(id: string) {
-    isLoading.value = true;
+  async function deleteTemplate(id: string) {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta plantilla?')) return;
     try {
-      await deleteApi(id);
-      toast.success('Plantilla eliminada con éxito.');
-      await fetchAll();
+      await service.deleteConsentTemplate(id);
+      toast.success('Plantilla eliminada.');
+      await fetchAllTemplates();
     } catch (error) {
       toast.error('Error al eliminar la plantilla.');
-    } finally {
-      isLoading.value = false;
     }
   }
-  
-  return { templates, isLoading, fetchAll, create, update, remove };
+
+  return {
+    templates,
+    systemTemplates,
+    clinicTemplates,
+    isLoading,
+    fetchAllTemplates,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+  };
 });
