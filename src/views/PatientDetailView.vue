@@ -1,269 +1,278 @@
-  <script setup lang="ts">
-  import { onMounted, ref, computed, watch } from 'vue';
-  import { useRoute, useRouter } from 'vue-router'; // Importa useRouter
-  import { usePatientsStore } from '@/stores/patients';
-  import { useOdontogramStore } from '@/stores/odontogram';
-  import { useClinicalHistoryStore } from '@/stores/clinicalHistory';
-  import { useBudgetsStore } from '@/stores/budgets';
-  import { useAppointmentsStore } from '@/stores/appointments';
-  import { storeToRefs } from 'pinia';
-  import { useAuthStore } from '@/stores/auth';
-  import { Gender } from '@/types'; // Importamos el enum Gender
-  import { translateStatus } from '@/utils/formatters';
-  import { useUsersStore } from '@/stores/users';
+<script setup lang="ts">
+import { onMounted, ref, computed, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { usePatientsStore } from '@/stores/patients';
+import { useOdontogramStore } from '@/stores/odontogram';
+import { useClinicalHistoryStore } from '@/stores/clinicalHistory';
+import { useBudgetsStore } from '@/stores/budgets';
+import { useAppointmentsStore } from '@/stores/appointments';
+import { storeToRefs } from 'pinia';
+import { useAuthStore } from '@/stores/auth';
+import { Gender } from '@/types';
+import { translateStatus } from '@/utils/formatters';
+import { useUsersStore } from '@/stores/users';
 
-  // Importación de Componentes
-  import Odontogram from '@/components/Odontogram.vue';
-  import ClinicalHistoryList from '@/components/ClinicalHistoryList.vue';
-  import BudgetList from '@/components/BudgetList.vue';
-  import AppointmentList from '@/components/AppointmentList.vue';
-  import Modal from '@/components/Modal.vue';
-  import ClinicalHistoryForm from '@/components/ClinicalHistoryForm.vue';
-  import BudgetForm from '@/components/BudgetForm.vue';
-  import MedicalHistoryForm from '@/components/MedicalHistoryForm.vue';
-  import PatientForm from '@/components/PatientForm.vue';
-  import ClinicalHistoryDetail from '@/components/ClinicalHistoryDetail.vue';
-  import PaymentHistory from '@/components/PaymentHistory.vue';
-  import PrintBudgetModal from '@/components/PrintBudgetModal.vue';
-  import type { ClinicalHistoryEntry } from '@/types';
-  import { usePlannedTreatmentsStore } from '@/stores/plannedTreatments'; // Importa el nuevo store
-  import TreatmentPlan from '@/components/TreatmentPlan.vue'; // Importa el nuevo componente
-  import type { PlannedTreatment } from '@/types';
-  import GenerateConsentModal from '@/components/GenerateConsentModal.vue';
-  import { useConsentTemplatesStore } from '@/stores/consentTemplates';
-  import { generateConsent } from '@/services/consentTemplateService';
-  import { useDocumentsStore } from '@/stores/documents';
-  import { usePeriodontogramStore } from '@/stores/periodontogram';
-  import Periodontogram from '@/components/Periodontogram.vue';
+// Importación de Componentes
+import Odontogram from '@/components/Odontogram.vue';
+import ClinicalHistoryList from '@/components/ClinicalHistoryList.vue';
+import BudgetList from '@/components/BudgetList.vue';
+import AppointmentList from '@/components/AppointmentList.vue';
+import Modal from '@/components/Modal.vue';
+import ClinicalHistoryForm from '@/components/ClinicalHistoryForm.vue';
+import BudgetForm from '@/components/BudgetForm.vue';
+import AnamnesisHub from '@/components/AnamnesisHub.vue'; // <-- Importa el Hub
+import PatientForm from '@/components/PatientForm.vue';
+import ClinicalHistoryDetail from '@/components/ClinicalHistoryDetail.vue';
+import PaymentHistory from '@/components/PaymentHistory.vue';
+import PrintBudgetModal from '@/components/PrintBudgetModal.vue';
+import type { ClinicalHistoryEntry } from '@/types';
+import { usePlannedTreatmentsStore } from '@/stores/plannedTreatments';
+import TreatmentPlan from '@/components/TreatmentPlan.vue';
+import type { PlannedTreatment } from '@/types';
+import GenerateConsentModal from '@/components/GenerateConsentModal.vue';
+import { useConsentTemplatesStore } from '@/stores/consentTemplates';
+import { generateConsent } from '@/services/consentTemplateService';
+import { useDocumentsStore } from '@/stores/documents';
+import { usePeriodontogramStore } from '@/stores/periodontogram';
+import Periodontogram from '@/components/Periodontogram.vue';
 
-  const usersStore = useUsersStore(); // <-- 2. INICIALIZA EL STORE
-  const { doctors } = storeToRefs(usersStore);
+// --- Inicialización de Stores ---
+const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore();
+const patientsStore = usePatientsStore();
+const odontogramStore = useOdontogramStore();
+const clinicalHistoryStore = useClinicalHistoryStore();
+const budgetsStore = useBudgetsStore();
+const appointmentsStore = useAppointmentsStore();
+const plannedTreatmentsStore = usePlannedTreatmentsStore();
+const periodontogramStore = usePeriodontogramStore();
+const documentsStore = useDocumentsStore();
+const usersStore = useUsersStore();
+const consentTemplatesStore = useConsentTemplatesStore();
 
-  const selectedDoctorId = ref('all');
+// --- Refs de Stores ---
+const { selectedPatient, medicalHistory, odontopediatricHistory, isLoading: isPatientLoading } = storeToRefs(patientsStore);
+const { wholeTeeth, surfaces, isLoading: isOdontogramLoading } = storeToRefs(odontogramStore);
+const { entries: historyEntries, isLoading: isHistoryLoading } = storeToRefs(clinicalHistoryStore);
+const { budgets, isLoading: isBudgetsLoading } = storeToRefs(budgetsStore);
+const { patientAppointments, isLoading: isAppointmentsLoading } = storeToRefs(appointmentsStore);
+const { documents, isLoading: isDocumentsLoading } = storeToRefs(documentsStore);
+const { doctors } = storeToRefs(usersStore);
 
-  const periodontogramStore = usePeriodontogramStore();
+// --- Refs de UI ---
+const activeTab = ref('info');
+const selectedDoctorId = ref<string>('all');
+const isEditing = ref(false);
+const isHistoryModalOpen = ref(false);
+const isBudgetModalOpen = ref(false);
+const isHistoryDetailModalOpen = ref(false);
+const isPaymentModalOpen = ref(false);
+const isPrintModalOpen = ref(false);
+const selectedHistoryEntry = ref<ClinicalHistoryEntry | null>(null);
+const selectedBudgetId = ref<string | null>(null);
+const budgetToPrintId = ref<string | null>(null);
+const fileToUpload = ref<File | null>(null);
+const isConsentModalOpen = ref(false);
+const historyInitialData = ref<any>({});
+const budgetInitialData = ref<any>({});
 
-  const documentsStore = useDocumentsStore(); // Inicializa el store
-  const { documents, isLoading: isDocumentsLoading } = storeToRefs(documentsStore);
+// --- Propiedades Computadas ---
+const age = computed(() => {
+  if (!selectedPatient.value?.birthDate) return 'N/A';
+  const birthDate = new Date(selectedPatient.value.birthDate);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+});
 
-  const fileToUpload = ref<File | null>(null);
-
-  const consentTemplatesStore = useConsentTemplatesStore();
-
-  const isConsentModalOpen = ref(false);
-
-  const historyInitialData = ref<any>({});
-  const budgetInitialData = ref<any>({});
-
-  const plannedTreatmentsStore = usePlannedTreatmentsStore();
-
-  const authStore = useAuthStore();
-  const route = useRoute();
-  const router = useRouter(); // Inicializa el router
-
-  // Inicialización de Stores
-  const patientsStore = usePatientsStore();
-  const { selectedPatient, medicalHistory, isLoading: isPatientLoading } = storeToRefs(patientsStore);
-
-  const odontogramStore = useOdontogramStore();
-  const { wholeTeeth, surfaces, isLoading: isOdontogramLoading } = storeToRefs(odontogramStore);
-
-  const clinicalHistoryStore = useClinicalHistoryStore();
-  const { entries: historyEntries, isLoading: isHistoryLoading } = storeToRefs(clinicalHistoryStore);
-
-  const budgetsStore = useBudgetsStore();
-  const { budgets, isLoading: isBudgetsLoading } = storeToRefs(budgetsStore);
-
-  const appointmentsStore = useAppointmentsStore();
-  const { patientAppointments, isLoading: isAppointmentsLoading } = storeToRefs(appointmentsStore);
-
-  // Estado para la UI
-  const activeTab = ref('info');
-  const isEditing = ref(false);
-  const isHistoryModalOpen = ref(false);
-  const isBudgetModalOpen = ref(false);
-  const isHistoryDetailModalOpen = ref(false);
-  const isPaymentModalOpen = ref(false);
-  const isPrintModalOpen = ref(false);
-  const selectedHistoryEntry = ref<ClinicalHistoryEntry | null>(null);
-  const selectedBudgetId = ref<string | null>(null);
-  const budgetToPrintId = ref<string | null>(null);
-
-
-
-  const age = computed(() => {
-    if (!selectedPatient.value?.birthDate) return 'N/A';
-    const birthDate = new Date(selectedPatient.value.birthDate);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  });
-
-  watch(() => selectedPatient.value, (newPatient) => {
-    if (newPatient) {
-      documentsStore.fetchDocuments(newPatient.id);
-    }
-  }, { immediate: true });
-
-  const formatGender = (gender?: Gender) => {
-    if (!gender) return 'N/A';
-    switch (gender) {
-      case Gender.MALE:
-        return 'Masculino';
-      case Gender.FEMALE:
-        return 'Femenino';
-      case Gender.OTHER:
-        return 'Otro';
-      default:
-        return 'N/A';
-    }
-  };
-
-  const filteredBudgets = computed(() => {
-  // Si el usuario es doctor, SIEMPRE filtra por su ID
+const filteredBudgets = computed(() => {
   if (authStore.user?.role === 'dentist') {
     return budgets.value.filter(b => b.doctor?.id === authStore.user?.id);
   }
-  
-  // Si es admin/asistente y el filtro es "Todos", muestra todo
   if (selectedDoctorId.value === 'all') {
     return budgets.value;
   }
-  
-  // Si es admin/asistente y ha seleccionado un doctor, filtra
   return budgets.value.filter(b => b.doctor?.id === selectedDoctorId.value);
 });
-onMounted(() => {
+
+const formatGender = (gender?: Gender) => {
+  if (!gender) return 'N/A';
+  switch (gender) {
+    case Gender.MALE: return 'Masculino';
+    case Gender.FEMALE: return 'Femenino';
+    case Gender.OTHER: return 'Otro';
+    default: return 'N/A';
+  }
+};
+
+watch(() => route.params.id, (newId) => {
+  if (newId) {
+    const patientId = newId as string;
+    
+    // Resetea todos los stores al cambiar de paciente
+    patientsStore.selectedPatient = null;
+    patientsStore.medicalHistory = null;
+    patientsStore.odontopediatricHistory = null;
+    odontogramStore.wholeTeeth = {};
+    odontogramStore.surfaces = {};
+    clinicalHistoryStore.entries = [];
+    budgetsStore.budgets = [];
+    appointmentsStore.patientAppointments = [];
+    documentsStore.documents = [];
+    plannedTreatmentsStore.plannedTreatments = [];
+
+    // Carga la información esencial del nuevo paciente
+    patientsStore.fetchPatientById(patientId);
+    
+    // Vuelve a cargar los datos de la pestaña que esté activa
+    loadDataForTab(activeTab.value, patientId);
+  }
+}, { immediate: true }); // 'immediate: true' lo ejecuta al cargar la página
+
+// 2. Observador de pestaña: carga datos solo cuando se hace clic
+watch(activeTab, (newTab) => {
   const patientId = route.params.id as string;
-  const userRole = authStore.user?.role;
-  const userId = authStore.user?.id;
-
-  // Carga todos los datos del paciente (esto no cambia)
-  patientsStore.fetchPatientById(patientId);
-  odontogramStore.fetchOdontogram(patientId);
-  clinicalHistoryStore.fetchHistory(patientId);
-  appointmentsStore.fetchAppointmentsForPatient(patientId);
-  plannedTreatmentsStore.fetchAll(patientId);
-  periodontogramStore.fetchPeriodontogram(patientId);
-  patientsStore.fetchMedicalHistory(patientId);
-
-  // Lógica de carga inicial para los presupuestos, ahora con el caso del admin
-  if (userRole === 'dentist') {
-    // Si es doctor, filtra por su ID y no carga la lista de doctores.
-    if (userId) budgetsStore.fetchBudgets(patientId, userId);
-  } else if (userRole === 'admin') {
-    // Si es admin, establece su propio ID como el filtro por defecto.
-    if (userId) {
-      selectedDoctorId.value = userId;
-      budgetsStore.fetchBudgets(patientId, userId);
-    }
-    // Y también carga la lista completa de doctores para el filtro.
-    usersStore.fetchDoctors();
-  } else if (userRole === 'assistant') {
-    // Si es asistente, carga todos por defecto y la lista de doctores.
-    budgetsStore.fetchBudgets(patientId);
-    usersStore.fetchDoctors();
+  if (patientId) {
+    loadDataForTab(newTab, patientId);
   }
 });
 
-  // --- MANEJADORES DE EVENTOS ---
-
-  function onFileChange(event: Event) {
-    const target = event.target as HTMLInputElement;
-    if (target.files) {
-      fileToUpload.value = target.files[0];
-    }
+// 3. Función de carga centralizada (se llama al cambiar de ID o de pestaña)
+function loadDataForTab(tab: string, patientId: string) {
+  switch (tab) {
+    case 'medical-history':
+      if (!medicalHistory.value) {
+        patientsStore.fetchMedicalHistory(patientId);
+        patientsStore.fetchOdontopediatricHistory(patientId);
+      }
+      break;
+    case 'odontogram':
+      if (Object.keys(wholeTeeth.value).length === 0) {
+        odontogramStore.fetchOdontogram(patientId);
+        plannedTreatmentsStore.fetchAll(patientId);
+      }
+      break;
+    case 'periodontogram':
+      periodontogramStore.fetchPeriodontogram(patientId);
+      break;
+    case 'history':
+      if (historyEntries.value.length === 0) {
+        clinicalHistoryStore.fetchHistory(patientId);
+      }
+      break;
+    case 'budgets':
+      if (budgets.value.length === 0) {
+        if (authStore.user?.role === 'dentist') {
+          budgetsStore.fetchBudgets(patientId, authStore.user.id);
+        } else {
+          budgetsStore.fetchBudgets(patientId);
+          if (authStore.user?.role === 'admin' || authStore.user?.role === 'assistant') {
+            usersStore.fetchDoctors();
+          }
+        }
+      }
+      break;
+    case 'appointments':
+      if (patientAppointments.value.length === 0) {
+        appointmentsStore.fetchAppointmentsForPatient(patientId);
+      }
+      break;
+    case 'documents':
+      if (documents.value.length === 0) {
+        documentsStore.fetchDocuments(patientId);
+      }
+      break;
   }
-  function handleUpload() {
-    if (fileToUpload.value && selectedPatient.value) {
-      documentsStore.uploadDocument(selectedPatient.value.id, fileToUpload.value);
-      fileToUpload.value = null; // Limpia el input
-    }
+}
+
+// Watch para reaccionar al filtro de doctor
+watch(selectedDoctorId, (newDoctorId) => {
+  if (activeTab.value !== 'budgets') return;
+  const patientId = route.params.id as string;
+  const doctorIdToFetch = newDoctorId === 'all' ? undefined : newDoctorId;
+  budgetsStore.fetchBudgets(patientId, doctorIdToFetch);
+});
+
+// --- MANEJADORES DE EVENTOS ---
+function onFileChange(event: Event) {
+  const target = event.target as HTMLInputElement;
+  if (target.files) {
+    fileToUpload.value = target.files[0];
   }
-
-  function handleClearPlan() {
-    const patientId = route.params.id as string;
-    plannedTreatmentsStore.clearAll(patientId);
+}
+async function handleUpload() {
+  if (fileToUpload.value && selectedPatient.value) {
+    await documentsStore.uploadDocument(selectedPatient.value.id, fileToUpload.value);
+    fileToUpload.value = null;
   }
+}
 
-  function openNewHistoryModal() {
-    historyInitialData.value = {}; // Limpia los datos anteriores
-    isHistoryModalOpen.value = true;
+function handleClearPlan() {
+  const patientId = route.params.id as string;
+  plannedTreatmentsStore.clearAll(patientId);
+}
+
+function openNewHistoryModal() {
+  historyInitialData.value = {};
+  isHistoryModalOpen.value = true;
+}
+
+function openNewBudgetModal() {
+  budgetInitialData.value = {};
+  isBudgetModalOpen.value = true;
+}
+
+async function handleSaveMedicalHistory(data: any) {
+  if (selectedPatient.value) {
+    await patientsStore.updateMedicalHistory(selectedPatient.value.id, data);
   }
+}
 
-  function openNewBudgetModal() {
-    budgetInitialData.value = {}; // Limpia los datos anteriores
-    isBudgetModalOpen.value = true;
-  }
+function handleGenerateBudget(plannedTreatments: PlannedTreatment[]) {
+  const prefilledItems = plannedTreatments.map(plan => ({
+    treatment: plan.treatment,
+    quantity: 1,
+    priceAtTimeOfBudget: plan.treatment.price,
+  }));
+  budgetInitialData.value = { prefilledItems };
+  isBudgetModalOpen.value = true;
+}
 
-  async function handleSaveMedicalHistory(data: any) {
-    if (selectedPatient.value) {
-      await patientsStore.updateMedicalHistory(selectedPatient.value.id, data);
-    }
-  }
+function handleRegisterHistory(plannedTreatments: PlannedTreatment[]) {
+  const plan = plannedTreatments[0]; 
+  if (!plan) return;
+  const diagnosis = translateStatus(plan.toothSurfaceState.status);
+  const tooth = plan.toothSurfaceState.toothNumber;
+  const surface = plan.toothSurfaceState.surface;
+  const treatment = plan.treatment.name;
+  const descriptionText = `Paciente presenta ${diagnosis} en el diente #${tooth} (superficie ${surface}).`;
+  const treatmentText = `${treatment} en el diente #${tooth}.`;
+  historyInitialData.value = {
+    description: descriptionText,
+    treatmentPerformed: treatmentText,
+    diagnosis: diagnosis,
+  };
+  isHistoryModalOpen.value = true;
+}
 
-  function handleGenerateBudget(plannedTreatments: PlannedTreatment[]) {
-    // 1. Transforma los datos del plan al formato que espera el BudgetForm
-    const prefilledItems = plannedTreatments.map(plan => ({
-      treatment: plan.treatment,
-      quantity: 1,
-      priceAtTimeOfBudget: plan.treatment.price,
-    }));
-    
-    // 2. Guarda estos datos en el estado y abre el modal
-    budgetInitialData.value = { prefilledItems };
-    isBudgetModalOpen.value = true;
+function handleViewHistoryEntry(entry: ClinicalHistoryEntry) {
+  selectedHistoryEntry.value = entry;
+  isHistoryDetailModalOpen.value = true;
+}
 
-    const patientId = route.params.id as string;
-    
-  }
-
-  function handleRegisterHistory(plannedTreatments: PlannedTreatment[]) {
-    // Tomamos el primer tratamiento planificado de la lista para el ejemplo
-    const plan = plannedTreatments[0]; 
-    if (!plan) return;
-
-    // 1. Extraemos los datos del diagnóstico (el problema original)
-    const diagnosis = translateStatus(plan.toothSurfaceState.status);
-    const tooth = plan.toothSurfaceState.toothNumber;
-    const surface = plan.toothSurfaceState.surface;
-
-    // 2. Extraemos los datos del tratamiento realizado
-    const treatment = plan.treatment.name;
-
-    // 3. Construimos los textos descriptivos
-    const descriptionText = `Paciente presenta ${diagnosis} en el diente #${tooth} (superficie ${surface}).`;
-    const treatmentText = `${treatment} en el diente #${tooth}.`;
-
-    // 4. Pasamos los datos pre-rellenados al formulario del historial
-    historyInitialData.value = {
-      description: descriptionText,
-      treatmentPerformed: treatmentText,
-      diagnosis: diagnosis, // También podemos pre-rellenar el campo de diagnóstico
-    };
-
-    isHistoryModalOpen.value = true;
-  }
-
-  function handleViewHistoryEntry(entry: ClinicalHistoryEntry) {
-    selectedHistoryEntry.value = entry;
-    isHistoryDetailModalOpen.value = true;
-  }
-
-  function handleManagePayments(budgetId: string) {
-    selectedBudgetId.value = budgetId;
-    isPaymentModalOpen.value = true;
-  }
+function handleManagePayments(budgetId: string) {
+  selectedBudgetId.value = budgetId;
+  isPaymentModalOpen.value = true;
+}
 
 function closePaymentModal() {
   isPaymentModalOpen.value = false;
   const patientId = route.params.id as string;
-  
-  // Refresca la lista de presupuestos respetando el filtro actual
   if (authStore.user?.role === 'dentist') {
     budgetsStore.fetchBudgets(patientId, authStore.user.id);
   } else {
@@ -272,66 +281,62 @@ function closePaymentModal() {
   }
 }
 
-  function handleOpenPrintModal(budgetId: string) {
-    budgetToPrintId.value = budgetId;
-    isPrintModalOpen.value = true;
-  }
+function handleOpenPrintModal(budgetId: string) {
+  budgetToPrintId.value = budgetId;
+  isPrintModalOpen.value = true;
+}
 
-  async function handleSaveHistoryEntry(data: any) {
-    const patientId = route.params.id as string;
-    const success = await clinicalHistoryStore.createHistoryEntry(patientId, data);
-    if (success) {
-      isHistoryModalOpen.value = false;
+async function handleSaveHistoryEntry(data: any) {
+  const patientId = route.params.id as string;
+  const success = await clinicalHistoryStore.createHistoryEntry(patientId, data);
+  if (success) {
+    isHistoryModalOpen.value = false;
+  }
+}
+
+async function handleSaveBudget(data: any) {
+  const patientId = route.params.id as string;
+  const doctorId = authStore.user?.id;
+  const payload = { ...data, patientId, doctorId };
+  const success = await budgetsStore.createBudget(payload);
+  if (success) {
+    isBudgetModalOpen.value = false;
+  }
+}
+
+async function handlePatientUpdate(data: any) {
+  if (!selectedPatient.value) return;
+  const success = await patientsStore.updatePatient(selectedPatient.value.id, data);
+  if (success) {
+    isEditing.value = false;
+  }
+}
+
+async function handleGenerateConsent(templateId: string) {
+  if (!selectedPatient.value) return;
+  try {
+    const response = await generateConsent(templateId, selectedPatient.value.id);
+    const htmlContent = response.data;
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+      newWindow.document.write(htmlContent);
+      newWindow.document.close();
+      newWindow.print();
     }
+  } catch (error) {
+    alert('Error al generar el documento.');
   }
+  isConsentModalOpen.value = false;
+}
 
-  async function handleSaveBudget(data: any) {
-    const patientId = route.params.id as string;
-    const doctorId = authStore.user?.sub;
-    const payload = { ...data, patientId, doctorId };
-    const success = await budgetsStore.createBudget(payload);
-    if (success) {
-      isBudgetModalOpen.value = false;
-    }
-  }
-
-  async function handlePatientUpdate(data: any) {
-    if (!selectedPatient.value) return;
-    const success = await patientsStore.updatePatient(selectedPatient.value.id, data);
-    if (success) {
-      isEditing.value = false;
-    }
-  }
-
-
-  async function handleGenerateConsent(templateId: string) {
-    if (!selectedPatient.value) return;
-
-    try {
-      const response = await generateConsent(templateId, selectedPatient.value.id);
-      const htmlContent = response.data;
-
-      const newWindow = window.open('', '_blank');
-      if (newWindow) {
-        newWindow.document.write(htmlContent);
-        newWindow.document.close();
-        newWindow.print();
-      }
-    } catch (error) {
-      alert('Error al generar el documento.');
-    }
-
-    isConsentModalOpen.value = false;
-  }
-
-  function handlePrintReceipt(paymentId: string) {
-    const routeData = router.resolve({
-      name: 'print-payment-receipt',
-      params: { id: paymentId }
-    });
-    window.open(routeData.href, '_blank');
-  }
-  </script>
+function handlePrintReceipt(paymentId: string) {
+  const routeData = router.resolve({
+    name: 'print-payment-receipt',
+    params: { id: paymentId }
+  });
+  window.open(routeData.href, '_blank');
+}
+</script>
 
   <template>
     <div v-if="isPatientLoading">Cargando información del paciente...</div>
@@ -344,7 +349,7 @@ function closePaymentModal() {
       <div class="border-b border-gray-200">
         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
           <a @click="activeTab = 'info'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Información General</a>
-          <a @click="activeTab = 'medical-history'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'medical-history' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Antecedentes</a>
+          <a @click="activeTab = 'medical-history'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'medical-history' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Anamnesis</a>
           <a @click="activeTab = 'odontogram'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'odontogram' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Odontograma</a>
           <a @click="activeTab = 'periodontogram'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'periodontogram' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Periodontograma</a>
           <a @click="activeTab = 'history'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Historial Clínico</a>
@@ -412,7 +417,6 @@ function closePaymentModal() {
             <div><strong class="text-text-light">Departamento:</strong> {{ selectedPatient.department || 'N/A' }}</div>
             <div><strong class="text-text-light">Provincia:</strong> {{ selectedPatient.province || 'N/A' }}</div>
             <div><strong class="text-text-light">Distrito:</strong> {{ selectedPatient.district || 'N/A' }}</div>
-            <div class="md:col-span-3"><strong class="text-text-light">Alergias:</strong> {{ selectedPatient.allergies || 'Ninguna' }}</div>
           </div>
           <div v-else>
             <PatientForm :initial-data="selectedPatient" :loading="isPatientLoading" @patient-saved="handlePatientUpdate" @cancel="isEditing = false" />
@@ -425,13 +429,11 @@ function closePaymentModal() {
           <Odontogram v-else :whole-teeth="wholeTeeth" :surfaces="surfaces" :patient-age="typeof age === 'number' ? age : 0" :user-role="authStore.user?.role" />
           <TreatmentPlan @generate-budget="handleGenerateBudget" @register-history="handleRegisterHistory" @clear-plan="handleClearPlan" />
         </div>
-        <div v-if="activeTab === 'medical-history'">
-          <MedicalHistoryForm 
-            :initial-data="medicalHistory"
-            :loading="isPatientLoading"
-            @submit="handleSaveMedicalHistory"
-          />
-        </div>
+        <div class="mt-6">
+    <div v-if="activeTab === 'medical-history'">
+      <AnamnesisHub />
+    </div>
+    </div>
         </div>
 
         <div v-if="activeTab === 'history'">

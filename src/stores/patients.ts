@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { useToast } from 'vue-toastification';
 import { getPatients, createPatient as createPatientApi, updatePatient as updatePatientApi, getPatientById as getByIdApi } from '@/services/patientService';
-import type { Patient, MedicalHistory } from '@/types';
+import type { Patient, MedicalHistory, OdontopediatricHistory } from '@/types';
 import * as service from '@/services/patientService';
 
 export const usePatientsStore = defineStore('patients', () => {
@@ -10,7 +10,9 @@ export const usePatientsStore = defineStore('patients', () => {
   const patients = ref<Patient[]>([]);
   const selectedPatient = ref<Patient | null>(null);
   const medicalHistory = ref<MedicalHistory | null>(null);
+  const odontopediatricHistory = ref<OdontopediatricHistory | null>(null);
   const isLoading = ref(false);
+  const isHistoryLoading = ref(false);
 
   async function fetchPatients() {
     isLoading.value = true;
@@ -79,31 +81,60 @@ export const usePatientsStore = defineStore('patients', () => {
   }
 
   async function fetchMedicalHistory(patientId: string) {
-    isLoading.value = true;
+    isHistoryLoading.value = true;
     try {
       const response = await service.getMedicalHistory(patientId);
       medicalHistory.value = response.data;
     } catch (error) {
-      toast.error('No se pudo cargar el historial médico.');
+      toast.error('No se pudo cargar la Anamnesis General.');
     } finally {
-      isLoading.value = false;
+      isHistoryLoading.value = false;
     }
   }
 
-  async function updateMedicalHistory(patientId: string, data: MedicalHistory) {
-    isLoading.value = true;
+async function updateMedicalHistory(patientId: string, data: MedicalHistory): Promise<boolean> {
+    isHistoryLoading.value = true; // <-- Usa el nuevo estado
     try {
       const response = await service.updateMedicalHistory(patientId, data);
       medicalHistory.value = response.data;
-      toast.success('Antecedentes actualizados con éxito.');
+      toast.success('Anamnesis General actualizada.');
+      return true;
     } catch (error) {
-      toast.error('No se pudo actualizar el historial médico.');
+      toast.error('No se pudo actualizar la Anamnesis General.');
+      return false;
     } finally {
-      isLoading.value = false;
+      isHistoryLoading.value = false; // <-- Usa el nuevo estado
+    }
+  }
+
+  async function fetchOdontopediatricHistory(patientId: string) {
+    isHistoryLoading.value = true; // <-- Usa el nuevo estado
+    try {
+      const response = await service.getOdontopediatricHistory(patientId);
+      odontopediatricHistory.value = response.data;
+    } catch (error) {
+      toast.error('No se pudo cargar la anamnesis pediátrica.');
+    } finally {
+      isHistoryLoading.value = false; // <-- Usa el nuevo estado
+    }
+  }
+
+  async function updateOdontopediatricHistory(patientId: string, data: OdontopediatricHistory): Promise<boolean> {
+    isHistoryLoading.value = true; // <-- Usa el nuevo estado
+    try {
+      const response = await service.updateOdontopediatricHistory(patientId, data);
+      odontopediatricHistory.value = response.data;
+      toast.success('Anamnesis Pediátrica actualizada.');
+      return true;
+    } catch (error) {
+      toast.error('No se pudo actualizar la Anamnesis Pediátrica.');
+      return false;
+    } finally {
+      isHistoryLoading.value = false; // <-- Usa el nuevo estado
     }
   }
 
 
-  return { patients, selectedPatient, medicalHistory, isLoading, fetchPatients, createPatient, updatePatient, fetchPatientById, fetchMedicalHistory,
-    updateMedicalHistory, };
+  return { patients, selectedPatient, medicalHistory, odontopediatricHistory, isLoading, isHistoryLoading, fetchPatients, createPatient, updatePatient, fetchPatientById, fetchMedicalHistory,
+    updateMedicalHistory, fetchOdontopediatricHistory, updateOdontopediatricHistory, };
 });

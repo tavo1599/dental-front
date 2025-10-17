@@ -30,3 +30,11 @@ export const updateMedicalHistory = (patientId: string, data: any) => {
   return apiClient.patch(`/patients/${patientId}/medical-history`, data);
 };
 
+export const getOdontopediatricHistory = (patientId: string) => {
+  return apiClient.get(`/patients/${patientId}/odontopediatric-history`);
+};
+
+export const updateOdontopediatricHistory = (patientId: string, data: any) => {
+  return apiClient.patch(`/patients/${patientId}/odontopediatric-history`, data);
+};
+

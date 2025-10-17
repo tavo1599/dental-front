@@ -110,12 +110,12 @@ export interface Patient {
   birthDate: string;
   email?: string;
   address?: string;
-  allergies?: string;
   department?: string;
   province?: string;
   district?: string;
   gender?: Gender;
   medicalHistory: MedicalHistory | null;
+  odontopediatricHistory: OdontopediatricHistory | null;
   category?: string;
   fileCode?: string;
 }
@@ -123,14 +123,46 @@ export interface Patient {
 export interface MedicalHistory {
   id: string;
   mainComplaint: string;
-  isUnderMedicalTreatment: boolean;
-  medicalTreatmentDescription: string;
+  illnessHistory: string;
+  biologicalFunctions: string;
+  familyHistory: string;
+  personalHistory: string;
   currentMedications: string;
-  systemicDiseases: string;
+  allergies: string;
+  anesthesiaReaction: string;
   hasBleedingIssues: boolean;
   isPregnant: boolean | null;
+  isLactating: boolean | null;
+  medicalChecklist: Record<string, boolean>;
+  medicalChecklistDetails: Record<string, string>;
   lastDentalVisit: Date | null;
-  reasonForLastVisit: string;
+  brushingFrequency: number;
+  usesFloss: boolean;
+  bruxism: boolean;
+  oralDiscomfort: string;
+  bloodPressure?: string;
+  heartRate?: number;
+  temperature?: number;
+  respiratoryRate?: number;
+}
+
+export interface OdontopediatricHistory {
+  id: string;
+  childhoodIllnesses: string;
+  vaccinesUpToDate: boolean;
+  allergies: string;
+  currentMedications: string;
+  previousSurgeries: string;
+  pregnancyIssues: string;
+  birthType: string;
+  birthComplications: string;
+  feedingType: string;
+  usedBottle: boolean;
+  usedPacifier: boolean;
+  oralHabits: string;
+  firstToothAge: string;
+  firstDentalVisit: Date | null;
+  previousDentalExperience: string;
 }
 
 export interface Treatment {

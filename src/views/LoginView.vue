@@ -75,7 +75,19 @@ async function handleLogin() {
             </div>
           </form>
         </div>
+
+        <footer class="text-center text-sm text-gray-500 mt-8">
+          <RouterLink to="/terms-and-conditions" class="hover:underline">Términos y Condiciones</RouterLink>
+          <span class="mx-2">|</span>
+          <RouterLink to="/privacy-policy" class="hover:underline">Política de Privacidad</RouterLink>
+        </footer>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.input-style { 
+  @apply border border-gray-300 rounded-md shadow-sm px-4 py-2 focus:outline-none focus:ring-primary focus:border-primary; 
+}
+</style>

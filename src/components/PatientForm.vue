@@ -76,7 +76,6 @@ watch(() => props.initialData, (newData) => {
       province: '',
       district: '',
       gender: undefined,
-      allergies: '',
     };
     selectedDepartment.value = '';
     selectedProvince.value = '';
@@ -202,10 +201,6 @@ async function handleSubmit() {
       <div>
         <label for="address" class="block text-sm font-medium text-text-light">Dirección (Opcional)</label>
         <input v-model="patient.address" type="text" id="address" class="mt-1 block w-full input-style" />
-      </div>
-      <div>
-        <label for="allergies" class="block text-sm font-medium text-text-light">Alergias (Opcional)</label>
-        <textarea v-model="patient.allergies" id="allergies" rows="4" class="mt-1 block w-full input-style"></textarea>
       </div>
     </div>
 
