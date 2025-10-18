@@ -192,10 +192,13 @@ const calendarOptions: CalendarOptions = {
 onMounted(async () => {
   await appointmentsStore.fetchAppointments();
   try {
+    // Carga los doctores para TODOS los roles
     const response = await getDoctors();
     doctors.value = response.data;
-    if (authStore.user?.role === 'dentist' || authStore.user?.role === 'admin') {
-      selectedDoctorId.value = authStore.user.sub;
+
+    // Si el usuario es un doctor, lo selecciona por defecto
+    if (authStore.user?.role === 'dentist') {
+      selectedDoctorId.value = authStore.user.id;
     }
   } catch (error) {
     console.error("No se pudo cargar la lista de doctores", error);
@@ -209,27 +212,22 @@ onMounted(async () => {
       <h1 class="text-3xl font-bold text-text-dark">Agenda de Citas</h1>
       
       <div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-        
-        <select @change="handleStatusFilterChange" :value="selectedStatus" class="input-style w-full sm:w-48">
-          <option value="all">Todos los Estados</option>
-          <option v-for="status in AppointmentStatus" :key="status" :value="status">
-            {{ translateAppointmentStatus(status) }}
-          </option>
-        </select>
-        
-        <select v-if="authStore.user?.role === 'assistant' || authStore.user?.role === 'admin'" v-model="selectedDoctorId" class="input-style w-full sm:w-64">
-          <option value="all">Todos los Doctores</option>
-          <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">
-            {{ doctor.fullName }}
-          </option>
-        </select>
-        
-        <div v-else class="text-right">
-          <p class="font-semibold text-text-dark">{{ authStore.user?.fullName }}</p>
-          <p class="text-sm text-text-light">Mi Agenda</p>
-        </div>
-
-      </div>
+    
+    <select @change="handleStatusFilterChange" :value="selectedStatus" class="input-style w-full sm:w-48">
+      <option value="all">Todos los Estados</option>
+      <option v-for="status in AppointmentStatus" :key="status" :value="status">
+        {{ translateAppointmentStatus(status) }}
+      </option>
+    </select>
+    
+    <select v-model="selectedDoctorId" class="input-style w-full sm:w-64">
+      <option value="all">Todos los Doctores</option>
+      <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">
+        {{ doctor.fullName }}
+      </option>
+    </select>
+    
+    </div>
     </div>
     
     <div class="bg-white rounded-lg shadow-md p-6">

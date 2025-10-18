@@ -53,13 +53,14 @@ const formatDate = (dateString: string) => {
   <div class="p-4 md:p-8 bg-gray-100 font-sans">
     <div class="print:hidden text-center mb-4 bg-white p-4 rounded-lg shadow-md max-w-4xl mx-auto">
       <p class="text-text-light mb-2">Preparando para imprimir...</p>
+      <p class="text-text-light mb-2">Ctrl + P para imprimir</p>
       <button @click="closeWindow" class="btn-secondary">Cerrar Ventana</button>
     </div>
 
     <div v-if="isLoading" class="text-center py-12">Cargando presupuesto...</div>
     <div v-else-if="selectedBudget" class="max-w-4xl mx-auto space-y-8">
       
-      <div v-if="formatsToPrint.includes('patient')" id="patient-format" class="p-10 bg-white shadow-lg">
+      <div v-if="formatsToPrint.includes('patient')" id="patient-format" class="p-10 bg-white shadow-lg print:page-break-after-always">
         <header class="flex justify-between items-start pb-6 border-b-2 border-primary">
           <div>
             <h1 class="text-3xl font-bold text-primary">{{ selectedBudget.tenant.name }}</h1>
@@ -142,10 +143,13 @@ const formatDate = (dateString: string) => {
 </template>
 
 <style scoped>
- .btn-secondary { @apply px-4 py-2 bg-gray-200 text-text-dark rounded-lg hover:bg-gray-300 font-semibold; }
- @media print {
+  .btn-secondary { @apply px-4 py-2 bg-gray-200 text-text-dark rounded-lg hover:bg-gray-300 font-semibold; }
+  @media print {
+  .print\:page-break-after-always {
+    page-break-after: always;
+  }
   .break-inside-avoid {
     page-break-inside: avoid;
   }
- }
+  }
 </style>

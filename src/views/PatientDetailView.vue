@@ -398,7 +398,6 @@ function handlePrintReceipt(paymentId: string) {
       <p v-else class="text-text-light">No hay documentos para este paciente.</p>
     </div>
   </div>
-
   <div class="mt-6">
     <button @click="isConsentModalOpen = true" class="btn-secondary">+ Generar Consentimiento</button>
   </div>
