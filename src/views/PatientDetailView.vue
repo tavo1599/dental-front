@@ -363,35 +363,46 @@ function handlePrintReceipt(paymentId: string) {
 
       <div class="mt-6">
           <div v-if="activeTab === 'documents'">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-xl font-bold text-text-dark mb-4">Subir Documento Firmado</h2>
-            <form @submit.prevent="handleUpload" class="space-y-4">
-              <div>
-                <label for="document-upload" class="block text-sm font-medium text-text-light">Seleccionar Archivo (PDF, JPG, PNG)</label>
-                <input @change="onFileChange" type="file" id="document-upload" class="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"/>
-              </div>
-              <button type="submit" class="btn-primary w-full" :disabled="!fileToUpload || isDocumentsLoading">
-                {{ isDocumentsLoading ? 'Subiendo...' : 'Subir Archivo' }}
-              </button>
-            </form>
-          </div>
-          
-          <div class="bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-xl font-bold text-text-dark mb-4">Archivos del Paciente</h2>
-            <div v-if="isDocumentsLoading">Cargando...</div>
-            <ul v-else-if="documents.length > 0" class="space-y-2">
-              <li v-for="doc in documents" :key="doc.id">
-                <a :href="`${apiBaseUrl}/${doc.filePath}`" target="_blank" class="text-primary hover:underline">{{ doc.fileName }}</a>
-              </li>
-            </ul>
-            <p v-else class="text-text-light">No hay documentos para este paciente.</p>
-          </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <h2 class="text-xl font-bold text-text-dark mb-4">Subir Documento</h2>
+      <form @submit.prevent="handleUpload" class="space-y-4">
+        <div>
+          <label for="document-upload" class="block text-sm font-medium text-text-light">Seleccionar Archivo (PDF, JPG, PNG)</label>
+          <input @change="onFileChange" type="file" id="document-upload" class="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"/>
         </div>
-        <div class="mt-6">
-          <button @click="isConsentModalOpen = true" class="btn-secondary">+ Generar Consentimiento</button>
-        </div>
-      </div>
+        <button type="submit" class="btn-primary w-full" :disabled="!fileToUpload || isDocumentsLoading">
+          {{ isDocumentsLoading ? 'Subiendo...' : 'Subir Archivo' }}
+        </button>
+      </form>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-md">
+      <h2 class="text-xl font-bold text-text-dark mb-4">Archivos del Paciente</h2>
+      <div v-if="isDocumentsLoading">Cargando...</div>
+      <ul v-else-if="documents.length > 0" class="divide-y divide-gray-200">
+        <li v-for="doc in documents" :key="doc.id" class="py-3 flex justify-between items-center">
+          <a :href="`${apiBaseUrl}/${doc.filePath}`" target="_blank" class="text-primary hover:underline font-medium">
+            {{ doc.fileName }}
+          </a>
+          <button 
+            v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'assistant'"
+            @click="documentsStore.deleteDocument(selectedPatient.id, doc.id)"
+            class="text-red-500 hover:text-red-700 text-sm font-semibold"
+          >
+            Eliminar
+          </button>
+        </li>
+      </ul>
+      <p v-else class="text-text-light">No hay documentos para este paciente.</p>
+    </div>
+  </div>
+
+  <div class="mt-6">
+    <button @click="isConsentModalOpen = true" class="btn-secondary">+ Generar Consentimiento</button>
+  </div>
+</div>
       </div>
 
       <div v-if="activeTab === 'periodontogram'">

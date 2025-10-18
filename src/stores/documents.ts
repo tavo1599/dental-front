@@ -35,5 +35,20 @@ export const useDocumentsStore = defineStore('documents', () => {
     }
   }
 
-  return { documents, isLoading, fetchDocuments, uploadDocument };
+  async function deleteDocument(patientId: string, documentId: string) {
+    if (!confirm('¿Estás seguro de que deseas eliminar este documento? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      await service.deleteDocument(documentId);
+      toast.success('Documento eliminado con éxito.');
+      // Actualiza la lista sin volver a llamar a la API
+      documents.value = documents.value.filter(doc => doc.id !== documentId);
+    } catch (error) {
+      toast.error('Error al eliminar el documento.');
+    }
+  }
+
+  return { documents, isLoading, fetchDocuments, uploadDocument, deleteDocument, };
 });

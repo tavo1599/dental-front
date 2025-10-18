@@ -6,6 +6,10 @@ export const getDocuments = (patientId: string) => {
   return apiClient.get<PatientDocument[]>(`/documents/patient/${patientId}`);
 };
 
+export const deleteDocument = (documentId: string) => {
+  return apiClient.delete(`/documents/${documentId}`);
+};
+
 // Sube un nuevo documento para un paciente
 export const uploadDocument = (patientId: string, file: File) => {
   const formData = new FormData();
