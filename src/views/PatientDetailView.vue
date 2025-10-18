@@ -110,6 +110,8 @@ const formatGender = (gender?: Gender) => {
   }
 };
 
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+
 watch(() => route.params.id, (newId) => {
   if (newId) {
     const patientId = newId as string;
@@ -380,7 +382,7 @@ function handlePrintReceipt(paymentId: string) {
             <div v-if="isDocumentsLoading">Cargando...</div>
             <ul v-else-if="documents.length > 0" class="space-y-2">
               <li v-for="doc in documents" :key="doc.id">
-                <a :href="`http://localhost:3000/${doc.filePath}`" target="_blank" class="text-primary hover:underline">{{ doc.fileName }}</a>
+                <a :href="`${apiBaseUrl}/${doc.filePath}`" target="_blank" class="text-primary hover:underline">{{ doc.fileName }}</a>
               </li>
             </ul>
             <p v-else class="text-text-light">No hay documentos para este paciente.</p>
