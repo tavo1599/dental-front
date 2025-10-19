@@ -192,14 +192,14 @@ const calendarOptions: CalendarOptions = {
 onMounted(async () => {
   await appointmentsStore.fetchAppointments();
   try {
-    // Carga los doctores para TODOS los roles
     const response = await getDoctors();
     doctors.value = response.data;
-
-    // Si el usuario es un doctor, lo selecciona por defecto
-    if (authStore.user?.role === 'dentist') {
+    
+    // Si el usuario es doctor O admin, selecciona su ID por defecto
+    if (authStore.user?.role === 'dentist' || authStore.user?.role === 'admin') {
       selectedDoctorId.value = authStore.user.id;
     }
+    
   } catch (error) {
     console.error("No se pudo cargar la lista de doctores", error);
   }

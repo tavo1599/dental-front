@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { useToast } from 'vue-toastification';
+import * as service from '@/services/appointmentService';
 import { 
   getAppointments,
   createAppointment as createApi, 
@@ -10,6 +11,7 @@ import {
   getNextDayPending as getNextDayPendingApi 
 } from '@/services/appointmentService';
 import type { Appointment, AppointmentStatus } from '@/types';
+import { AppointmentStatus as StatusEnum } from '@/types';
 
 export const useAppointmentsStore = defineStore('appointments', () => {
   const toast = useToast();
@@ -21,10 +23,14 @@ export const useAppointmentsStore = defineStore('appointments', () => {
 
   // 'appointments' ahora devuelve la lista filtrada
   const appointments = computed(() => {
-    if (selectedStatus.value === 'all') {
-      return allAppointments.value;
-    }
-    return allAppointments.value.filter(a => a.status === selectedStatus.value);
+    return allAppointments.value.filter(appt => {
+      if (selectedStatus.value === 'all') {
+        // Por defecto, oculta las canceladas y no presentadas
+        return appt.status !== StatusEnum.CANCELLED && appt.status !== StatusEnum.NO_SHOW;
+      }
+      // Si se selecciona un filtro, muestra solo ese
+      return appt.status === selectedStatus.value;
+    });
   });
 
   async function fetchAppointments() {
@@ -109,6 +115,22 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     selectedStatus.value = status;
   }
 
+  async function deleteAppointment(id: string): Promise<boolean> {
+    isLoading.value = true;
+    try {
+      await service.deleteAppointment(id);
+      // Elimina la cita de la lista local
+      allAppointments.value = allAppointments.value.filter(a => a.id !== id);
+      toast.success('Cita eliminada permanentemente.');
+      return true;
+    } catch (error) {
+      toast.error('No se pudo eliminar la cita.');
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   return { 
     appointments, 
     patientAppointments, 
@@ -121,6 +143,6 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     updateAppointmentTime, 
     updateAppointmentStatus, 
     fetchNextDayPending,
-    filterByStatus
+    filterByStatus, deleteAppointment,
   };
 });

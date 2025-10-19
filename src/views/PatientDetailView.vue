@@ -169,13 +169,20 @@ function loadDataForTab(tab: string, patientId: string) {
       break;
     case 'budgets':
       if (budgets.value.length === 0) {
-        if (authStore.user?.role === 'dentist') {
-          budgetsStore.fetchBudgets(patientId, authStore.user.id);
-        } else {
-          budgetsStore.fetchBudgets(patientId);
-          if (authStore.user?.role === 'admin' || authStore.user?.role === 'assistant') {
-            usersStore.fetchDoctors();
+        const userRole = authStore.user?.role;
+        const userId = authStore.user?.id;
+
+        if (userRole === 'dentist') {
+          if (userId) budgetsStore.fetchBudgets(patientId, userId);
+        } else if (userRole === 'admin') {
+          if (userId) {
+            selectedDoctorId.value = userId; // Selecciona al admin por defecto
+            budgetsStore.fetchBudgets(patientId, userId);
           }
+          usersStore.fetchDoctors();
+        } else if (userRole === 'assistant') {
+          budgetsStore.fetchBudgets(patientId); // Carga todos por defecto
+          usersStore.fetchDoctors();
         }
       }
       break;

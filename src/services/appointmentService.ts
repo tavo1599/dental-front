@@ -28,3 +28,7 @@ export const getAppointmentsForPatient = (patientId: string) => {
 export const getNextDayPending = () => {
   return apiClient.get<Appointment[]>('/appointments/pending/next-day');
 };
+
+export const deleteAppointment = (id: string) => {
+  return apiClient.delete(`/appointments/${id}`);
+};
