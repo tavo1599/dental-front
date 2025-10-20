@@ -197,6 +197,27 @@ export interface ToothSurfaceState {
   status: ToothStatus;
 }
 
+export interface ToothState {
+  id: string;
+  toothNumber: number;
+  condition: string;
+  sub_type: string | null;
+  abbreviation: string;
+  status: 'bueno' | 'malo';
+}
+
+export interface OdontogramData {
+  wholeTeeth: Tooth[]; // <-- Debe ser un Array
+  surfaces: ToothSurfaceState[]; // <-- Debe ser un Array
+  toothStates: ToothState[];
+}
+
+export interface ToothUpdate {
+  toothNumber: number;
+  status: ToothStatus; // <-- CORREGIDO de 'string' a 'ToothStatus'
+  surface?: string;
+}
+
 export interface ClinicalHistoryEntry {
   id: string;
   entryDate: string;

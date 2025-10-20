@@ -2,11 +2,13 @@
 import { ref, computed, watchEffect } from 'vue';
 import { useRoute } from 'vue-router';
 import { useOdontogramStore } from '@/stores/odontogram';
-import { ToothStatus, type Tooth, type ToothSurfaceState } from '@/types';
+import { ToothStatus, type Tooth, type ToothSurfaceState, type ToothState } from '@/types';
 import StatusSelector from '@/components/StatusSelector.vue';
 import ToothComponent from '@/components/Tooth.vue';
 import TreatmentPlanner from './TreatmentPlanner.vue';
 import { translateStatus } from '@/utils/formatters';
+import OdontogramLegend from './OdontogramLegend.vue';
+import { storeToRefs } from 'pinia';
 
 const props = defineProps<{
   wholeTeeth: Record<number, Tooth>;
@@ -17,6 +19,10 @@ const props = defineProps<{
 
 const route = useRoute();
 const odontogramStore = useOdontogramStore();
+const { toothStates } = storeToRefs(odontogramStore);
+
+// --- ESTADO LOCAL PARA EL DIENTE SELECCIONADO ---
+const selectedToothNumber = ref<number | null>(null);
 
 const selectionMode = ref(false);
 const selectedSurfaces = ref<{ toothNumber: number, surface: string }[]>([]);
@@ -47,7 +53,6 @@ const plannerPosition = ref({ top: '0px', left: '0px' });
 const selectedToothInfo = ref<{ toothNumber: number, surface: string } | null>(null);
 const selectedSurfaceStateId = ref('');
 
-// Lista oficial de estados que afectan solo a superficies
 const surfaceStatuses = [ 
   ToothStatus.HEALTHY, ToothStatus.CARIES, ToothStatus.FILLED, 
   ToothStatus.FILLED_DEFECTIVE, ToothStatus.SEALANT, 
@@ -56,6 +61,13 @@ const surfaceStatuses = [
 
 let clickTimer: number | null = null;
 
+// --- COMPUTED PARA LOS ESTADOS DEL DIENTE SELECCIONADO ---
+// Esto pasará los estados existentes al StatusSelector
+const selectedToothExistingStates = computed(() => {
+  if (!selectedToothNumber.value) return [];
+  return toothStates.value[selectedToothNumber.value] || [];
+});
+
 function handleSurfaceClick(toothNumber: number, surfaceData: { surface: string, event: MouseEvent }) {
   if (props.userRole !== 'admin' && props.userRole !== 'dentist') return;
   if (selectionMode.value) {
@@ -63,55 +75,48 @@ function handleSurfaceClick(toothNumber: number, surfaceData: { surface: string,
     return;
   }
 
-  // Cancela cualquier temporizador de clic anterior
   if (clickTimer) {
     clearTimeout(clickTimer);
     clickTimer = null;
   }
 
-  // Inicia un nuevo temporizador. Si no hay doble clic, esto se ejecutará.
   clickTimer = window.setTimeout(() => {
-    // Con UN CLIC, siempre intentamos planificar un tratamiento
-    const state = props.surfaces[toothNumber]?.['occlusal'] || props.surfaces[toothNumber]?.[surfaceData.surface];
+    const state = props.surfaces[toothNumber]?.[surfaceData.surface];
     if (state && state.id) {
       selectedSurfaceStateId.value = state.id;
       plannerPosition.value = { top: `${surfaceData.event.clientY + 10}px`, left: `${surfaceData.event.clientX}px` };
       isPlannerOpen.value = true;
     } else {
-      openSelector(toothNumber, surfaceData); // Si no hay nada que planificar, diagnostica
+      openSelector(toothNumber, surfaceData);
     }
-  }, 250); // Un retraso de 250ms es ideal
+  }, 250);
 }
 
 function handleSurfaceDoubleClick(toothNumber: number, surfaceData: { surface: string, event: MouseEvent }) {
   if (props.userRole !== 'admin' && props.userRole !== 'dentist') return;
 
-  // Si hay un doble clic, cancelamos el temporizador del clic simple
   if (clickTimer) {
     clearTimeout(clickTimer);
     clickTimer = null;
   }
   
-  // Y ejecutamos la acción de diagnosticar
+  // Guardamos el número de diente para pasarlo al selector
+  selectedToothNumber.value = toothNumber; 
   openSelector(toothNumber, surfaceData);
 }
 
-
 function openSelector(toothNumber: number, surfaceData: { surface: string, event: MouseEvent }) {
   selectedToothInfo.value = { toothNumber, surface: surfaceData.surface };
-
   const clickX = surfaceData.event.clientX;
   const screenWidth = window.innerWidth;
 
-  // Si el clic ocurre en la mitad derecha de la pantalla, mueve el menú a la izquierda
   if (clickX > screenWidth / 2) {
     selectorPosition.value = {
       top: `${surfaceData.event.clientY + 10}px`,
       left: `${clickX}px`,
-      transform: 'translateX(-100%)', // <-- La magia está aquí
+      transform: 'translateX(-100%)',
     };
   } else {
-    // Si no, lo deja a la derecha del clic
     selectorPosition.value = {
       top: `${surfaceData.event.clientY + 10}px`,
       left: `${clickX}px`,
@@ -161,6 +166,7 @@ function applyBulkUpdate() {
   selectionMode.value = false;
 }
 
+// MANEJADOR DE EVENTO ANTIGUO (Superficies)
 function handleStatusUpdate(newStatus: ToothStatus) {
   if (selectedToothInfo.value) {
     const patientId = route.params.id as string;
@@ -178,6 +184,26 @@ function handleStatusUpdate(newStatus: ToothStatus) {
     odontogramStore.updateOdontogram(patientId, [updatePayload]);
   }
   isSelectorOpen.value = false;
+}
+
+// NUEVO MANEJADOR DE EVENTO (Top Box)
+function handleStateUpdate(state: Partial<ToothState>) {
+  if (selectedToothInfo.value) {
+    const patientId = route.params.id as string;
+    const payload = {
+      ...state,
+      toothNumber: selectedToothInfo.value.toothNumber,
+    };
+    odontogramStore.saveToothState(patientId, payload);
+  }
+  isSelectorOpen.value = false;
+}
+
+// --- NUEVA FUNCIÓN PARA BORRAR ---
+function handleStateDelete(stateToDelete: ToothState) {
+  const patientId = route.params.id as string;
+  odontogramStore.clearToothState(patientId, stateToDelete.id, stateToDelete.toothNumber);
+  // No cerramos el selector para que pueda borrar varios
 }
 </script>
 
@@ -198,21 +224,53 @@ function handleStatusUpdate(newStatus: ToothStatus) {
       <div v-if="odontogramType === 'permanent'" class="space-y-4">
         <div class="flex justify-center items-center gap-2">
           <div v-for="tooth in permanentQuadrants.upperRight" :key="tooth" class="w-16 h-16">
-            <ToothComponent :tooth-number="tooth" :whole-status="wholeTeeth[tooth]?.status" :surface-states="surfaces[tooth]" :is-selected="isSurfaceSelected" @surface-click="handleSurfaceClick(tooth, $event)"  @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" />
+            <ToothComponent 
+              :tooth-number="tooth" 
+              :whole-status="wholeTeeth[tooth]?.status" 
+              :surface-states="surfaces[tooth]" 
+              :tooth-states="toothStates[tooth]"
+              :is-selected="isSurfaceSelected" 
+              @surface-click="handleSurfaceClick(tooth, $event)"  
+              @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" 
+            />
           </div>
           <div class="w-px bg-gray-400 self-stretch mx-4"></div>
           <div v-for="tooth in permanentQuadrants.upperLeft" :key="tooth" class="w-16 h-16">
-            <ToothComponent :tooth-number="tooth" :whole-status="wholeTeeth[tooth]?.status" :surface-states="surfaces[tooth]" :is-selected="isSurfaceSelected" @surface-click="handleSurfaceClick(tooth, $event)"  @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" />
+            <ToothComponent 
+              :tooth-number="tooth" 
+              :whole-status="wholeTeeth[tooth]?.status" 
+              :surface-states="surfaces[tooth]" 
+              :tooth-states="toothStates[tooth]"
+              :is-selected="isSurfaceSelected" 
+              @surface-click="handleSurfaceClick(tooth, $event)"  
+              @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" 
+            />
           </div>
         </div>
         <hr class="my-4 border-gray-400 w-full max-w-5xl mx-auto">
         <div class="flex justify-center items-center gap-2">
           <div v-for="tooth in permanentQuadrants.lowerRight.slice().reverse()" :key="tooth" class="w-16 h-16">
-            <ToothComponent :tooth-number="tooth" :whole-status="wholeTeeth[tooth]?.status" :surface-states="surfaces[tooth]" :is-selected="isSurfaceSelected" @surface-click="handleSurfaceClick(tooth, $event)"  @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" />
+            <ToothComponent 
+              :tooth-number="tooth" 
+              :whole-status="wholeTeeth[tooth]?.status" 
+              :surface-states="surfaces[tooth]" 
+              :tooth-states="toothStates[tooth]"
+              :is-selected="isSurfaceSelected" 
+              @surface-click="handleSurfaceClick(tooth, $event)"  
+              @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" 
+            />
           </div>
           <div class="w-px bg-gray-400 self-stretch mx-4"></div>
           <div v-for="tooth in permanentQuadrants.lowerLeft.slice().reverse()" :key="tooth" class="w-16 h-16">
-            <ToothComponent :tooth-number="tooth" :whole-status="wholeTeeth[tooth]?.status" :surface-states="surfaces[tooth]" :is-selected="isSurfaceSelected" @surface-click="handleSurfaceClick(tooth, $event)"  @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" />
+            <ToothComponent 
+              :tooth-number="tooth" 
+              :whole-status="wholeTeeth[tooth]?.status" 
+              :surface-states="surfaces[tooth]" 
+              :tooth-states="toothStates[tooth]"
+              :is-selected="isSurfaceSelected" 
+              @surface-click="handleSurfaceClick(tooth, $event)"  
+              @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" 
+            />
           </div>
         </div>
       </div>
@@ -220,21 +278,21 @@ function handleStatusUpdate(newStatus: ToothStatus) {
       <div v-if="odontogramType === 'pediatric'" class="space-y-4">
         <div class="flex justify-center items-center gap-2">
           <div v-for="tooth in pediatricQuadrants.upperRight" :key="tooth" class="w-12 h-12">
-            <ToothComponent :tooth-number="tooth" :whole-status="wholeTeeth[tooth]?.status" :surface-states="surfaces[tooth]" :is-selected="isSurfaceSelected" @surface-click="handleSurfaceClick(tooth, $event)"  @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" />
+            <ToothComponent :tooth-number="tooth" :whole-status="wholeTeeth[tooth]?.status" :surface-states="surfaces[tooth]" :tooth-states="toothStates[tooth]" :is-selected="isSurfaceSelected" @surface-click="handleSurfaceClick(tooth, $event)"  @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" />
           </div>
           <div class="w-px bg-gray-400 self-stretch mx-2"></div>
           <div v-for="tooth in pediatricQuadrants.upperLeft" :key="tooth" class="w-12 h-12">
-            <ToothComponent :tooth-number="tooth" :whole-status="wholeTeeth[tooth]?.status" :surface-states="surfaces[tooth]" :is-selected="isSurfaceSelected" @surface-click="handleSurfaceClick(tooth, $event)"  @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" />
+            <ToothComponent :tooth-number="tooth" :whole-status="wholeTeeth[tooth]?.status" :surface-states="surfaces[tooth]" :tooth-states="toothStates[tooth]" :is-selected="isSurfaceSelected" @surface-click="handleSurfaceClick(tooth, $event)"  @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" />
           </div>
         </div>
         <hr class="my-4 border-gray-400 w-full max-w-xl mx-auto">
         <div class="flex justify-center items-center gap-2">
           <div v-for="tooth in pediatricQuadrants.lowerRight.slice().reverse()" :key="tooth" class="w-12 h-12">
-            <ToothComponent :tooth-number="tooth" :whole-status="wholeTeeth[tooth]?.status" :surface-states="surfaces[tooth]" :is-selected="isSurfaceSelected" @surface-click="handleSurfaceClick(tooth, $event)"  @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" />
+            <ToothComponent :tooth-number="tooth" :whole-status="wholeTeeth[tooth]?.status" :surface-states="surfaces[tooth]" :tooth-states="toothStates[tooth]" :is-selected="isSurfaceSelected" @surface-click="handleSurfaceClick(tooth, $event)"  @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" />
           </div>
           <div class="w-px bg-gray-400 self-stretch mx-2"></div>
           <div v-for="tooth in pediatricQuadrants.lowerLeft.slice().reverse()" :key="tooth" class="w-12 h-12">
-            <ToothComponent :tooth-number="tooth" :whole-status="wholeTeeth[tooth]?.status" :surface-states="surfaces[tooth]" :is-selected="isSurfaceSelected" @surface-click="handleSurfaceClick(tooth, $event)"  @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" />
+            <ToothComponent :tooth-number="tooth" :whole-status="wholeTeeth[tooth]?.status" :surface-states="surfaces[tooth]" :tooth-states="toothStates[tooth]" :is-selected="isSurfaceSelected" @surface-click="handleSurfaceClick(tooth, $event)"  @surface-double-click="handleSurfaceDoubleClick(tooth, $event)" />
           </div>
         </div>
       </div>
@@ -252,84 +310,18 @@ function handleStatusUpdate(newStatus: ToothStatus) {
       <button @click="applyBulkUpdate" class="btn-primary text-sm" :disabled="!bulkStatus">Aplicar</button>
     </div>
 
-    <div class="mt-8 pt-4 border-t">
-  <h3 class="text-lg font-semibold text-text-dark mb-3">Leyenda</h3>
-  <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-4 text-sm">
+    <OdontogramLegend />
 
-    <div class="flex items-center gap-2">
-      <div class="w-4 h-4 rounded-full bg-white border"></div>
-      <span>Sano</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <div class="w-4 h-4 rounded-full bg-red-500"></div>
-      <span>Caries</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <div class="w-4 h-4 rounded-full bg-blue-500"></div>
-      <span>Obturado</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <div class="w-4 h-4 rounded-full bg-yellow-sealant"></div>
-      <span>Sellante</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <div class="w-4 h-4 rounded-full bg-orange-fracture"></div>
-      <span>Fractura</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <div class="w-4 h-4 rounded-full bg-brown-dischromia"></div>
-      <span>Discoloración</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <div class="w-4 h-4 rounded-full bg-purple-defective"></div>
-      <span>Obturado Defectuoso</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <div class="w-4 h-4 rounded-full bg-teal-defective"></div>
-      <span>Sellante Defectuoso</span>
-    </div>
-
-    <div class="flex items-center gap-2">
-      <svg class="w-5 h-5" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" class="stroke-primary" stroke-width="10" fill="none"/></svg>
-      <span>Corona</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <svg class="w-5 h-5" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" class="stroke-red-700" stroke-width="10" fill="none"/></svg>
-      <span>Corona Defectuosa</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <svg class="w-5 h-5" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" class="stroke-pink-temp" stroke-width="10" fill="none"/></svg>
-      <span>Corona Temporal</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <svg class="w-5 h-5" viewBox="0 0 100 100"><line x1="50" y1="20" x2="50" y2="80" class="stroke-purple-endo" stroke-width="10" stroke-linecap="round"/></svg>
-      <span>Endodoncia</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <svg class="w-5 h-5" viewBox="0 0 100 100"><g class="stroke-gray-implant" stroke-width="10" stroke-linecap="round"><line x1="50" y1="30" x2="50" y2="70"/><line x1="30" y1="45" x2="70" y2="45"/></g></svg>
-      <span>Implante</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <svg class="w-5 h-5" viewBox="0 0 100 100"><rect x="25" y="40" width="50" height="20" rx="5" class="stroke-gray-400" stroke-width="10" fill="none"/></svg>
-      <span>Póntico</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <svg class="w-5 h-5" viewBox="0 0 100 100"><g class="stroke-red-800" stroke-width="12" stroke-linecap="round"><line x1="20" y1="20" x2="80" y2="80"/><line x1="20" y1="80" x2="80" y2="20"/></g></svg>
-      <span>Extracción Indicada</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <svg class="w-5 h-5" viewBox="0 0 100 100"><g class="stroke-black" stroke-width="12" stroke-linecap="round"><line x1="20" y1="20" x2="80" y2="80"/><line x1="20" y1="80" x2="80" y2="20"/></g></svg>
-      <span>Extraído / Ausente</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <svg class="w-5 h-5" viewBox="0 0 100 100"><g class="stroke-teal-super" stroke-width="12" stroke-linecap="round"><line x1="50" y1="20" x2="50" y2="80"/><line x1="20" y1="50" x2="80" y2="50"/></g></svg>
-      <span>Supernumerario</span>
-    </div>
-
-  </div>
-</div>
-
-    <StatusSelector v-if="isSelectorOpen" :style="selectorPosition" @select="handleStatusUpdate" @close="isSelectorOpen = false" />
+    <StatusSelector 
+      v-if="isSelectorOpen" 
+      :style="selectorPosition" 
+      :existing-states="selectedToothExistingStates"
+      @select-status="handleStatusUpdate"
+      @select-state="handleStateUpdate"
+      @delete-state="handleStateDelete"
+      @close="isSelectorOpen = false" 
+    />
+    
     <TreatmentPlanner 
       v-if="isPlannerOpen"
       :style="plannerPosition"
