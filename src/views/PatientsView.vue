@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'; // <-- Añadimos computed
+import { onMounted, ref, computed, watch } from 'vue'; // <-- Añadimos watch
 import { usePatientsStore } from '@/stores/patients';
 import type { Patient } from '@/types';
 import Modal from '@/components/Modal.vue';
@@ -12,24 +12,55 @@ const { patients, isLoading } = storeToRefs(patientsStore);
 const isModalOpen = ref(false);
 const patientToEdit = ref<Patient | null>(null);
 
-// --- INICIO DE LA LÓGICA DEL BUSCADOR ---
-
-// 1. Creamos una variable para guardar el texto de búsqueda
+// --- LÓGICA DEL BUSCADOR (Existente) ---
 const searchQuery = ref('');
 
-// 2. Creamos una propiedad "computada" que filtra los pacientes
 const filteredPatients = computed(() => {
   if (!searchQuery.value) {
-    return patients.value; // Si no hay búsqueda, muestra todos
+    return patients.value;
   }
-  // Filtra por nombre o DNI, ignorando mayúsculas/minúsculas
   return patients.value.filter(patient =>
     patient.fullName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
     patient.dni.toLowerCase().includes(searchQuery.value.toLowerCase())
   );
 });
 
-// --- FIN DE LA LÓGICA DEL BUSCADOR ---
+// --- INICIO DE LA LÓGICA DE PAGINACIÓN ---
+
+const currentPage = ref(1);
+const pageSize = 10; // Mostrar 10 pacientes por página
+
+// 1. Resetea a la página 1 cada vez que el usuario busca algo
+watch(searchQuery, () => {
+  currentPage.value = 1;
+});
+
+// 2. Calcula el número total de páginas basado en la lista FILTRADA
+const totalPages = computed(() => {
+  return Math.ceil(filteredPatients.value.length / pageSize);
+});
+
+// 3. "Rebana" la lista filtrada para mostrar solo la página actual
+const paginatedPatients = computed(() => {
+  const startIndex = (currentPage.value - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  return filteredPatients.value.slice(startIndex, endIndex);
+});
+
+// 4. Funciones para cambiar de página
+function nextPage() {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+  }
+}
+
+function prevPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+  }
+}
+
+// --- FIN DE LA LÓGICA DE PAGINACIÓN ---
 
 onMounted(() => {
   patientsStore.fetchPatients();
@@ -86,7 +117,7 @@ function handlePatientSaved() {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="patient in filteredPatients" :key="patient.id" class="border-b border-gray-200 hover:bg-light-gray">
+          <tr v-for="patient in paginatedPatients" :key="patient.id" class="border-b border-gray-200 hover:bg-light-gray">
             <td class="py-3 px-4 font-medium text-text-dark">{{ patient.fullName }}</td>
             <td class="py-3 px-4">{{ patient.dni }}</td>
             <td class="py-3 px-4">{{ patient.phone }}</td>
@@ -104,7 +135,29 @@ function handlePatientSaved() {
       <div v-else class="text-center py-4 text-text-light">
         No se encontraron pacientes que coincidan con tu búsqueda.
       </div>
-    </div>
+
+      <div v-if="totalPages > 1" class="flex justify-between items-center mt-6">
+        <button 
+          @click="prevPage" 
+          :disabled="currentPage === 1"
+          class="px-4 py-2 bg-gray-200 text-text-dark rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Anterior
+        </button>
+        
+        <span class="text-sm text-text-light">
+          Página {{ currentPage }} de {{ totalPages }}
+        </span>
+        
+        <button 
+          @click="nextPage" 
+          :disabled="currentPage === totalPages"
+          class="px-4 py-2 bg-gray-200 text-text-dark rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Siguiente
+        </button>
+      </div>
+      </div>
 
     <Modal :isOpen="isModalOpen" @close="isModalOpen = false">
       <template #header>
