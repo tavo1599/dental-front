@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed } from 'vue';
+import { onMounted, ref, computed } from 'vue'; // ref y computed ya estaban, solo los usamos más
 import { useDashboardStore } from '@/stores/dashboard';
 import { storeToRefs } from 'pinia';
 import { RouterLink } from 'vue-router';
@@ -14,6 +14,53 @@ const { summary, monthlyRevenueChartData, appointmentStatusChartData, isLoading 
 onMounted(() => {
   dashboardStore.fetchSummary();
 });
+
+// --- [NUEVO] LÓGICA DE PAGINACIÓN DE AGENDA ---
+const todayCurrentPage = ref(1);
+const tomorrowCurrentPage = ref(1);
+const appointmentPageSize = 5; // Mostrar 5 citas por página
+
+// Paginación para "Agenda del Día"
+const todayTotalPages = computed(() => {
+  const total = summary.value.todayAppointments?.length || 0;
+  return Math.ceil(total / appointmentPageSize);
+});
+
+const paginatedTodayAppointments = computed(() => {
+  if (!summary.value.todayAppointments) return [];
+  const startIndex = (todayCurrentPage.value - 1) * appointmentPageSize;
+  const endIndex = startIndex + appointmentPageSize;
+  return summary.value.todayAppointments.slice(startIndex, endIndex);
+});
+
+function nextPageToday() {
+  if (todayCurrentPage.value < todayTotalPages.value) todayCurrentPage.value++;
+}
+function prevPageToday() {
+  if (todayCurrentPage.value > 1) todayCurrentPage.value--;
+}
+
+// Paginación para "Agenda de Mañana"
+const tomorrowTotalPages = computed(() => {
+  const total = summary.value.tomorrowAppointments?.length || 0;
+  return Math.ceil(total / appointmentPageSize);
+});
+
+const paginatedTomorrowAppointments = computed(() => {
+  if (!summary.value.tomorrowAppointments) return [];
+  const startIndex = (tomorrowCurrentPage.value - 1) * appointmentPageSize;
+  const endIndex = startIndex + appointmentPageSize;
+  return summary.value.tomorrowAppointments.slice(startIndex, endIndex);
+});
+
+function nextPageTomorrow() {
+  if (tomorrowCurrentPage.value < tomorrowTotalPages.value) tomorrowCurrentPage.value++;
+}
+function prevPageTomorrow() {
+  if (tomorrowCurrentPage.value > 1) tomorrowCurrentPage.value--;
+}
+// --- FIN DE LA LÓGICA DE PAGINACIÓN ---
+
 
 // --- DATOS PARA LOS GRÁFICOS ---
 const monthlyChartData = computed(() => ({
@@ -111,31 +158,61 @@ function sendBirthdayMessage(patient: any) {
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="bg-white p-6 rounded-lg shadow-md flex flex-col">
           <h3 class="text-xl font-bold text-text-dark mb-4">Agenda del Día</h3>
-          <div v-if="summary.todayAppointments?.length > 0" class="space-y-4">
-            <RouterLink v-for="appt in summary.todayAppointments" :key="appt.id" :to="{ name: 'patient-detail', params: { id: appt.patient.id } }" class="flex items-center p-3 bg-gray-50 rounded-md hover:bg-primary hover:text-white transition-colors group">
-              <div class="font-semibold text-primary w-24 group-hover:text-white">{{ formatTime(appt.startTime) }}</div>
-              <div class="flex-1">
-                <p class="font-semibold text-text-dark group-hover:text-white">{{ appt.patient.fullName }}</p>
-              </div>
-            </RouterLink>
+          <div class="flex-1">
+            <div v-if="summary.todayAppointments?.length > 0" class="space-y-4">
+              <RouterLink v-for="appt in paginatedTodayAppointments" :key="appt.id" :to="{ name: 'patient-detail', params: { id: appt.patient.id } }" class="flex items-center p-3 bg-gray-50 rounded-md hover:bg-primary hover:text-white transition-colors group">
+                <div class="font-semibold text-primary w-24 group-hover:text-white">{{ formatTime(appt.startTime) }}</div>
+                <div class="flex-1">
+                  <p class="font-semibold text-text-dark group-hover:text-white">{{ appt.patient.fullName }}</p>
+                </div>
+              </RouterLink>
+            </div>
+            <div v-else class="text-center py-4 text-text-light">No hay citas programadas para hoy.</div>
           </div>
-          <div v-else class="text-center py-4 text-text-light">No hay citas programadas para hoy.</div>
+          
+          <div v-if="todayTotalPages > 1" class="flex justify-between items-center mt-4 pt-4 border-t">
+            <button @click="prevPageToday" :disabled="todayCurrentPage === 1" class="btn-pagination">
+              &lt; Ant
+            </button>
+            <span class="text-sm font-semibold text-text-light">
+              {{ todayCurrentPage }} / {{ todayTotalPages }}
+            </span>
+            <button @click="nextPageToday" :disabled="todayCurrentPage === todayTotalPages" class="btn-pagination">
+              Sig &gt;
+            </button>
+          </div>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow-md">
+        
+        <div class="bg-white p-6 rounded-lg shadow-md flex flex-col">
           <h3 class="text-xl font-bold text-text-dark mb-4">Agenda de Mañana</h3>
-          <div v-if="summary.tomorrowAppointments?.length > 0" class="space-y-4">
-            <RouterLink v-for="appt in summary.tomorrowAppointments" :key="appt.id" :to="{ name: 'patient-detail', params: { id: appt.patient.id } }" class="flex items-center p-3 bg-gray-50 rounded-md hover:bg-primary hover:text-white transition-colors group">
-              <div class="font-semibold text-primary w-24 group-hover:text-white">{{ formatTime(appt.startTime) }}</div>
-              <div class="flex-1">
-                <p class="font-semibold text-text-dark group-hover:text-white">{{ appt.patient.fullName }}</p>
-              </div>
-            </RouterLink>
+          <div class="flex-1">
+            <div v-if="summary.tomorrowAppointments?.length > 0" class="space-y-4">
+              <RouterLink v-for="appt in paginatedTomorrowAppointments" :key="appt.id" :to="{ name: 'patient-detail', params: { id: appt.patient.id } }" class="flex items-center p-3 bg-gray-50 rounded-md hover:bg-primary hover:text-white transition-colors group">
+                <div class="font-semibold text-primary w-24 group-hover:text-white">{{ formatTime(appt.startTime) }}</div>
+                <div class="flex-1">
+                  <p class="font-semibold text-text-dark group-hover:text-white">{{ appt.patient.fullName }}</p>
+                </div>
+              </RouterLink>
+            </div>
+            <div v-else class="text-center py-4 text-text-light">No hay citas programadas para mañana.</div>
           </div>
-          <div v-else class="text-center py-4 text-text-light">No hay citas programadas para mañana.</div>
+
+          <div v-if="tomorrowTotalPages > 1" class="flex justify-between items-center mt-4 pt-4 border-t">
+            <button @click="prevPageTomorrow" :disabled="tomorrowCurrentPage === 1" class="btn-pagination">
+              &lt; Ant
+            </button>
+            <span class="text-sm font-semibold text-text-light">
+              {{ tomorrowCurrentPage }} / {{ tomorrowTotalPages }}
+            </span>
+            <button @click="nextPageTomorrow" :disabled="tomorrowCurrentPage === tomorrowTotalPages" class="btn-pagination">
+              Sig &gt;
+            </button>
+          </div>
         </div>
       </div>
+      
       <div class="bg-white p-6 rounded-lg shadow-md">
         <h3 class="text-xl font-bold text-text-dark mb-4">Próximos Cumpleaños</h3>
         <div v-if="summary.upcomingBirthdays?.length > 0" class="space-y-3">
@@ -178,3 +255,9 @@ function sendBirthdayMessage(patient: any) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.btn-pagination {
+  @apply px-3 py-1 text-sm font-semibold text-primary bg-blue-100 rounded-md hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors;
+}
+</style>
