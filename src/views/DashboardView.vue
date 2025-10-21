@@ -8,7 +8,7 @@ import BarChart from '@/components/charts/BarChart.vue';
 import HorizontalBarChart from '@/components/charts/HorizontalBarChart.vue';
 import DoughnutChart from '@/components/charts/DoughnutChart.vue';
 import { translateAppointmentStatus } from '@/utils/formatters';
-import { AppointmentStatus } from '@/types'; // <-- [NUEVO] 1. Importamos el tipo
+import { AppointmentStatus } from '@/types'; // Importamos el tipo
 
 const dashboardStore = useDashboardStore();
 const { summary, monthlyRevenueChartData, appointmentStatusChartData, isLoading } = storeToRefs(dashboardStore);
@@ -84,18 +84,29 @@ const topTreatmentsChartData = computed(() => {
   }
 });
 
+// --- [NUEVO] Objeto de Mapeo de Colores ---
+// Asigna un color a cada estado específico.
+const statusColorMap = {
+  [AppointmentStatus.SCHEDULED]: '#2563EB', // Azul
+  [AppointmentStatus.CONFIRMED]: '#10B981', // Verde
+  [AppointmentStatus.COMPLETED]: '#6B7280', // Gris
+  [AppointmentStatus.CANCELLED]: '#EF4444', // Rojo
+  [AppointmentStatus.NO_SHOW]: '#F97316',   // Naranja
+};
+// --- Fin del Mapeo ---
+
 const statusChartData = computed(() => {
+  // Obtenemos las etiquetas en inglés (ej: "scheduled", "no_show", etc.)
+  const labelsFromStore = appointmentStatusChartData.value.labels as AppointmentStatus[];
+  
   return {
-    // [CORREGIDO] 2. Le decimos a TypeScript que 'l' es del tipo 'AppointmentStatus'
-    labels: appointmentStatusChartData.value.labels.map(l => translateAppointmentStatus(l as AppointmentStatus)),
+    // 1. Traducimos las etiquetas para mostrarlas en el gráfico
+    labels: labelsFromStore.map(l => translateAppointmentStatus(l)),
+    
     datasets: [{
-      backgroundColor: [
-        '#2563EB', // Agendada
-        '#10B981', // Confirmada
-        '#6B7280', // Completada
-        '#EF4444', // Cancelada
-        '#F97316', // No se presentó
-      ],
+      // 2. [MODIFICADO] Creamos el array de colores dinámicamente
+      //    Buscamos el color correcto para cada etiqueta en nuestro "mapa"
+      backgroundColor: labelsFromStore.map(l => statusColorMap[l] || '#CCCCCC'), // Usamos gris si no lo encuentra
       data: appointmentStatusChartData.value.data,
     }]
   }
