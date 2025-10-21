@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'; // ref y computed ya estaban, solo los usamos más
+import { onMounted, ref, computed } from 'vue';
 import { useDashboardStore } from '@/stores/dashboard';
 import { storeToRefs } from 'pinia';
 import { RouterLink } from 'vue-router';
@@ -7,6 +7,8 @@ import IconWhatsapp from '@/components/icons/IconWhatsapp.vue';
 import BarChart from '@/components/charts/BarChart.vue';
 import HorizontalBarChart from '@/components/charts/HorizontalBarChart.vue';
 import DoughnutChart from '@/components/charts/DoughnutChart.vue';
+import { translateAppointmentStatus } from '@/utils/formatters';
+import { AppointmentStatus } from '@/types'; // <-- [NUEVO] 1. Importamos el tipo
 
 const dashboardStore = useDashboardStore();
 const { summary, monthlyRevenueChartData, appointmentStatusChartData, isLoading } = storeToRefs(dashboardStore);
@@ -15,12 +17,11 @@ onMounted(() => {
   dashboardStore.fetchSummary();
 });
 
-// --- [NUEVO] LÓGICA DE PAGINACIÓN DE AGENDA ---
+// --- LÓGICA DE PAGINACIÓN DE AGENDA ---
 const todayCurrentPage = ref(1);
 const tomorrowCurrentPage = ref(1);
-const appointmentPageSize = 5; // Mostrar 5 citas por página
+const appointmentPageSize = 5; 
 
-// Paginación para "Agenda del Día"
 const todayTotalPages = computed(() => {
   const total = summary.value.todayAppointments?.length || 0;
   return Math.ceil(total / appointmentPageSize);
@@ -40,7 +41,6 @@ function prevPageToday() {
   if (todayCurrentPage.value > 1) todayCurrentPage.value--;
 }
 
-// Paginación para "Agenda de Mañana"
 const tomorrowTotalPages = computed(() => {
   const total = summary.value.tomorrowAppointments?.length || 0;
   return Math.ceil(total / appointmentPageSize);
@@ -59,7 +59,6 @@ function nextPageTomorrow() {
 function prevPageTomorrow() {
   if (tomorrowCurrentPage.value > 1) tomorrowCurrentPage.value--;
 }
-// --- FIN DE LA LÓGICA DE PAGINACIÓN ---
 
 
 // --- DATOS PARA LOS GRÁFICOS ---
@@ -87,14 +86,15 @@ const topTreatmentsChartData = computed(() => {
 
 const statusChartData = computed(() => {
   return {
-    labels: appointmentStatusChartData.value.labels.map(l => l.charAt(0).toUpperCase() + l.slice(1).replace('_', ' ')),
+    // [CORREGIDO] 2. Le decimos a TypeScript que 'l' es del tipo 'AppointmentStatus'
+    labels: appointmentStatusChartData.value.labels.map(l => translateAppointmentStatus(l as AppointmentStatus)),
     datasets: [{
       backgroundColor: [
-        '#2563EB', // scheduled
-        '#10B981', // confirmed
-        '#6B7280', // completed
-        '#EF4444', // cancelled
-        '#F97316', // no_show
+        '#2563EB', // Agendada
+        '#10B981', // Confirmada
+        '#6B7280', // Completada
+        '#EF4444', // Cancelada
+        '#F97316', // No se presentó
       ],
       data: appointmentStatusChartData.value.data,
     }]
