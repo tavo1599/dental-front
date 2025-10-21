@@ -2,21 +2,23 @@
 import { ref, onMounted, watchEffect } from 'vue';
 import { useTreatmentsStore } from '@/stores/treatments';
 import { storeToRefs } from 'pinia';
-import Autocomplete from '@/components/Autocomplete.vue'; // <-- Importa el nuevo componente
+import Autocomplete from '@/components/Autocomplete.vue'; // Importa el componente de búsqueda
 import { searchCie10 } from '@/services/cie10Service';
+import type { ClinicalHistoryEntry } from '@/types'; // Importa el tipo
 
 const props = defineProps<{ 
-  initialData?: any,
+  initialData?: Partial<ClinicalHistoryEntry> | null, // Usa el tipo
   loading: boolean 
 }>();
 const emit = defineEmits(['submit', 'cancel']);
 
-// 1. Llama al store de tratamientos
 const treatmentsStore = useTreatmentsStore();
 const { treatments, isLoading: isLoadingTreatments } = storeToRefs(treatmentsStore);
 
+// 1. AÑADE 'evolution' a formData
 const formData = ref({
   description: '',
+  evolution: '', // <-- NUEVO CAMPO
   treatmentPerformed: '',
   diagnosis: '',
   prescription: '',
@@ -39,27 +41,33 @@ watchEffect(() => {
   }
 });
 
-// 2. Carga la lista de tratamientos cuando el componente se monta
 onMounted(() => {
   if (treatments.value.length === 0) {
     treatmentsStore.fetchTreatments();
   }
 });
 
-
-
+const handleSubmit = () => {
+  emit('submit', formData.value);
+};
 </script>
 
 <template>
-  <form @submit.prevent="emit('submit', formData)" class="space-y-4">
+  <form @submit.prevent="handleSubmit" class="space-y-4">
     <div>
-      <label for="description" class="block text-sm font-medium text-text-light">Descripción / Motivo de Consulta</label>
-      <textarea v-model="formData.description" id="description" rows="3" class="mt-1 block w-full input-style" required></textarea>
+      <label for="description" class="block text-sm font-medium text-text-light">Motivo de Consulta</label>
+      <textarea v-model="formData.description" id="description" rows="2" class="mt-1 block w-full input-style" required></textarea>
+    </div>
+
+    <div>
+      <label for="evolution" class="block text-sm font-medium text-text-light">Evolución (SOAP)</label>
+      <textarea v-model="formData.evolution" id="evolution" rows="5" class="mt-1 block w-full input-style" placeholder="Escriba la evolución del paciente..."></textarea>
     </div>
     <div>
       <label for="diagnosis">Diagnóstico (CIE-10)</label>
       <Autocomplete 
         :search-function="handleDiagnosisSearch"
+        :initial-value="formData.diagnosis"
         @select="onDiagnosisSelect"
         class="mt-1"
       />

@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { PropType } from 'vue';
-import { ToothStatus, type ToothSurfaceState, type ToothState } from '@/types';
+import { ToothStatus, type Tooth, type ToothSurfaceState, type ToothState } from '@/types';
 
 const props = defineProps({
   toothNumber: { type: Number, required: true },
-  wholeStatus: { type: String as PropType<ToothStatus>, default: ToothStatus.HEALTHY },
+  wholeStatus: { type: Object as PropType<Tooth> },
   surfaceStates: { type: Object as PropType<Record<string, ToothSurfaceState>> },
   toothStates: { type: Array as PropType<ToothState[]> },
   isSelected: { type: Function as PropType<(tooth: number, surface: string) => boolean>, default: () => false },
 });
 
 const emit = defineEmits(['surface-click', 'surface-double-click']);
+
+const isLowerTooth = computed(() => {
+  const num = props.toothNumber;
+  return (num >= 31 && num <= 48) || (num >= 71 && num <= 85);
+});
 
 const topBoxStates = computed(() => {
   if (!props.toothStates || props.toothStates.length === 0) {
@@ -23,22 +28,8 @@ const topBoxStates = computed(() => {
   }));
 });
 
-const pulparTreatment = computed(() => {
-  if (!props.toothStates) return null;
-  return props.toothStates.find(state => state.condition === 'Tratamiento Pulpar');
-});
-
 const wholeToothStatus = computed(() => {
-  const oclusalStatus = props.surfaceStates?.['occlusal']?.status;
-  const statuses = [ 
-    ToothStatus.CROWN, ToothStatus.TEMPORARY_CROWN, ToothStatus.ENDODONTICS,
-    ToothStatus.IMPLANT, ToothStatus.PONTIC, ToothStatus.EXTRACTION_NEEDED,
-    ToothStatus.EXTRACTED, ToothStatus.SUPERNUMERARY 
-  ];
-  if (oclusalStatus && statuses.includes(oclusalStatus)) {
-    return oclusalStatus;
-  }
-  return props.wholeStatus;
+  return props.wholeStatus?.status;
 });
 
 const getFillClass = (surface: string) => {
@@ -95,11 +86,11 @@ function getSurfaceName(surface: string) {
 </script>
 
 <template>
-  <div class="flex flex-col items-center select-none relative">
-    
-    <div 
-      class="absolute -top-4 left-0 right-0 h-4 flex justify-center items-center gap-1"
-    >
+  <div 
+    class="flex flex-col items-center select-none relative"
+    :class="{ 'mt-3': isLowerTooth }"
+  >
+    <div class="absolute -top-4 left-0 right-0 h-4 flex justify-center items-center gap-1">
       <span 
         v-for="(state, index) in topBoxStates" 
         :key="index" 
@@ -112,7 +103,6 @@ function getSurfaceName(surface: string) {
     <span class="text-xs text-text-light mb-0.5">{{ toothNumber }}</span>
     
     <svg class="w-full h-full" viewBox="-10 -15 120 130">
-      
       <g stroke="#333" stroke-width="2" class="cursor-pointer">
         <path d="M 30 90 C 30 110, 70 110, 70 90 L 50 48 Z" fill="#F3EADF" stroke-width="1.5" />
         <g transform="translate(0, -10)">
@@ -145,22 +135,11 @@ function getSurfaceName(surface: string) {
           <line x1="25" y1="40" x2="75" y2="40" />
         </g>
       </g>
-
-      <g v-if="pulparTreatment" 
-         :class="pulparTreatment.status === 'bueno' ? 'stroke-blue-600' : 'stroke-red-600'" 
-         stroke-width="8" 
-         fill="none" 
-         stroke-linecap="round">
-        
-        <line x1="50" y1="40" x2="50" y2="100" />
-        
-      </g>
-      </svg>
+    </svg>
   </div>
 </template>
 
 <style scoped>
-/* Da espacio para el Top Box y el número del diente */
 .relative {
   margin-top: 0.5rem;
   margin-bottom: 0.5rem;

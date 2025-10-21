@@ -47,7 +47,7 @@ function sendConfirmationRequest() {
   const appointmentDate = new Date(startTime).toLocaleDateString('es-PE', { day: '2-digit', month: 'long' });
   const appointmentTime = new Date(startTime).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
 
-  const message = `Hola ${patient.fullName}, te contactamos de ${clinicName} para tu cita agendada el ${appointmentDate} a las ${appointmentTime} con el Dr(a). ${doctor.fullName}. Por favor, responde para CONFIRMAR tu asistencia. ¡Gracias!`;
+  const message = `Hola ${patient.fullName}, te contactamos de ${clinicName} para tu cita agendada el ${appointmentDate} a las ${appointmentTime} con el Dr(a). ${doctor.fullName}. Por favor, CONFIRMAR tu asistencia respondiendo este mensaje. ¡Gracias por tu confianza!`;
 
   openWhatsApp(patient.phone, message);
 }
@@ -62,6 +62,19 @@ function sendDayOfReminder() {
 
   openWhatsApp(patient.phone, message);
 }
+
+// --- [NUEVA FUNCIÓN] ---
+// Crea y envía el mensaje para invitar a reprogramar una cita perdida.
+function sendRescheduleInvitation() {
+  if (!props.appointment) return;
+  const { patient, doctor } = props.appointment;
+  const clinicName = doctor.tenant.name;
+
+  const message = `Hola ${patient.fullName}, te saludamos de ${clinicName} porque notamos que no pudiste asistir a tu última cita. Si deseas reprogramarla según tu disponibilidad, Estamos atentos para poder ayudarte a agendar una nueva cita. ¡Que tengas un buen día!`;
+
+  openWhatsApp(patient.phone, message);
+}
+// --- FIN DE LA NUEVA FUNCIÓN ---
 
 async function handleDelete() {
   if (props.appointment) {
@@ -100,14 +113,22 @@ async function handleDelete() {
     <div class="flex justify-between items-center pt-4 border-t mt-4">
       
       <div class="flex gap-2">
-        <button v-if="appointment.status === 'scheduled'" @click="sendConfirmationRequest" type="button" class="btn-icon bg-blue-500 hover:bg-blue-600" title="Solicitar confirmación">
+        <button v-if="appointment.status === AppointmentStatus.SCHEDULED" @click="sendConfirmationRequest" type="button" class="btn-icon bg-blue-500 hover:bg-blue-600" title="Solicitar confirmación">
           <IconWhatsapp class="h-5 w-5" />
           <span>Confirmar</span>
         </button>
-        <button v-if="appointment.status === 'confirmed'" @click="sendDayOfReminder" type="button" class="btn-icon bg-green-500 hover:bg-green-600" title="Enviar recordatorio">
+        <button v-if="appointment.status === AppointmentStatus.CONFIRMED" @click="sendDayOfReminder" type="button" class="btn-icon bg-green-500 hover:bg-green-600" title="Enviar recordatorio">
           <IconWhatsapp class="h-5 w-5" />
           <span>Recordar</span>
         </button>
+        
+        <!-- --- [NUEVO BOTÓN] --- -->
+        <!-- Este botón solo aparecerá si el estado de la cita es 'NO_SHOW' -->
+        <button v-if="appointment.status === AppointmentStatus.NO_SHOW" @click="sendRescheduleInvitation" type="button" class="btn-icon bg-orange-500 hover:bg-orange-600" title="Enviar mensaje para reprogramar">
+          <IconWhatsapp class="h-5 w-5" />
+          <span>Reprogramar</span>
+        </button>
+        <!-- --- FIN DEL NUEVO BOTÓN --- -->
         
         <Menu as="div" class="relative inline-block text-left">
           <div>
@@ -144,7 +165,6 @@ async function handleDelete() {
     </div>
   </div>
 
-  <!-- --- MODAL DE CONFIRMACIÓN CON ICONO --- -->
   <ConfirmationModal 
     :isOpen="isDeleteConfirmModalOpen"
     title="Eliminar Cita"

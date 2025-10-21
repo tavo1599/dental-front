@@ -31,12 +31,17 @@ const formatDate = (dateString: string) => {
       </div>
       <div class="space-y-3">
         <div>
-          <h4 class="font-semibold text-text-dark">Descripción</h4>
+          <h4 class="font-semibold text-text-dark">Motivo de Consulta</h4>
           <p class="text-text-light truncate">{{ entry.description }}</p>
+        </div>
+
+        <div v-if="entry.evolution">
+          <h4 class="font-semibold text-text-dark">Evolución</h4>
+          <p class="text-text-light truncate">{{ entry.evolution }}</p>
         </div>
         <div v-if="entry.treatmentPerformed">
           <h4 class="font-semibold text-text-dark">Tratamiento Realizado</h4>
-          <p class="text-text-light">{{ entry.treatmentPerformed }}</p>
+          <p class="text-text-light truncate">{{ entry.treatmentPerformed }}</p>
         </div>
       </div>
     </div>

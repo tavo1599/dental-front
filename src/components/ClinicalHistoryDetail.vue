@@ -25,6 +25,11 @@ const formatDate = (dateString: string) => {
       <h4 class="font-semibold text-text-dark">Descripción / Motivo de Consulta</h4>
       <p class="text-text-light mt-1">{{ entry.description }}</p>
     </div>
+
+    <div v-if="entry.evolution">
+      <h4 class="font-semibold text-text-dark">Evolución (SOAP)</h4>
+      <p class="text-text-light mt-1 whitespace-pre-wrap">{{ entry.evolution }}</p>
+    </div>
     <div v-if="entry.diagnosis">
       <h4 class="font-semibold text-text-dark">Diagnóstico</h4>
       <p class="text-text-light mt-1">{{ entry.diagnosis }}</p>
@@ -35,11 +40,11 @@ const formatDate = (dateString: string) => {
     </div>
     <div v-if="entry.prescription">
       <h4 class="font-semibold text-text-dark">Prescripción</h4>
-      <p class="text-text-light mt-1">{{ entry.prescription }}</p>
+      <p class="text-text-light mt-1 whitespace-pre-wrap">{{ entry.prescription }}</p>
     </div>
     <div v-if="entry.indications">
       <h4 class="font-semibold text-text-dark">Indicaciones</h4>
-      <p class="text-text-light mt-1">{{ entry.indications }}</p>
+      <p class="text-text-light mt-1 whitespace-pre-wrap">{{ entry.indications }}</p>
     </div>
   </div>
 </template>

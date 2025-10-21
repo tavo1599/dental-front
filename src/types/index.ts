@@ -222,6 +222,7 @@ export interface ClinicalHistoryEntry {
   id: string;
   entryDate: string;
   description: string;
+  evolution: string;
   treatmentPerformed?: string;
   diagnosis?: string;
   prescription?: string;

@@ -1,29 +1,45 @@
 <script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue'; // Importa hooks
 import { useTreatmentsStore } from '@/stores/treatments';
 import { usePlannedTreatmentsStore } from '@/stores/plannedTreatments';
 import { storeToRefs } from 'pinia';
-import { onMounted, ref } from 'vue';
-import SearchableDropdown from './SearchableDropdown.vue'; // 1. Importa el componente de búsqueda
+import type { Treatment } from '@/types';
+import SearchableDropdown from './SearchableDropdown.vue';
 
 const props = defineProps<{
   patientId: string;
   toothSurfaceStateId: string;
 }>();
+
 const emit = defineEmits(['close']);
 
 const treatmentsStore = useTreatmentsStore();
 const { treatments } = storeToRefs(treatmentsStore);
 const plannedTreatmentsStore = usePlannedTreatmentsStore();
 
-const selectedTreatmentId = ref<string | null>(null); // 2. Estado para el tratamiento seleccionado
+const selectedTreatmentId = ref<string | null>(null);
+
+// --- Lógica para "Cerrar al hacer Clic Afuera" ---
+const plannerEl = ref<HTMLDivElement | null>(null);
+
+const handleClickOutside = (event: MouseEvent) => {
+  if (plannerEl.value && !plannerEl.value.contains(event.target as Node)) {
+    emit('close');
+  }
+};
 
 onMounted(() => {
   if (treatments.value.length === 0) {
     treatmentsStore.fetchTreatments();
   }
+  document.addEventListener('mousedown', handleClickOutside);
 });
 
-// 3. La función ahora se llama desde un botón
+onUnmounted(() => {
+  document.removeEventListener('mousedown', handleClickOutside);
+});
+// --- Fin de la lógica ---
+
 function planSelectedTreatment() {
   if (!selectedTreatmentId.value) return;
 
@@ -37,7 +53,7 @@ function planSelectedTreatment() {
 </script>
 
 <template>
-  <div class="fixed bg-white rounded-lg shadow-xl border p-4 z-50 w-72 space-y-3">
+  <div ref="plannerEl" class="fixed bg-white rounded-lg shadow-xl border p-4 z-50 w-72 space-y-3">
     <h4 class="font-bold text-sm text-text-dark border-b pb-2">Planear Tratamiento</h4>
     
     <div>
@@ -58,3 +74,8 @@ function planSelectedTreatment() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.btn-primary { @apply px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-80 font-semibold text-sm; }
+.btn-secondary { @apply px-4 py-2 bg-gray-200 text-text-dark rounded-lg hover:bg-gray-300 font-semibold text-sm; }
+</style>
