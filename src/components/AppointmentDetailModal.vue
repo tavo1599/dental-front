@@ -33,7 +33,7 @@ function openWhatsApp(phone: string, message: string) {
   const internationalPhone = `51${phone.replace(/[^0-9]/g, '')}`;
   const encodedMessage = encodeURIComponent(message);
   const whatsappUrl = `https://wa.me/${internationalPhone}?text=${encodedMessage}`;
-  window.location.href = whatsappUrl;
+  window.open(whatsappUrl, '_blank');
 }
 
 function sendConfirmationRequest() {
