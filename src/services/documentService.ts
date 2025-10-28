@@ -21,3 +21,11 @@ export const uploadDocument = (patientId: string, file: File) => {
     },
   });
 };
+
+// Descarga un archivo por su ruta relativa (ej: uploads/documents/archivo.pdf)
+export const downloadFileByPath = (filePath: string) => {
+  // Usamos apiClient para respetar baseURL y headers/auth
+  return apiClient.get<Blob>(`/${filePath.replace(/^\//, '')}`, {
+    responseType: 'blob',
+  });
+};

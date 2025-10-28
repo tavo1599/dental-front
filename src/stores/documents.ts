@@ -50,5 +50,20 @@ export const useDocumentsStore = defineStore('documents', () => {
     }
   }
 
-  return { documents, isLoading, fetchDocuments, uploadDocument, deleteDocument, };
+  // Descarga el documento como Blob y lo retorna al caller
+  async function downloadDocumentFile(doc: PatientDocument): Promise<Blob | null> {
+    isLoading.value = true;
+    try {
+      const response = await service.downloadFileByPath(doc.filePath);
+      return response.data as Blob;
+    } catch (error: any) {
+      toast.error('No se pudo descargar el documento.');
+      console.error('Download error:', error);
+      return null;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  return { documents, isLoading, fetchDocuments, uploadDocument, deleteDocument, downloadDocumentFile };
 });

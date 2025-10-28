@@ -109,7 +109,7 @@ function handleSubmit() {
     </div>
     
     <div class="grid grid-cols-2 gap-4">
-      <div>
+      <div>z
         <label for="startTime" class="block text-sm font-medium text-text-light">Hora de Inicio</label>
         <input v-model="startTime" type="time" id="startTime" class="mt-1 block w-full input-style" required />
       </div>

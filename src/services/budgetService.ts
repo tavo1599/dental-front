@@ -17,3 +17,13 @@ export const createBudget = (data: any) => {
 export const getBudgetById = (id: string) => {
   return apiClient.get<Budget>(`/budgets/${id}`);
 };
+
+// Actualiza (o establece) el descuento fijo de un presupuesto
+export const updateBudgetDiscount = (id: string, discountAmount: number) => {
+  return apiClient.patch(`/budgets/${id}/discount`, { discountAmount });
+};
+
+// Elimina un presupuesto por su id
+export const deleteBudget = (id: string) => {
+  return apiClient.delete(`/budgets/${id}`);
+};

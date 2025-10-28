@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue';
 import { useTreatmentsStore } from '@/stores/treatments';
+import { useAuthStore } from '@/stores/auth';
 import { storeToRefs } from 'pinia';
-import type { Treatment } from '@/types';
+import type { Treatment, BudgetItem } from '@/types';
 
 const props = defineProps<{
-  initialData?: any; // Puede recibir un presupuesto existente o items pre-cargados
+  initialData?: any; // Recibe patientId, prefilledItems, discountAmount
   loading: boolean;
 }>();
 
@@ -13,23 +14,34 @@ const emit = defineEmits(['submit', 'cancel']);
 
 const treatmentsStore = useTreatmentsStore();
 const { treatments } = storeToRefs(treatmentsStore);
+const authStore = useAuthStore(); 
 
 const selectedTreatmentId = ref('');
 const budgetItems = ref<{ treatment: Treatment; quantity: number, priceAtTimeOfBudget: number }[]>([]);
+const discountAmount = ref(0);
 
-// Si vienen items pre-cargados del plan de tratamiento, los usamos
 onMounted(() => {
   if (props.initialData?.prefilledItems) {
     budgetItems.value = props.initialData.prefilledItems;
+  }
+  if (props.initialData?.discountAmount) {
+    discountAmount.value = props.initialData.discountAmount;
   }
   if (treatments.value.length === 0) {
     treatmentsStore.fetchTreatments();
   }
 });
 
-// Calcula el total del presupuesto
-const totalAmount = computed(() => {
-  return budgetItems.value.reduce((sum, item) => sum + (item.priceAtTimeOfBudget * item.quantity), 0);
+// Calcula el Subtotal
+const subtotal = computed(() => {
+  return budgetItems.value.reduce((sum, item) => sum + (Number(item.priceAtTimeOfBudget) * item.quantity), 0);
+});
+
+// Calcula el Total Final
+const finalTotal = computed(() => {
+  const discount = Number(discountAmount.value) || 0;
+  const total = subtotal.value - discount;
+  return total < 0 ? 0 : total;
 });
 
 function addTreatment() {
@@ -43,7 +55,7 @@ function addTreatment() {
       budgetItems.value.push({
         treatment,
         quantity: 1,
-        priceAtTimeOfBudget: treatment.price // Guardamos el precio actual
+        priceAtTimeOfBudget: treatment.price
       });
     }
     selectedTreatmentId.value = '';
@@ -54,12 +66,25 @@ function removeItem(treatmentId: string) {
   budgetItems.value = budgetItems.value.filter(item => item.treatment.id !== treatmentId);
 }
 
+// --- 'handleSubmit' CORREGIDO ---
 function handleSubmit() {
+  // 1. Mapea los items correctamente (incluyendo el precio)
   const itemsPayload = budgetItems.value.map(item => ({
     treatmentId: item.treatment.id,
-    quantity: item.quantity,
+    quantity: Number(item.quantity), // Asegura que sea número
+    priceAtTimeOfBudget: Number(item.priceAtTimeOfBudget), // Envía el precio
   }));
-  emit('submit', { items: itemsPayload });
+  
+  // 2. Construye el payload COMPLETO que el DTO espera
+  const payload = {
+    items: itemsPayload,
+    totalAmount: subtotal.value, // Envía el Subtotal
+    discountAmount: Number(discountAmount.value) || 0, // Envía el Descuento
+    patientId: props.initialData?.patientId, // Envía el patientId
+    doctorId: authStore.user?.id, // Envía el doctorId
+  };
+  
+  emit('submit', payload);
 }
 </script>
 
@@ -95,8 +120,30 @@ function handleSubmit() {
               </button>
             </div>
           </div>
-          <div class="pt-3 text-right">
-            <p class="text-xl font-bold text-text-dark">Total: S/. {{ totalAmount.toFixed(2) }}</p>
+          
+          <div class="pt-4 text-right space-y-2">
+            <div class="flex justify-end items-center gap-4">
+              <span class="text-lg text-text-light">Subtotal:</span>
+              <span class="text-lg text-text-dark font-semibold w-28 text-right">S/. {{ subtotal.toFixed(2) }}</span>
+            </div>
+            
+            <div class="flex justify-end items-center gap-4">
+              <label for="discount" class="text-lg font-semibold text-text-light">Descuento:</label>
+              <input 
+                v-model.number="discountAmount" 
+                type="number" 
+                id="discount" 
+                class="input-style w-28 text-right font-bold text-red-600 py-1" 
+                placeholder="0.00" 
+                min="0"
+                step="0.01"
+              />
+            </div>
+            
+            <div class="flex justify-end items-center gap-4 border-t pt-2">
+              <span class="text-xl font-bold text-primary">Total:</span>
+              <span class="text-xl font-bold text-primary w-28 text-right">S/. {{ finalTotal.toFixed(2) }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -123,5 +170,8 @@ function handleSubmit() {
 }
 .btn-secondary { 
   @apply px-6 py-2.5 bg-gray-200 text-text-dark rounded-lg hover:bg-gray-300 font-semibold; 
+}
+.text-danger {
+  @apply text-red-500 hover:text-red-700;
 }
 </style>

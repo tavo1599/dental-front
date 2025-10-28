@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { useToast } from 'vue-toastification';
 import { getPatients, createPatient as createPatientApi, updatePatient as updatePatientApi, getPatientById as getByIdApi } from '@/services/patientService';
-import type { Patient, MedicalHistory, OdontopediatricHistory } from '@/types';
+import type { Patient, MedicalHistory, OdontopediatricHistory, OrthodonticAnamnesis } from '@/types';
 import * as service from '@/services/patientService';
 
 export const usePatientsStore = defineStore('patients', () => {
@@ -11,6 +11,7 @@ export const usePatientsStore = defineStore('patients', () => {
   const selectedPatient = ref<Patient | null>(null);
   const medicalHistory = ref<MedicalHistory | null>(null);
   const odontopediatricHistory = ref<OdontopediatricHistory | null>(null);
+  const orthodonticHistory = ref<OrthodonticAnamnesis | null>(null);
   const isLoading = ref(false);
   const isHistoryLoading = ref(false);
 
@@ -134,7 +135,35 @@ async function updateMedicalHistory(patientId: string, data: MedicalHistory): Pr
     }
   }
 
+  async function fetchOrthodonticHistory(patientId: string) {
+    isHistoryLoading.value = true;
+    try {
+      const response = await service.getOrthodonticHistory(patientId);
+      orthodonticHistory.value = response.data;
+    } catch (error) {
+      console.error('Error fetching orthodontic history:', error);
+      orthodonticHistory.value = null; // Asegura que esté nulo si falla
+    } finally {
+      isHistoryLoading.value = false;
+    }
+  }
 
-  return { patients, selectedPatient, medicalHistory, odontopediatricHistory, isLoading, isHistoryLoading, fetchPatients, createPatient, updatePatient, fetchPatientById, fetchMedicalHistory,
-    updateMedicalHistory, fetchOdontopediatricHistory, updateOdontopediatricHistory, };
+  async function updateOrthodonticHistory(patientId: string, data: Partial<OrthodonticAnamnesis>): Promise<boolean> {
+    isHistoryLoading.value = true;
+    try {
+      const response = await service.updateOrthodonticHistory(patientId, data);
+      orthodonticHistory.value = response.data;
+      toast.success('Anamnesis de Ortodoncia actualizada con éxito.');
+      return true;
+    } catch (error) {
+      toast.error('Error al actualizar la Anamnesis de Ortodoncia.');
+      return false;
+    } finally {
+      isHistoryLoading.value = false;
+    }
+  }
+
+
+  return { patients, selectedPatient, medicalHistory, orthodonticHistory, odontopediatricHistory, isLoading, isHistoryLoading, fetchPatients, createPatient, updatePatient, fetchPatientById, fetchMedicalHistory,
+    updateMedicalHistory, fetchOdontopediatricHistory, updateOdontopediatricHistory, fetchOrthodonticHistory, updateOrthodonticHistory, };
 });

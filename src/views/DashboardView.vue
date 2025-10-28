@@ -8,7 +8,7 @@ import BarChart from '@/components/charts/BarChart.vue';
 import HorizontalBarChart from '@/components/charts/HorizontalBarChart.vue';
 import DoughnutChart from '@/components/charts/DoughnutChart.vue';
 import { translateAppointmentStatus } from '@/utils/formatters';
-import { AppointmentStatus } from '@/types'; // Importamos el tipo
+import { AppointmentStatus } from '@/types';
 
 const dashboardStore = useDashboardStore();
 const { summary, monthlyRevenueChartData, appointmentStatusChartData, isLoading } = storeToRefs(dashboardStore);
@@ -17,7 +17,6 @@ onMounted(() => {
   dashboardStore.fetchSummary();
 });
 
-// --- LÓGICA DE PAGINACIÓN DE AGENDA ---
 const todayCurrentPage = ref(1);
 const tomorrowCurrentPage = ref(1);
 const appointmentPageSize = 5; 

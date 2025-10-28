@@ -30,6 +30,14 @@ export const updateMedicalHistory = (patientId: string, data: any) => {
   return apiClient.patch(`/patients/${patientId}/medical-history`, data);
 };
 
+export const getOrthodonticHistory = (patientId: string) => {
+  return apiClient.get(`/patients/${patientId}/orthodontic-anamnesis`);
+};
+
+export const updateOrthodonticHistory = (patientId: string, data: any) => {
+  return apiClient.patch(`/patients/${patientId}/orthodontic-anamnesis`, data);
+};
+
 export const getOdontopediatricHistory = (patientId: string) => {
   return apiClient.get(`/patients/${patientId}/odontopediatric-history`);
 };
@@ -37,4 +45,6 @@ export const getOdontopediatricHistory = (patientId: string) => {
 export const updateOdontopediatricHistory = (patientId: string, data: any) => {
   return apiClient.patch(`/patients/${patientId}/odontopediatric-history`, data);
 };
+
+
 

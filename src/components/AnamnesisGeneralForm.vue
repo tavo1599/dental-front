@@ -28,6 +28,8 @@ const checklistItems = {
   osteoporosis: 'Osteoporosis (Bifosfonatos)',
 };
 
+// (No orthodontic options here — ortodoncia tendrá su propio formulario)
+
 // --- FUNCIÓN HELPER PARA LIMPIAR NÚMEROS ---
 const parseNumber = (val: any): number | undefined => {
   if (val === null || val === undefined || val === '') return undefined;
@@ -70,6 +72,7 @@ watch(() => props.initialData, (newData) => {
     heartRate: parseNumber(newData?.heartRate),
     temperature: parseNumber(newData?.temperature),
     respiratoryRate: parseNumber(newData?.respiratoryRate),
+    // orthodontic data is handled in its own form
   };
 }, { immediate: true, deep: true });
 
@@ -114,6 +117,8 @@ const handleSubmit = () => {
           </div>
         </div>
       </fieldset>
+
+      
 
       <fieldset class="border-b pb-6">
         <legend class="text-lg font-semibold text-text-dark">2. Antecedentes</legend>

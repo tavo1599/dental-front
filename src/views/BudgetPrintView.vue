@@ -4,6 +4,8 @@ import { useRoute } from 'vue-router';
 import { useBudgetsStore } from '@/stores/budgets';
 import { storeToRefs } from 'pinia';
 import type { Budget } from '@/types';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 const route = useRoute();
 const budgetsStore = useBudgetsStore();
@@ -11,6 +13,7 @@ const { selectedBudget, isLoading } = storeToRefs(budgetsStore);
 
 const isLogoLoaded = ref(false);
 const areFormatsRendered = ref(false);
+const isDownloading = ref(false);
 
 const formatsToPrint = computed(() => route.query.formats?.toString().split(',') || []);
 
@@ -20,6 +23,12 @@ const logoSrc = computed(() => {
   }
   isLogoLoaded.value = true; 
   return null;
+});
+
+// --- NUEVO CÁLCULO ---
+const finalTotal = computed(() => {
+  if (!selectedBudget.value) return 0;
+  return Number(selectedBudget.value.totalAmount) - Number(selectedBudget.value.discountAmount || 0);
 });
 
 const tryPrint = () => {
@@ -43,6 +52,50 @@ function closeWindow() {
   window.close();
 }
 
+async function downloadPDF() {
+  if (!selectedBudget.value) return;
+  isDownloading.value = true;
+  await nextTick();
+  const element = document.getElementById('print-root');
+  if (!element) {
+    alert('No se encontró el contenido para descargar.');
+    isDownloading.value = false;
+    return;
+  }
+
+  try {
+    // Renderiza el contenido a canvas
+    const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL('image/png');
+
+    // Configuración A4 en mm
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgWidth = 210; // mm
+    const pageHeight = 297; // mm
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position = position - pageHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    pdf.save(`presupuesto_${selectedBudget.value.id}.pdf`);
+  } catch (error) {
+    console.error(error);
+    alert('Error al generar el PDF.');
+  } finally {
+    isDownloading.value = false;
+  }
+}
+
 const formatDate = (dateString: string) => {
   if (!dateString) return '';
   return new Date(dateString).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -54,11 +107,16 @@ const formatDate = (dateString: string) => {
     <div class="print:hidden text-center mb-4 bg-white p-4 rounded-lg shadow-md max-w-4xl mx-auto">
       <p class="text-text-light mb-2">Preparando para imprimir...</p>
       <p class="text-text-light mb-2">Ctrl + P para imprimir</p>
-      <button @click="closeWindow" class="btn-secondary">Cerrar Ventana</button>
+      <div class="flex justify-center gap-3">
+        <button @click="downloadPDF" :disabled="isDownloading" class="btn-primary">
+          {{ isDownloading ? 'Generando...' : 'Descargar PDF' }}
+        </button>
+        <button @click="closeWindow" class="btn-secondary">Cerrar Ventana</button>
+      </div>
     </div>
 
     <div v-if="isLoading" class="text-center py-12">Cargando presupuesto...</div>
-    <div v-else-if="selectedBudget" class="max-w-4xl mx-auto space-y-8">
+  <div v-else-if="selectedBudget" id="print-root" class="max-w-4xl mx-auto space-y-8">
       
       <div v-if="formatsToPrint.includes('patient')" id="patient-format" class="p-10 bg-white shadow-lg print:page-break-after-always">
         <header class="flex justify-between items-start pb-6 border-b-2 border-primary">
@@ -97,7 +155,7 @@ const formatDate = (dateString: string) => {
             </thead>
             <tbody>
               <tr v-for="item in selectedBudget.items" :key="item.id" class="border-b border-gray-100">
-                <td class="p-3">{{ item.treatment.name }}</td>
+                <td class="p-3">{{ item.treatmentName || item.treatment?.name }}</td>
                 <td class="p-3 text-center">{{ item.quantity }}</td>
                 <td class="p-3 text-right">S/. {{ Number(item.priceAtTimeOfBudget).toFixed(2) }}</td>
                 <td class="p-3 text-right">S/. {{ (item.priceAtTimeOfBudget * item.quantity).toFixed(2) }}</td>
@@ -113,15 +171,19 @@ const formatDate = (dateString: string) => {
                 <span class="text-gray-600">Subtotal:</span>
                 <span class="text-gray-800">S/. {{ Number(selectedBudget.totalAmount).toFixed(2) }}</span>
               </div>
+              <div v-if="selectedBudget.discountAmount > 0" class="flex justify-between text-lg text-red-600">
+                <span class="text-gray-600">Descuento:</span>
+                <span class="font-semibold">- S/. {{ Number(selectedBudget.discountAmount).toFixed(2) }}</span>
+              </div>
               <div class="flex justify-between font-bold text-2xl text-primary border-t-2 border-primary mt-2 pt-2">
                 <span>TOTAL:</span>
-                <span>S/. {{ Number(selectedBudget.totalAmount).toFixed(2) }}</span>
+                <span>S/. {{ finalTotal.toFixed(2) }}</span>
               </div>
             </div>
             <p class="text-xs text-gray-500 mt-6">Presupuesto válido por 30 días.</p>
           </div>
         </footer>
-      </div>
+        </div>
       <div v-if="formatsToPrint.includes('doctor')" id="doctor-format" class="font-mono p-4 bg-white border border-dashed text-xs shadow-lg break-inside-avoid">
         <h2 class="text-lg font-bold">Ficha Interna de Presupuesto</h2>
         <p><strong>ID Presupuesto:</strong> {{ selectedBudget.id }}</p>
@@ -130,15 +192,18 @@ const formatDate = (dateString: string) => {
         <hr class="my-2">
         <ul>
           <li v-for="item in selectedBudget.items" :key="item.id">
-            - {{ item.treatment.name }} (x{{ item.quantity }}) @ S/.{{ Number(item.priceAtTimeOfBudget).toFixed(2) }}
+            - {{ item.treatmentName || item.treatment?.name }} (x{{ item.quantity }}) @ S/.{{ Number(item.priceAtTimeOfBudget).toFixed(2) }}
           </li>
         </ul>
         <hr class="my-2">
-        <p><strong>Total:</strong> S/. {{ Number(selectedBudget.totalAmount).toFixed(2) }} / <strong>Pagado:</strong> S/. {{ Number(selectedBudget.paidAmount).toFixed(2) }}</p>
+        <p><strong>Subtotal:</strong> S/. {{ Number(selectedBudget.totalAmount).toFixed(2) }}</p>
+        <p v-if="selectedBudget.discountAmount > 0"><strong>Descuento:</strong> - S/. {{ Number(selectedBudget.discountAmount).toFixed(2) }}</p>
+        <p class="font-bold"><strong>Total Final:</strong> S/. {{ finalTotal.toFixed(2) }}</p>
+        <p><strong>Pagado:</strong> S/. {{ Number(selectedBudget.paidAmount).toFixed(2) }}</p>
+        <p><strong>Saldo:</strong> S/. {{ (finalTotal - selectedBudget.paidAmount).toFixed(2) }}</p>
         <p><strong>Estado:</strong> {{ selectedBudget.status }}</p>
+        </div>
       </div>
-
-    </div>
   </div>
 </template>
 

@@ -28,7 +28,6 @@ app.use(Toast, {
   newestOnTop: true,
 })
 
-// ✅ Llamamos al store DESPUÉS de registrar Pinia
 const authStore = useAuthStore()
 authStore.checkToken() // <-- MUY IMPORTANTE
 

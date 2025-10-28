@@ -144,6 +144,124 @@ export interface MedicalHistory {
   heartRate?: number;
   temperature?: number;
   respiratoryRate?: number;
+  orthodonticAnamnesis?: OrthodonticAnamnesis | null;
+}
+
+export enum CollaborationIndex {
+  HIGH = 'high',
+  MEDIUM = 'medium',
+  LOW = 'low',
+}
+export enum OralHygiene {
+  ADEQUATE = 'adequate',
+  DEFICIENT = 'deficient',
+}
+export enum FacialType {
+  MESOFACIAL = 'mesofacial',
+  DOLICOFACIAL = 'dolicofacial',
+  BRAQUIFACIAL = 'braquifacial',
+}
+export enum Convexity {
+  RECTO = 'recto',
+  CONCAVO = 'concavo',
+  CONVEXO = 'convexo',
+}
+export enum NasolabialAngle {
+  NORMAL = 'normal',
+  OPEN = 'open',
+  REDUCED = 'reduced',
+}
+export enum MentolabialAngle {
+  NORMAL = 'normal',
+  DEEP = 'deep',
+  SHALLOW = 'shallow',
+}
+export enum ZygomaticProjection {
+  NORMAL = 'normal',
+  INCREASED = 'increased',
+  DEFICIENT = 'deficient',
+}
+export enum ChinNeckLine {
+  NORMAL = 'normal',
+  INCREASED = 'increased',
+  DECREASED = 'decreased',
+}
+export enum ChinNeckAngle {
+  NORMAL = 'normal',
+  OPEN = 'open',
+  CLOSED = 'closed',
+}
+export enum FacialPattern {
+  PATTERN_1 = 'pattern_1',
+  PATTERN_2 = 'pattern_2',
+  PATTERN_3 = 'pattern_3',
+  MANDIBULAR_RETRUSION = 'mandibular_retrusion',
+  MAXILLARY_PROTRUSION = 'maxillary_protrusion',
+  SHORT_FACE = 'short_face',
+  LONG_FACE = 'long_face',
+}
+export enum DentalTransverseRelation {
+  BRODIE = 'brodie',
+  NORMAL = 'normal',
+  BILATERAL_POSTERIOR_CROSSBITE = 'bilateral_posterior_crossbite',
+  UNILATERAL_POSTERIOR_CROSSBITE_RIGHT = 'unilateral_posterior_crossbite_right',
+  UNILATERAL_POSTERIOR_CROSSBITE_LEFT = 'unilateral_posterior_crossbite_left',
+}
+export enum CrossbiteCharacteristic {
+  SKELETAL = 'skeletal',
+  DENTO_ALVEOLAR = 'dento_alveolar',
+  NONE = 'none',
+}
+export enum VerticalRelation {
+  NORMAL = 'normal',
+  EDGE_TO_EDGE = 'edge_to_edge',
+  DEEP_BITE = 'deep_bite',
+  OPEN_BITE = 'open_bite',
+}
+
+// --- AÑADE ESTA INTERFACE ---
+export interface OrthodonticAnamnesis {
+  id: string;
+  creationDate: string;
+  mainComplaint?: string;
+  medicalHistory?: string;
+  traumaHistory?: string;
+  previousOrthodonticTreatment?: boolean;
+  previousOrthodonticTreatmentDetails?: string;
+  collaborationIndex?: CollaborationIndex;
+  oralHygiene?: OralHygiene;
+  needsGeneralTreatment?: boolean;
+  needsGeneralTreatmentDetails?: string;
+  facialType?: FacialType;
+  convexity?: Convexity;
+  proportionThirds?: string;
+  labialSeal?: boolean;
+  facialSymmetryAtRest?: string;
+  facialSymmetryOnMouthOpening?: string;
+  nasolabialAngle?: NasolabialAngle;
+  mentolabialAngle?: MentolabialAngle;
+  zygomaticProjection?: ZygomaticProjection;
+  chinNeckLine?: ChinNeckLine;
+  chinNeckAngle?: ChinNeckAngle;
+  facialPattern?: FacialPattern;
+  occlusionOnManipulation?: string;
+  dentalTransverseRelation?: DentalTransverseRelation;
+  crossbiteCharacteristic?: CrossbiteCharacteristic;
+  verticalRelation?: VerticalRelation;
+  speeCurve?: string;
+  incisorSagittalRelation?: string;
+  canineRelationRight?: string;
+  canineRelationLeft?: string;
+  molarRelationRight?: string;
+  molarRelationLeft?: string;
+  centricRelation?: string;
+  midline?: string;
+  dentalAnomalies?: string;
+  tmjCondition?: string;
+  familyWithSameMalocclusion?: boolean;
+  familyMemberDetail?: string;
+  cephalometricAnalysis?: string;
+  functionalDiagnoses?: string;
 }
 
 export interface OdontopediatricHistory {
@@ -234,13 +352,15 @@ export interface BudgetItem {
   id: string;
   priceAtTimeOfBudget: number;
   quantity: number;
-  treatment: Treatment;
+  treatment?: Treatment | null;
+  treatmentName?: string;
 }
 
 export interface Budget {
   id: string;
   creationDate: string;
   totalAmount: number;
+  discountAmount: number;
   paidAmount: number;
   status: string;
   items: BudgetItem[];

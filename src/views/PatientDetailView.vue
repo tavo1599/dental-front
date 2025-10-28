@@ -12,7 +12,7 @@ import { Gender } from '@/types';
 import { translateStatus } from '@/utils/formatters';
 import { useUsersStore } from '@/stores/users';
 
-// Importación de Componentes
+
 import Odontogram from '@/components/Odontogram.vue';
 import ClinicalHistoryList from '@/components/ClinicalHistoryList.vue';
 import BudgetList from '@/components/BudgetList.vue';
@@ -20,7 +20,7 @@ import AppointmentList from '@/components/AppointmentList.vue';
 import Modal from '@/components/Modal.vue';
 import ClinicalHistoryForm from '@/components/ClinicalHistoryForm.vue';
 import BudgetForm from '@/components/BudgetForm.vue';
-import AnamnesisHub from '@/components/AnamnesisHub.vue'; // <-- Importa el Hub
+import AnamnesisHub from '@/components/AnamnesisHub.vue';
 import PatientForm from '@/components/PatientForm.vue';
 import ClinicalHistoryDetail from '@/components/ClinicalHistoryDetail.vue';
 import PaymentHistory from '@/components/PaymentHistory.vue';
@@ -28,7 +28,7 @@ import PrintBudgetModal from '@/components/PrintBudgetModal.vue';
 import type { ClinicalHistoryEntry } from '@/types';
 import { usePlannedTreatmentsStore } from '@/stores/plannedTreatments';
 import TreatmentPlan from '@/components/TreatmentPlan.vue';
-import type { PlannedTreatment } from '@/types';
+import type { PlannedTreatment, Treatment } from '@/types';
 import GenerateConsentModal from '@/components/GenerateConsentModal.vue';
 import { useConsentTemplatesStore } from '@/stores/consentTemplates';
 import { generateConsent } from '@/services/consentTemplateService';
@@ -36,7 +36,7 @@ import { useDocumentsStore } from '@/stores/documents';
 import { usePeriodontogramStore } from '@/stores/periodontogram';
 import Periodontogram from '@/components/Periodontogram.vue';
 
-// --- Inicialización de Stores ---
+
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
@@ -77,7 +77,7 @@ const isConsentModalOpen = ref(false);
 const historyInitialData = ref<any>({});
 const budgetInitialData = ref<any>({});
 
-// --- Propiedades Computadas ---
+
 const age = computed(() => {
   if (!selectedPatient.value?.birthDate) return 'N/A';
   const birthDate = new Date(selectedPatient.value.birthDate);
@@ -232,7 +232,12 @@ function openNewHistoryModal() {
 }
 
 function openNewBudgetModal() {
-  budgetInitialData.value = {};
+  const patientId = route.params.id as string;
+  budgetInitialData.value = {
+    patientId: patientId, // <-- Pasa el patientId
+    prefilledItems: [],
+    discountAmount: 0
+  };
   isBudgetModalOpen.value = true;
 }
 
@@ -243,12 +248,36 @@ async function handleSaveMedicalHistory(data: any) {
 }
 
 function handleGenerateBudget(plannedTreatments: PlannedTreatment[]) {
-  const prefilledItems = plannedTreatments.map(plan => ({
-    treatment: plan.treatment,
-    quantity: 1,
-    priceAtTimeOfBudget: plan.treatment.price,
-  }));
-  budgetInitialData.value = { prefilledItems };
+  const patientId = route.params.id as string;
+  
+  // 1. Crea un mapa para agrupar
+  const groupedItems = new Map<string, { treatment: Treatment; quantity: number; priceAtTimeOfBudget: number }>();
+
+  for (const plan of plannedTreatments) {
+    const treatmentId = plan.treatment.id;
+    
+    if (groupedItems.has(treatmentId)) {
+      // Si ya existe, solo incrementa la cantidad
+      groupedItems.get(treatmentId)!.quantity++;
+    } else {
+      // Si es nuevo, añádelo al mapa
+      groupedItems.set(treatmentId, {
+        treatment: plan.treatment,
+        quantity: 1,
+        priceAtTimeOfBudget: plan.treatment.price,
+      });
+    }
+  }
+  
+  // 2. Convierte el mapa de nuevo a un array
+  const prefilledItems = Array.from(groupedItems.values());
+  
+  // 3. Envía los datos agrupados al formulario
+  budgetInitialData.value = {
+    patientId: patientId,
+    prefilledItems: prefilledItems, // <-- Ahora van agrupados
+    discountAmount: 0
+  };
   isBudgetModalOpen.value = true;
 }
 
@@ -290,6 +319,28 @@ function closePaymentModal() {
   }
 }
 
+// Cuando se actualiza el descuento en un presupuesto, recarga la lista
+function handleBudgetDiscountUpdated() {
+  const patientId = route.params.id as string;
+  if (authStore.user?.role === 'dentist') {
+    budgetsStore.fetchBudgets(patientId, authStore.user.id);
+  } else {
+    const doctorIdToFetch = selectedDoctorId.value === 'all' ? undefined : selectedDoctorId.value;
+    budgetsStore.fetchBudgets(patientId, doctorIdToFetch);
+  }
+}
+
+// Handler para cuando se elimina un presupuesto desde la lista
+function handleBudgetDeleted() {
+  const patientId = route.params.id as string;
+  if (authStore.user?.role === 'dentist') {
+    budgetsStore.fetchBudgets(patientId, authStore.user.id);
+  } else {
+    const doctorIdToFetch = selectedDoctorId.value === 'all' ? undefined : selectedDoctorId.value;
+    budgetsStore.fetchBudgets(patientId, doctorIdToFetch);
+  }
+}
+
 function handleOpenPrintModal(budgetId: string) {
   budgetToPrintId.value = budgetId;
   isPrintModalOpen.value = true;
@@ -304,10 +355,9 @@ async function handleSaveHistoryEntry(data: any) {
 }
 
 async function handleSaveBudget(data: any) {
-  const patientId = route.params.id as string;
-  const doctorId = authStore.user?.id;
-  const payload = { ...data, patientId, doctorId };
-  const success = await budgetsStore.createBudget(payload);
+  // 'data' ya viene con todo (patientId, doctorId, items, totalAmount, discountAmount)
+  // desde el BudgetForm.vue
+  const success = await budgetsStore.createBudget(data);
   if (success) {
     isBudgetModalOpen.value = false;
   }
@@ -345,6 +395,34 @@ function handlePrintReceipt(paymentId: string) {
   });
   window.open(routeData.href, '_blank');
 }
+
+// Descarga y abre/forza la descarga del documento seleccionado
+async function openDocument(doc: any) {
+  // Intenta descargar el blob usando el store helper
+  const blob = await documentsStore.downloadDocumentFile(doc);
+  if (!blob) return;
+
+  const url = URL.createObjectURL(blob);
+
+  // Si es PDF o imagen, intentamos abrir en nueva pestaña
+  const lower = (doc.fileName || '').toLowerCase();
+  if (lower.endsWith('.pdf') || lower.match(/\.(jpg|jpeg|png|gif)$/)) {
+    window.open(url, '_blank');
+    // liberamos el URL después de unos segundos
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    return;
+  }
+
+  // Para otros tipos, forzamos descarga
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = doc.fileName || 'download';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+
 </script>
 
   <template>
@@ -390,7 +468,7 @@ function handlePrintReceipt(paymentId: string) {
       <div v-if="isDocumentsLoading">Cargando...</div>
       <ul v-else-if="documents.length > 0" class="divide-y divide-gray-200">
         <li v-for="doc in documents" :key="doc.id" class="py-3 flex justify-between items-center">
-          <a :href="`${apiBaseUrl}/${doc.filePath}`" target="_blank" class="text-primary hover:underline font-medium">
+          <a @click.prevent="openDocument(doc)" href="#" class="text-primary hover:underline font-medium">
             {{ doc.fileName }}
           </a>
           <button 
@@ -484,7 +562,7 @@ function handlePrintReceipt(paymentId: string) {
       </div>
     </div>
     <div v-if="isBudgetsLoading && budgets.length === 0">Cargando...</div>
-    <BudgetList v-else :budgets="filteredBudgets" @manage-payments="handleManagePayments" @print-budget="handleOpenPrintModal" />
+  <BudgetList v-else :budgets="filteredBudgets" @manage-payments="handleManagePayments" @print-budget="handleOpenPrintModal" @discount-updated="handleBudgetDiscountUpdated" @budget-deleted="handleBudgetDeleted" />
   </div>
 
         <div v-if="activeTab === 'appointments'">
@@ -554,6 +632,8 @@ function handlePrintReceipt(paymentId: string) {
   .btn-primary { 
     @apply px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-80 font-semibold; 
   }
+
+  /* openDocument moved into the <script setup> block; kept style section clean */
   .btn-secondary {
     @apply px-4 py-2 bg-gray-200 text-text-dark rounded-lg hover:bg-gray-300 font-semibold;
   }
