@@ -82,7 +82,7 @@ const translatePaymentMethod = (method: PaymentMethod) => {
           </thead>
           <tbody>
             <tr v-for="item in selectedPayment.budget.items" :key="item.id" class="border-b border-gray-100">
-              <td class="p-3">{{ item.treatmentName || item.treatment?.name || 'Sin Tratamiento' }}</td>
+              <td class="p-3">{{ item.treatment.name }}</td>
               <td class="p-3 text-center">{{ item.quantity }}</td>
             </tr>
           </tbody>

@@ -161,7 +161,7 @@ const getStatusClass = (status: string) => {
         <h4 class="font-semibold text-sm text-text-dark mb-2">Tratamientos Incluidos:</h4>
         <ul class="list-disc list-inside text-text-light text-sm space-y-1">
           <li v-for="item in budget.items" :key="item.id">
-            {{ item.treatmentName || item.treatment?.name }} (x{{ item.quantity }})
+            {{ item.treatment.name }} (x{{ item.quantity }})
           </li>
         </ul>
       </div>

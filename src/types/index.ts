@@ -352,8 +352,7 @@ export interface BudgetItem {
   id: string;
   priceAtTimeOfBudget: number;
   quantity: number;
-  treatment?: Treatment | null;
-  treatmentName?: string;
+  treatment: Treatment;
 }
 
 export interface Budget {

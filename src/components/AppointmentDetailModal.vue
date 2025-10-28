@@ -9,12 +9,8 @@ import { translateAppointmentStatus } from '@/utils/formatters';
 import ConfirmationModal from './ConfirmationModal.vue';
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
 
-const props = defineProps<{
-  appointment: Appointment | null;
-}>();
-
+const props = defineProps<{ appointment: Appointment | null }>();
 const emit = defineEmits(['close', 'status-updated']);
-
 const appointmentsStore = useAppointmentsStore();
 const authStore = useAuthStore();
 const selectedStatus = ref(props.appointment?.status || AppointmentStatus.SCHEDULED);
@@ -24,69 +20,66 @@ async function handleUpdateStatus() {
   if (props.appointment && selectedStatus.value) {
     if (props.appointment.status !== selectedStatus.value) {
       const success = await appointmentsStore.updateAppointmentStatus(props.appointment.id, selectedStatus.value);
-      if (success) {
-        emit('status-updated');
-      }
-    } else {
-      emit('close');
-    }
+      if (success) emit('status-updated');
+    } else emit('close');
   }
 }
 
 function openWhatsApp(phone: string, message: string) {
-  if (!phone || phone.trim() === '') {
+  if (!phone?.trim()) {
     alert('Este paciente no tiene un número de teléfono registrado.');
     return;
   }
   const internationalPhone = `51${phone.replace(/[^0-9]/g, '')}`;
-  const sanitizedMessage = message.replace(/[^\S \r\n\t]/g, ' ');
-  const encodedMessage = encodeURIComponent(sanitizedMessage);
+  const encodedMessage = encodeURIComponent(message);
   const whatsappUrl = `https://wa.me/${internationalPhone}?text=${encodedMessage}`;
-  window.open(whatsappUrl, '_blank');
+  window.location.href = whatsappUrl;
 }
 
-// --- FUNCIÓN 'sendConfirmationRequest' CORREGIDA ---
 function sendConfirmationRequest() {
   if (!props.appointment) return;
   const { patient, doctor, startTime } = props.appointment;
   const clinicName = doctor.tenant.name;
   const appointmentDate = new Date(startTime).toLocaleDateString('es-PE', { day: '2-digit', month: 'long' });
-  
-  // CORRECCIÓN: Limpia los puntos de "a. m."
   const appointmentTime = new Date(startTime)
     .toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
-    .replace(/\./g, '') // Elimina todos los puntos
-    .replace(/\u00A0/g, ' '); // Limpia espacios
+    .replace(/\./g, '').replace(/\u00A0/g, ' ');
 
-  const message = `Hola ☺️ ${patient.fullName}, te contactamos de ${clinicName} 🦷 para tu cita agendada el ${appointmentDate} a las ${appointmentTime} con el Dr(a). ${doctor.fullName}. Por favor, CONFIRMAR tu asistencia respondiendo este mensaje. ¡Gracias por tu confianza! 🦷✨`;
+  const message = [
+    `¡Hola ${patient.fullName}! Te saludamos desde *${clinicName}*.`,
+    `Tienes una cita agendada el *${appointmentDate}* a las *${appointmentTime}* con el Dr(a). ${doctor.fullName}.`,
+    `Por favor, confirma tu asistencia respondiendo este mensaje.`,
+    `¡Gracias por tu confianza!`
+  ].join('\n');
 
   openWhatsApp(patient.phone, message);
 }
 
-// --- FUNCIÓN 'sendDayOfReminder' CORREGIDA ---
+// ✅ Recordatorio del día
 function sendDayOfReminder() {
   if (!props.appointment) return;
   const { patient, doctor, startTime } = props.appointment;
   const clinicName = doctor.tenant.name;
-
-  // CORRECCIÓN: Limpia los puntos de "a. m."
   const appointmentTime = new Date(startTime)
     .toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
-    .replace(/\./g, '') // Elimina todos los puntos
-    .replace(/\u00A0/g, ' '); // Limpia espacios
+    .replace(/\./g, '').replace(/\u00A0/g, ' ');
 
-  const message = `¡Hola ☺️ ${patient.fullName}! Te recordamos tu cita en ${clinicName} 🦷 el día de HOY a las ${appointmentTime} con el Dr(a). ${doctor.fullName}. ¡Te esperamos! 🦷✨`;
+  const message = `¡Hola ${patient.fullName}! Te recordamos tu cita de hoy en *${clinicName}* a las *${appointmentTime}* con el Dr(a). ${doctor.fullName}.
+¡Te esperamos con una sonrisa!`;
 
   openWhatsApp(patient.phone, message);
 }
 
-// --- FUNCIÓN 'sendRescheduleMessage' (Esta ya estaba bien) ---
+// ✅ Reprogramar cita
 function sendRescheduleMessage() {
   if (!props.appointment) return;
   const { patient, doctor } = props.appointment;
   const clinicName = doctor.tenant.name;
 
-  const message = `Hola ☺️ ${patient.fullName}, te saludamos de ${clinicName} porque notamos que no pudiste asistir a tu última cita. Si deseas reprogramarla según tu disponibilidad 🕒, estamos atentos para poder ayudarte a agendar una nueva cita. ¡Que tengas un buen día! ☺️🤝`;
+  const message = `Hola ${patient.fullName}, te saludamos desde *${clinicName}*.
+Notamos que no pudiste asistir a tu última cita con el Dr(a). ${doctor.fullName}.
+Si deseas reprogramarla según tu disponibilidad, estamos atentos para ayudarte.
+¡Que tengas un excelente día!`;
 
   openWhatsApp(patient.phone, message);
 }
@@ -101,6 +94,7 @@ async function handleDelete() {
   }
 }
 </script>
+
 
 <template>
   <div v-if="!appointment" class="text-center">Cargando...</div>

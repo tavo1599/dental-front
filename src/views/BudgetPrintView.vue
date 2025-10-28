@@ -155,7 +155,7 @@ const formatDate = (dateString: string) => {
             </thead>
             <tbody>
               <tr v-for="item in selectedBudget.items" :key="item.id" class="border-b border-gray-100">
-                <td class="p-3">{{ item.treatmentName || item.treatment?.name }}</td>
+                <td class="p-3">{{ item.treatment.name }}</td>
                 <td class="p-3 text-center">{{ item.quantity }}</td>
                 <td class="p-3 text-right">S/. {{ Number(item.priceAtTimeOfBudget).toFixed(2) }}</td>
                 <td class="p-3 text-right">S/. {{ (item.priceAtTimeOfBudget * item.quantity).toFixed(2) }}</td>
@@ -192,7 +192,7 @@ const formatDate = (dateString: string) => {
         <hr class="my-2">
         <ul>
           <li v-for="item in selectedBudget.items" :key="item.id">
-            - {{ item.treatmentName || item.treatment?.name }} (x{{ item.quantity }}) @ S/.{{ Number(item.priceAtTimeOfBudget).toFixed(2) }}
+            - {{ item.treatment.name }} (x{{ item.quantity }}) @ S/.{{ Number(item.priceAtTimeOfBudget).toFixed(2) }}
           </li>
         </ul>
         <hr class="my-2">
