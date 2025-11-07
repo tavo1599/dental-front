@@ -32,6 +32,7 @@ const selectedDateInfo = ref<any>(null);
 const selectedAppointment = ref<Appointment | null>(null);
 const dropEventInfo = ref<any>(null);
 const resizeEventInfo = ref<any>(null);
+const searchQuery = ref<string>('');
 
 const filteredAppointments = computed(() => {
   if (selectedDoctorId.value === 'all') return appointments.value;
@@ -54,8 +55,17 @@ const getStatusStyle = (status: AppointmentStatus) => {
 };
 
 const calendarEvents = computed(() => {
+  const query = searchQuery.value.toLowerCase().trim();
   return filteredAppointments.value.map(appt => {
     const style = getStatusStyle(appt.status);
+    let eventClassName = style.className ? [style.className] : [];
+    if (query) {
+    const patientName = appt.patient.fullName.toLowerCase();
+    if (!patientName.includes(query)) {
+ // Si el nombre NO coincide, añadimos la clase para atenuar
+  eventClassName.push('event-faded');
+  }
+  }
     
     // 1. Creamos objetos Date a partir de los strings UTC del backend.
     // El navegador los convierte automáticamente a la zona horaria local.
@@ -78,7 +88,7 @@ const calendarEvents = computed(() => {
       end: toLocalISOString(endDate),
       backgroundColor: style.color,
       borderColor: style.color,
-      className: style.className,
+      className: eventClassName.join(' '),
       extendedProps: { 
         notes: appt.notes, 
         doctor: appt.doctor.fullName 
@@ -212,6 +222,13 @@ onMounted(async () => {
       <h1 class="text-3xl font-bold text-text-dark">Agenda de Citas</h1>
       
       <div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+
+  <input 
+  v-model="searchQuery" 
+  type="text" 
+  placeholder="Buscar paciente..." 
+  class="input-style w-full sm:w-56"
+  />
     
     <select @change="handleStatusFilterChange" :value="selectedStatus" class="input-style w-full sm:w-48">
       <option value="all">Todos los Estados</option>
@@ -301,5 +318,14 @@ onMounted(async () => {
 /* Estilo para citas completadas (un poco transparente) */
 .event-completed {
   opacity: 0.7;
+}
+
+.event-faded {
+ opacity: 0.3 !important; /* Usamos !important para sobreescribir otros estilos */
+  transition: opacity 0.3s ease-in-out;
+}
+/* Al pasar el mouse, se restaura la opacidad para poder hacer clic */
+.event-faded:hover {
+  opacity: 1 !important;
 }
 </style>

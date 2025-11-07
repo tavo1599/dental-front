@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useToast } from 'vue-toastification';
 import { getPatients, createPatient as createPatientApi, updatePatient as updatePatientApi, getPatientById as getByIdApi } from '@/services/patientService';
 import type { Patient, MedicalHistory, OdontopediatricHistory, OrthodonticAnamnesis } from '@/types';
+
 import * as service from '@/services/patientService';
 
 export const usePatientsStore = defineStore('patients', () => {

@@ -116,6 +116,7 @@ export interface Patient {
   gender?: Gender;
   medicalHistory: MedicalHistory | null;
   odontopediatricHistory: OdontopediatricHistory | null;
+  orthodonticHistory: OrthodonticAnamnesis | null;
   category?: string;
   fileCode?: string;
 }
@@ -144,7 +145,6 @@ export interface MedicalHistory {
   heartRate?: number;
   temperature?: number;
   respiratoryRate?: number;
-  orthodonticAnamnesis?: OrthodonticAnamnesis | null;
 }
 
 export enum CollaborationIndex {
@@ -220,49 +220,114 @@ export enum VerticalRelation {
 }
 
 // --- AÑADE ESTA INTERFACE ---
-export interface OrthodonticAnamnesis {
-  id: string;
-  creationDate: string;
-  mainComplaint?: string;
-  medicalHistory?: string;
-  traumaHistory?: string;
-  previousOrthodonticTreatment?: boolean;
-  previousOrthodonticTreatmentDetails?: string;
-  collaborationIndex?: CollaborationIndex;
-  oralHygiene?: OralHygiene;
-  needsGeneralTreatment?: boolean;
-  needsGeneralTreatmentDetails?: string;
-  facialType?: FacialType;
-  convexity?: Convexity;
-  proportionThirds?: string;
-  labialSeal?: boolean;
-  facialSymmetryAtRest?: string;
-  facialSymmetryOnMouthOpening?: string;
-  nasolabialAngle?: NasolabialAngle;
-  mentolabialAngle?: MentolabialAngle;
-  zygomaticProjection?: ZygomaticProjection;
-  chinNeckLine?: ChinNeckLine;
-  chinNeckAngle?: ChinNeckAngle;
-  facialPattern?: FacialPattern;
-  occlusionOnManipulation?: string;
-  dentalTransverseRelation?: DentalTransverseRelation;
-  crossbiteCharacteristic?: CrossbiteCharacteristic;
-  verticalRelation?: VerticalRelation;
-  speeCurve?: string;
-  incisorSagittalRelation?: string;
-  canineRelationRight?: string;
-  canineRelationLeft?: string;
-  molarRelationRight?: string;
-  molarRelationLeft?: string;
-  centricRelation?: string;
-  midline?: string;
-  dentalAnomalies?: string;
-  tmjCondition?: string;
-  familyWithSameMalocclusion?: boolean;
-  familyMemberDetail?: string;
-  cephalometricAnalysis?: string;
-  functionalDiagnoses?: string;
+export interface IOrthoGeneralAnalysis {
+  mainComplaint: string | null;
+  medicalHistory: string | null;
+  traumaHistory: string | null;
+  previousTreatment: {
+    hasPrevious: boolean | null;
+    comments: string | null;
+  };
+  collaborationIndex: 'alto' | 'medio' | 'bajo' | null;
+  oralHygiene: 'adecuada' | 'deficiente' | null;
+  needsGeneralTreatment: string | null;
 }
+
+// PDF Sección 2: ANÁLISIS FACIAL
+export interface IOrthoFacialAnalysis {
+  facialType: 'mesofacial' | 'dolicofacial' | 'braquifacial' | null;
+  convexity: 'recto' | 'concavo' | 'convexo' | null;
+  facialThirds: {
+    proportional: boolean | null;
+    upperAugmented: boolean | null;
+    middleAugmented: boolean | null;
+    lowerAugmented: boolean | null;
+    upperDiminished: boolean | null;
+    middleDiminished: boolean | null;
+    lowerDiminished: boolean | null;
+  };
+  lipSeal: boolean | null;
+  restSymmetry: {
+    isSymmetric: boolean | null;
+    deviation: 'derecha' | 'izquierda' | null;
+  };
+  openingSymmetry: {
+    isSymmetric: boolean | null;
+    deviation: 'derecha' | 'izquierda' | null;
+  };
+  nasolabialAngle: 'normal' | 'abierto' | 'disminuido' | null;
+  mentolabialAngle: 'normal' | 'profundo' | 'poco profundo' | null;
+  zygomaticProjection: 'normal' | 'aumentada' | 'deficiente' | null;
+  chinNeckLine: 'normal' | 'aumentada' | 'disminuida' | null;
+  chinNeckAngle: 'normal' | 'abierto' | 'cerrado' | null;
+  facialPattern: {
+    pattern: 'I' | 'II' | 'III' | 'cara corta' | 'cara larga' | null;
+    details: string[]; // ej: ['protrusion_maxilar', 'retrusion_mandibular']
+  };
+}
+
+// Tipo para relaciones Caninas/Molares
+type SagittalRelation = 'claseI' | 'claseII' | 'claseIII' | 'mediaClaseII' | 'tresCuartosClaseII' | 'completaClaseII' | 'mediaClaseIII' | 'tresCuartosClaseIII' | 'completaClaseIII' | null;
+
+// PDF Sección 3: ANÁLISIS OCLUSAL
+export interface IOrthoOcclusalAnalysis {
+  manipulation: 'rc_mih_igual' | 'rc_mih_diferente' | null;
+  transversal: {
+    relation: 'brodie' | 'normal' | 'cruzada_unilateral' | 'cruzada_bilateral' | null;
+    crossbiteFeatures: 'esqueletal' | 'dentoalveolar' | 'no_presenta' | null;
+  };
+  vertical: {
+    relation: 'normal' | 'bis_a_bis' | 'mordida_profunda' | 'mordida_abierta' | null;
+    amount: string | null; // (para registrar mm o piezas de profunda/abierta)
+  };
+  speeCurve: {
+    isAltered: boolean | null;
+    details: string[]; // ej: ['extrusion_incisivos_inf']
+  };
+  sagittalIncisors: 'normal' | 'overjet_aumentado' | 'mordida_cruzada_anterior' | null;
+  mihCanineRelation: {
+    right: SagittalRelation;
+    left: SagittalRelation;
+  };
+  mihMolarRelation: {
+    right: SagittalRelation;
+    left: SagittalRelation;
+  };
+  rcCanineRelation: {
+    right: SagittalRelation;
+    left: SagittalRelation;
+  };
+  rcMolarRelation: {
+    right: SagittalRelation;
+    left: SagittalRelation;
+  };
+  midline: {
+    coincident: boolean | null;
+    upperDeviation: 'derecha' | 'izquierda' | null;
+    lowerDeviation: 'derecha' | 'izquierda' | null;
+  };
+  dentalAnomalies: string | null;
+  atmCondition: string | null;
+  familyMalocclusion: string | null;
+}
+
+// PDF Sección 5: DIAGNOSTICO FUNCIONAL
+export interface IOrthoFunctionalAnalysis {
+  respirationType: string | null;
+  // (Se puede expandir fácil)
+}
+
+// --- EL TIPO PRINCIPAL DE LA ANAMNESIS DE ORTODONCIA ---
+export type OrthodonticAnamnesis = {
+  id: string;
+  generalAnalysis: IOrthoGeneralAnalysis;
+  facialAnalysis: IOrthoFacialAnalysis;
+  occlusalAnalysis: IOrthoOcclusalAnalysis;
+  functionalAnalysis: IOrthoFunctionalAnalysis;
+  cephalometricAnalysis: string | null;
+  diagnosis: string | null;
+  treatmentPlan: string | null;
+};
 
 export interface OdontopediatricHistory {
   id: string;
