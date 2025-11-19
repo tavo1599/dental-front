@@ -15,6 +15,7 @@ export const uploadDocument = (patientId: string, file: File) => {
   const formData = new FormData();
   formData.append('file', file);
 
+  // El backend se encarga de recibir este FormData y subirlo a R2
   return apiClient.post<PatientDocument>(`/documents/upload/${patientId}`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -22,10 +23,6 @@ export const uploadDocument = (patientId: string, file: File) => {
   });
 };
 
-// Descarga un archivo por su ruta relativa (ej: uploads/documents/archivo.pdf)
-export const downloadFileByPath = (filePath: string) => {
-  // Usamos apiClient para respetar baseURL y headers/auth
-  return apiClient.get<Blob>(`/${filePath.replace(/^\//, '')}`, {
-    responseType: 'blob',
-  });
-};
+// --- NOTA: Se eliminó 'downloadFileByPath' ---
+// Ya no es necesaria porque los archivos ahora tienen URLs públicas (R2)
+// y se abren directamente con window.open() en el navegador.

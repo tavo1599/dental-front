@@ -410,6 +410,8 @@ export interface ClinicalHistoryEntry {
   diagnosis?: string;
   prescription?: string;
   indications?: string;
+  nextAppointmentPlan?: string;
+  nextAppointmentDate?: string;
   user: User;
 }
 

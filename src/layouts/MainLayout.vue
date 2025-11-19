@@ -9,14 +9,22 @@ import AnnouncementBanner from '@/components/AnnouncementBanner.vue';
 
 const authStore = useAuthStore();
 
+// --- CORRECCIÓN DE LOGO PARA R2/CLOUD ---
 const logoSrc = computed(() => {
-  // Ahora lee la URL directamente del tenant en el store
   const logoPath = authStore.user?.tenant?.logoUrl;
-  if (logoPath) {
-    return `${import.meta.env.VITE_API_BASE_URL}${logoPath}`;
+  
+  if (!logoPath) return null;
+
+  // 1. Si la URL es absoluta (empieza con http/https), viene de Cloudflare R2
+  if (logoPath.startsWith('http')) {
+    return logoPath;
   }
-  return null;
+
+  // 2. Si es relativa, es un logo antiguo (local), le pegamos la base del API
+  return `${import.meta.env.VITE_API_BASE_URL}${logoPath}`;
 });
+// ---------------------------------------
+
 const appointmentsStore = useAppointmentsStore();
 const { nextDayPending } = storeToRefs(appointmentsStore);
 
@@ -53,19 +61,19 @@ onMounted(() => {
         <div class="py-2 flex flex-col justify-center border-b border-slate-700 text-center">
 
           <div v-if="logoSrc" class="">
-    <img :src="logoSrc" alt="Logo de la Clínica" class="max-h-32 w-auto mx-auto" />
-  </div>
+            <img :src="logoSrc" alt="Logo de la Clínica" class="max-h-32 w-auto mx-auto object-contain" />
+          </div>
     
-    <p v-if="authStore.user?.tenant" class="text-xl text-white font-bold text-center px-2">
-      {{ authStore.user.tenant.name }}
-    </p>
+          <p v-if="authStore.user?.tenant" class="text-xl text-white font-bold text-center px-2 mt-2">
+            {{ authStore.user.tenant.name }}
+          </p>
 
-    <div class="mt-2 flex items-center justify-center gap-2">
-      <img src="/logo.svg" class="h-5 w-5" alt="Logo de SonriAndes" />
-      <span class="text-xs text-slate-400 font-semibold">SonriAndes</span>
-    </div>
+          <div class="mt-2 flex items-center justify-center gap-2">
+            <img src="/logo.svg" class="h-5 w-5" alt="Logo de SonriAndes" />
+            <span class="text-xs text-slate-400 font-semibold">SonriAndes</span>
+          </div>
 
-  </div>
+        </div>
         
         <nav class="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
           <RouterLink to="/dashboard" class="flex items-center px-4 py-2 text-slate-300 hover:bg-slate-700 hover:text-white rounded-lg" active-class="bg-slate-700 text-white font-semibold">Dashboard</RouterLink>

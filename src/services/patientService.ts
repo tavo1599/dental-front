@@ -48,3 +48,5 @@ export const updateOdontopediatricHistory = (patientId: string, data: any) => {
 
 
 
+
+

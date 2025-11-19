@@ -17,22 +17,36 @@ const isDownloading = ref(false);
 
 const formatsToPrint = computed(() => route.query.formats?.toString().split(',') || []);
 
+// --- CORRECCIÓN DE LOGO PARA PDF (R2 + CORS) ---
 const logoSrc = computed(() => {
-  if (selectedBudget.value?.tenant?.logoUrl) {
-    return `${import.meta.env.VITE_API_BASE_URL}${selectedBudget.value.tenant.logoUrl}`;
+  const url = selectedBudget.value?.tenant?.logoUrl;
+  
+  if (!url) {
+    isLogoLoaded.value = true; 
+    return null;
   }
-  isLogoLoaded.value = true; 
-  return null;
-});
 
-// --- NUEVO CÁLCULO ---
+  // Añadimos un timestamp para evitar problemas de caché con CORS
+  const timestamp = new Date().getTime();
+
+  // 1. URL Absoluta (Cloudflare R2)
+  if (url.startsWith('http')) {
+    return `${url}?t=${timestamp}`;
+  }
+
+  // 2. URL Relativa (Legacy)
+  return `${import.meta.env.VITE_API_BASE_URL}${url}?t=${timestamp}`;
+});
+// -----------------------------------------------
+
 const finalTotal = computed(() => {
   if (!selectedBudget.value) return 0;
   return Number(selectedBudget.value.totalAmount) - Number(selectedBudget.value.discountAmount || 0);
 });
 
 const tryPrint = () => {
-  if (areFormatsRendered.value && isLogoLoaded.value) {
+  // Solo imprimimos si los formatos están listos Y el logo cargó
+  if (areFormatsRendered.value && (isLogoLoaded.value || !logoSrc.value)) {
     window.print();
   }
 };
@@ -45,6 +59,10 @@ onMounted(async () => {
     await budgetsStore.fetchBudgetForPrint(budgetId);
     await nextTick();
     areFormatsRendered.value = true;
+    // Si no hay logo, marcamos como cargado para no bloquear
+    if (!selectedBudget.value?.tenant?.logoUrl) {
+        isLogoLoaded.value = true;
+    }
   }
 });
 
@@ -52,45 +70,92 @@ function closeWindow() {
   window.close();
 }
 
+// --- HELPER: Generar PDF ---
+async function getPDFObject() {
+  await nextTick();
+  const element = document.getElementById('print-root');
+  if (!element) throw new Error('No se encontró el contenido.');
+
+  // Esperamos un momento extra por seguridad si hay logo
+  if (logoSrc.value && !isLogoLoaded.value) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  const canvas = await html2canvas(element, { 
+      scale: 2, 
+      useCORS: true, // CRUCIAL para imágenes externas (R2)
+      logging: false
+  });
+  
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const imgWidth = 210;
+  const pageHeight = 297;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+  let heightLeft = imgHeight;
+  let position = 0;
+
+  pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+  heightLeft -= pageHeight;
+
+  while (heightLeft > 0) {
+    position = position - pageHeight;
+    pdf.addPage();
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+  }
+  
+  return pdf;
+}
+
+// --- ACCIÓN 1: DESCARGAR PDF ---
 async function downloadPDF() {
   if (!selectedBudget.value) return;
   isDownloading.value = true;
-  await nextTick();
-  const element = document.getElementById('print-root');
-  if (!element) {
-    alert('No se encontró el contenido para descargar.');
-    isDownloading.value = false;
-    return;
-  }
-
   try {
-    // Renderiza el contenido a canvas
-    const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-    const imgData = canvas.toDataURL('image/png');
-
-    // Configuración A4 en mm
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgWidth = 210; // mm
-    const pageHeight = 297; // mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    let heightLeft = imgHeight;
-    let position = 0;
-
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-
-    while (heightLeft > 0) {
-      position = position - pageHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-    }
-
-    pdf.save(`presupuesto_${selectedBudget.value.id}.pdf`);
+    const pdf = await getPDFObject();
+    pdf.save(`Presupuesto_${selectedBudget.value.patient.fullName}.pdf`);
   } catch (error) {
     console.error(error);
     alert('Error al generar el PDF.');
+  } finally {
+    isDownloading.value = false;
+  }
+}
+
+// --- ACCIÓN 2: WHATSAPP ---
+async function sendToWhatsAppWithPDF() {
+  if (!selectedBudget.value) return;
+  
+  let phone = selectedBudget.value.patient.phone?.replace(/\D/g, '');
+  if (!phone) {
+    alert('El paciente no tiene un número de teléfono registrado.');
+    return;
+  }
+  if (phone.length === 9) phone = `51${phone}`;
+
+  isDownloading.value = true; 
+
+  try {
+    const pdf = await getPDFObject();
+    pdf.save(`Presupuesto_${selectedBudget.value.patient.fullName}.pdf`);
+
+    const clinicName = selectedBudget.value.tenant.name;
+    const patientName = selectedBudget.value.patient.fullName;
+    const total = finalTotal.value.toFixed(2);
+    
+    const message = `Hola *${patientName}*, le saludamos de *${clinicName}*.\n\n` +
+                    `📄 *Adjunto encontrará el PDF detallado de su presupuesto.*\n` +
+                    `💰 Monto Total: S/. ${total}\n\n` +
+                    `(Por favor, revise el archivo descargado)`;
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    setTimeout(() => window.open(url, '_blank'), 500);
+
+  } catch (error) {
+    console.error(error);
+    alert('Error al preparar WhatsApp.');
   } finally {
     isDownloading.value = false;
   }
@@ -105,18 +170,25 @@ const formatDate = (dateString: string) => {
 <template>
   <div class="p-4 md:p-8 bg-gray-100 font-sans">
     <div class="print:hidden text-center mb-4 bg-white p-4 rounded-lg shadow-md max-w-4xl mx-auto">
-      <p class="text-text-light mb-2">Preparando para imprimir...</p>
-      <p class="text-text-light mb-2">Ctrl + P para imprimir</p>
-      <div class="flex justify-center gap-3">
+      <p class="text-text-light mb-2">Vista previa del documento</p>
+      
+      <div class="flex flex-wrap justify-center gap-3 mt-4">
         <button @click="downloadPDF" :disabled="isDownloading" class="btn-primary">
-          {{ isDownloading ? 'Generando...' : 'Descargar PDF' }}
+          {{ isDownloading ? 'Procesando...' : 'Descargar PDF' }}
         </button>
-        <button @click="closeWindow" class="btn-secondary">Cerrar Ventana</button>
+        <button @click="sendToWhatsAppWithPDF" :disabled="isDownloading" class="btn-whatsapp flex items-center gap-2 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+          Enviar PDF por WhatsApp
+        </button>
+
+        <button @click="closeWindow" class="btn-secondary">Cerrar</button>
       </div>
+      <p v-if="isDownloading" class="text-xs text-primary mt-2 font-semibold animate-pulse">Generando documento, por favor espere...</p>
     </div>
 
     <div v-if="isLoading" class="text-center py-12">Cargando presupuesto...</div>
-  <div v-else-if="selectedBudget" id="print-root" class="max-w-4xl mx-auto space-y-8">
+    
+    <div v-else-if="selectedBudget" id="print-root" class="max-w-4xl mx-auto space-y-8">
       
       <div v-if="formatsToPrint.includes('patient')" id="patient-format" class="p-10 bg-white shadow-lg print:page-break-after-always">
         <header class="flex justify-between items-start pb-6 border-b-2 border-primary">
@@ -127,7 +199,13 @@ const formatDate = (dateString: string) => {
             <p class="text-sm text-gray-500">{{ selectedBudget.tenant.email }}</p>
           </div>
           <div v-if="logoSrc" class="w-24 h-24 flex-shrink-0">
-            <img :src="logoSrc" @load="isLogoLoaded = true" alt="Logo de la Clínica" class="max-h-24 max-w-24 object-contain" />
+            <img 
+              :src="logoSrc" 
+              @load="isLogoLoaded = true" 
+              crossorigin="anonymous"
+              alt="Logo de la Clínica" 
+              class="max-h-24 max-w-24 object-contain" 
+            />
           </div>
         </header>
 
@@ -183,7 +261,8 @@ const formatDate = (dateString: string) => {
             <p class="text-xs text-gray-500 mt-6">Presupuesto válido por 30 días.</p>
           </div>
         </footer>
-        </div>
+      </div>
+
       <div v-if="formatsToPrint.includes('doctor')" id="doctor-format" class="font-mono p-4 bg-white border border-dashed text-xs shadow-lg break-inside-avoid">
         <h2 class="text-lg font-bold">Ficha Interna de Presupuesto</h2>
         <p><strong>ID Presupuesto:</strong> {{ selectedBudget.id }}</p>
@@ -202,19 +281,29 @@ const formatDate = (dateString: string) => {
         <p><strong>Pagado:</strong> S/. {{ Number(selectedBudget.paidAmount).toFixed(2) }}</p>
         <p><strong>Saldo:</strong> S/. {{ (finalTotal - selectedBudget.paidAmount).toFixed(2) }}</p>
         <p><strong>Estado:</strong> {{ selectedBudget.status }}</p>
-        </div>
       </div>
+
+    </div>
   </div>
 </template>
 
 <style scoped>
-  .btn-secondary { @apply px-4 py-2 bg-gray-200 text-text-dark rounded-lg hover:bg-gray-300 font-semibold; }
+  .btn-primary {
+     @apply px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-80 font-semibold;
+  }
+  .btn-secondary { 
+    @apply px-4 py-2 bg-gray-200 text-text-dark rounded-lg hover:bg-gray-300 font-semibold; 
+  }
+  .btn-whatsapp {
+    @apply px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold transition-colors;
+  }
+
   @media print {
-  .print\:page-break-after-always {
-    page-break-after: always;
-  }
-  .break-inside-avoid {
-    page-break-inside: avoid;
-  }
+    .print\:page-break-after-always {
+      page-break-after: always;
+    }
+    .break-inside-avoid {
+      page-break-inside: avoid;
+    }
   }
 </style>

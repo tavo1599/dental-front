@@ -1,18 +1,22 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { storeToRefs } from 'pinia';
+
+// Stores
+import { useAuthStore } from '@/stores/auth';
 import { usePatientsStore } from '@/stores/patients';
 import { useOdontogramStore } from '@/stores/odontogram';
 import { useClinicalHistoryStore } from '@/stores/clinicalHistory';
 import { useBudgetsStore } from '@/stores/budgets';
 import { useAppointmentsStore } from '@/stores/appointments';
-import { storeToRefs } from 'pinia';
-import { useAuthStore } from '@/stores/auth';
-import { Gender } from '@/types';
-import { translateStatus } from '@/utils/formatters';
+import { usePlannedTreatmentsStore } from '@/stores/plannedTreatments';
+import { usePeriodontogramStore } from '@/stores/periodontogram';
+import { useDocumentsStore } from '@/stores/documents';
 import { useUsersStore } from '@/stores/users';
+import { useConsentTemplatesStore } from '@/stores/consentTemplates';
 
-
+// Componentes
 import Odontogram from '@/components/Odontogram.vue';
 import ClinicalHistoryList from '@/components/ClinicalHistoryList.vue';
 import BudgetList from '@/components/BudgetList.vue';
@@ -22,23 +26,23 @@ import ClinicalHistoryForm from '@/components/ClinicalHistoryForm.vue';
 import BudgetForm from '@/components/BudgetForm.vue';
 import AnamnesisHub from '@/components/AnamnesisHub.vue';
 import PatientForm from '@/components/PatientForm.vue';
-import ClinicalHistoryDetail from '@/components/ClinicalHistoryDetail.vue';
+import ClinicalHistoryEntryDetail from '@/components/ClinicalHistoryDetail.vue';
 import PaymentHistory from '@/components/PaymentHistory.vue';
 import PrintBudgetModal from '@/components/PrintBudgetModal.vue';
-import type { ClinicalHistoryEntry } from '@/types';
-import { usePlannedTreatmentsStore } from '@/stores/plannedTreatments';
 import TreatmentPlan from '@/components/TreatmentPlan.vue';
-import type { PlannedTreatment, Treatment } from '@/types';
 import GenerateConsentModal from '@/components/GenerateConsentModal.vue';
-import { useConsentTemplatesStore } from '@/stores/consentTemplates';
-import { generateConsent } from '@/services/consentTemplateService';
-import { useDocumentsStore } from '@/stores/documents';
-import { usePeriodontogramStore } from '@/stores/periodontogram';
 import Periodontogram from '@/components/Periodontogram.vue';
 
+// Tipos y Utilidades
+import type { ClinicalHistoryEntry, PlannedTreatment, Treatment } from '@/types';
+import { Gender } from '@/types';
+import { translateStatus } from '@/utils/formatters';
+import { generateConsent } from '@/services/consentTemplateService';
 
 const route = useRoute();
 const router = useRouter();
+
+// Inicializar Stores
 const authStore = useAuthStore();
 const patientsStore = usePatientsStore();
 const odontogramStore = useOdontogramStore();
@@ -64,20 +68,28 @@ const { doctors } = storeToRefs(usersStore);
 const activeTab = ref('info');
 const selectedDoctorId = ref<string>('all');
 const isEditing = ref(false);
+const isDragging = ref(false); // Estado para Drag & Drop
+const fileInputRef = ref<HTMLInputElement | null>(null);
+
+// Modales
 const isHistoryModalOpen = ref(false);
 const isBudgetModalOpen = ref(false);
 const isHistoryDetailModalOpen = ref(false);
 const isPaymentModalOpen = ref(false);
 const isPrintModalOpen = ref(false);
+const isConsentModalOpen = ref(false);
+
+// Datos seleccionados
 const selectedHistoryEntry = ref<ClinicalHistoryEntry | null>(null);
 const selectedBudgetId = ref<string | null>(null);
 const budgetToPrintId = ref<string | null>(null);
 const fileToUpload = ref<File | null>(null);
-const isConsentModalOpen = ref(false);
+
+// Datos iniciales para formularios
 const historyInitialData = ref<any>({});
 const budgetInitialData = ref<any>({});
 
-
+// --- Computed Properties ---
 const age = computed(() => {
   if (!selectedPatient.value?.birthDate) return 'N/A';
   const birthDate = new Date(selectedPatient.value.birthDate);
@@ -110,13 +122,11 @@ const formatGender = (gender?: Gender) => {
   }
 };
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-
+// --- Watchers ---
 watch(() => route.params.id, (newId) => {
   if (newId) {
     const patientId = newId as string;
-    
-    // Resetea todos los stores al cambiar de paciente
+    // Resetea stores
     patientsStore.selectedPatient = null;
     patientsStore.medicalHistory = null;
     patientsStore.odontopediatricHistory = null;
@@ -128,15 +138,11 @@ watch(() => route.params.id, (newId) => {
     documentsStore.documents = [];
     plannedTreatmentsStore.plannedTreatments = [];
 
-    // Carga la información esencial del nuevo paciente
     patientsStore.fetchPatientById(patientId);
-    
-    // Vuelve a cargar los datos de la pestaña que esté activa
     loadDataForTab(activeTab.value, patientId);
   }
-}, { immediate: true }); // 'immediate: true' lo ejecuta al cargar la página
+}, { immediate: true });
 
-// 2. Observador de pestaña: carga datos solo cuando se hace clic
 watch(activeTab, (newTab) => {
   const patientId = route.params.id as string;
   if (patientId) {
@@ -144,7 +150,14 @@ watch(activeTab, (newTab) => {
   }
 });
 
-// 3. Función de carga centralizada (se llama al cambiar de ID o de pestaña)
+watch(selectedDoctorId, (newDoctorId) => {
+  if (activeTab.value !== 'budgets') return;
+  const patientId = route.params.id as string;
+  const doctorIdToFetch = newDoctorId === 'all' ? undefined : newDoctorId;
+  budgetsStore.fetchBudgets(patientId, doctorIdToFetch);
+});
+
+// --- Funciones de Carga ---
 function loadDataForTab(tab: string, patientId: string) {
   switch (tab) {
     case 'medical-history':
@@ -171,17 +184,16 @@ function loadDataForTab(tab: string, patientId: string) {
       if (budgets.value.length === 0) {
         const userRole = authStore.user?.role;
         const userId = authStore.user?.id;
-
         if (userRole === 'dentist') {
           if (userId) budgetsStore.fetchBudgets(patientId, userId);
         } else if (userRole === 'admin') {
           if (userId) {
-            selectedDoctorId.value = userId; // Selecciona al admin por defecto
+            selectedDoctorId.value = userId;
             budgetsStore.fetchBudgets(patientId, userId);
           }
           usersStore.fetchDoctors();
         } else if (userRole === 'assistant') {
-          budgetsStore.fetchBudgets(patientId); // Carga todos por defecto
+          budgetsStore.fetchBudgets(patientId);
           usersStore.fetchDoctors();
         }
       }
@@ -199,21 +211,42 @@ function loadDataForTab(tab: string, patientId: string) {
   }
 }
 
-// Watch para reaccionar al filtro de doctor
-watch(selectedDoctorId, (newDoctorId) => {
-  if (activeTab.value !== 'budgets') return;
-  const patientId = route.params.id as string;
-  const doctorIdToFetch = newDoctorId === 'all' ? undefined : newDoctorId;
-  budgetsStore.fetchBudgets(patientId, doctorIdToFetch);
-});
+// --- MANEJADORES DE DOCUMENTOS (Drag & Drop + UI Mejorada) ---
 
-// --- MANEJADORES DE EVENTOS ---
+function triggerFileUpload() {
+  fileInputRef.value?.click();
+}
+
+function onDragOver(e: DragEvent) {
+  isDragging.value = true;
+}
+
+function onDragLeave(e: DragEvent) {
+  isDragging.value = false;
+}
+
+function onDrop(e: DragEvent) {
+  isDragging.value = false;
+  const files = e.dataTransfer?.files;
+  if (files && files.length > 0) {
+    fileToUpload.value = files[0];
+  }
+}
+
 function onFileChange(event: Event) {
   const target = event.target as HTMLInputElement;
-  if (target.files) {
+  if (target.files && target.files.length > 0) {
     fileToUpload.value = target.files[0];
   }
 }
+
+function getFileIcon(fileName: string) {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  if (ext === 'pdf') return 'pdf';
+  if (['jpg', 'jpeg', 'png', 'webp'].includes(ext || '')) return 'image';
+  return 'file';
+}
+
 async function handleUpload() {
   if (fileToUpload.value && selectedPatient.value) {
     await documentsStore.uploadDocument(selectedPatient.value.id, fileToUpload.value);
@@ -221,46 +254,86 @@ async function handleUpload() {
   }
 }
 
+// --- FUNCIÓN OPEN DOCUMENT (CORREGIDA PARA R2) ---
+function openDocument(doc: any) {
+  if (!doc.filePath) return;
+  
+  // Si es URL absoluta (R2), abrir directo
+  if (doc.filePath.startsWith('http')) {
+    window.open(doc.filePath, '_blank');
+  } 
+  // Si es URL relativa (Legacy), concatenar base
+  else {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL;
+    const separator = doc.filePath.startsWith('/') ? '' : '/';
+    const fullUrl = `${baseUrl}${separator}${doc.filePath}`;
+    window.open(fullUrl, '_blank');
+  }
+}
+// ------------------------------------------------
+
 function handleClearPlan() {
   const patientId = route.params.id as string;
   plannedTreatmentsStore.clearAll(patientId);
 }
 
+// --- Historial Clínico ---
 function openNewHistoryModal() {
   historyInitialData.value = {};
   isHistoryModalOpen.value = true;
 }
 
+function handleEditHistoryEntry(entry: ClinicalHistoryEntry) {
+  isHistoryDetailModalOpen.value = false;
+  historyInitialData.value = { ...entry };
+  isHistoryModalOpen.value = true;
+}
+
+function handleViewHistoryEntry(entry: ClinicalHistoryEntry) {
+  selectedHistoryEntry.value = entry;
+  isHistoryDetailModalOpen.value = true;
+}
+
+async function handleSaveHistoryEntry(data: any) {
+  const patientId = route.params.id as string;
+  let success = false;
+
+  if (historyInitialData.value && historyInitialData.value.id) {
+    success = await clinicalHistoryStore.editHistoryEntry(
+      patientId, 
+      historyInitialData.value.id, 
+      data
+    );
+  } else {
+    success = await clinicalHistoryStore.createHistoryEntry(patientId, data);
+  }
+
+  if (success) {
+    isHistoryModalOpen.value = false;
+    historyInitialData.value = {};
+  }
+}
+
+// --- Presupuestos ---
 function openNewBudgetModal() {
   const patientId = route.params.id as string;
   budgetInitialData.value = {
-    patientId: patientId, // <-- Pasa el patientId
+    patientId: patientId,
     prefilledItems: [],
     discountAmount: 0
   };
   isBudgetModalOpen.value = true;
 }
 
-async function handleSaveMedicalHistory(data: any) {
-  if (selectedPatient.value) {
-    await patientsStore.updateMedicalHistory(selectedPatient.value.id, data);
-  }
-}
-
 function handleGenerateBudget(plannedTreatments: PlannedTreatment[]) {
   const patientId = route.params.id as string;
-  
-  // 1. Crea un mapa para agrupar
   const groupedItems = new Map<string, { treatment: Treatment; quantity: number; priceAtTimeOfBudget: number }>();
 
   for (const plan of plannedTreatments) {
     const treatmentId = plan.treatment.id;
-    
     if (groupedItems.has(treatmentId)) {
-      // Si ya existe, solo incrementa la cantidad
       groupedItems.get(treatmentId)!.quantity++;
     } else {
-      // Si es nuevo, añádelo al mapa
       groupedItems.set(treatmentId, {
         treatment: plan.treatment,
         quantity: 1,
@@ -269,38 +342,19 @@ function handleGenerateBudget(plannedTreatments: PlannedTreatment[]) {
     }
   }
   
-  // 2. Convierte el mapa de nuevo a un array
-  const prefilledItems = Array.from(groupedItems.values());
-  
-  // 3. Envía los datos agrupados al formulario
   budgetInitialData.value = {
     patientId: patientId,
-    prefilledItems: prefilledItems, // <-- Ahora van agrupados
+    prefilledItems: Array.from(groupedItems.values()),
     discountAmount: 0
   };
   isBudgetModalOpen.value = true;
 }
 
-function handleRegisterHistory(plannedTreatments: PlannedTreatment[]) {
-  const plan = plannedTreatments[0]; 
-  if (!plan) return;
-  const diagnosis = translateStatus(plan.toothSurfaceState.status);
-  const tooth = plan.toothSurfaceState.toothNumber;
-  const surface = plan.toothSurfaceState.surface;
-  const treatment = plan.treatment.name;
-  const descriptionText = `Paciente presenta ${diagnosis} en el diente #${tooth} (superficie ${surface}).`;
-  const treatmentText = `${treatment} en el diente #${tooth}.`;
-  historyInitialData.value = {
-    description: descriptionText,
-    treatmentPerformed: treatmentText,
-    diagnosis: diagnosis,
-  };
-  isHistoryModalOpen.value = true;
-}
-
-function handleViewHistoryEntry(entry: ClinicalHistoryEntry) {
-  selectedHistoryEntry.value = entry;
-  isHistoryDetailModalOpen.value = true;
+async function handleSaveBudget(data: any) {
+  const success = await budgetsStore.createBudget(data);
+  if (success) {
+    isBudgetModalOpen.value = false;
+  }
 }
 
 function handleManagePayments(budgetId: string) {
@@ -311,34 +365,18 @@ function handleManagePayments(budgetId: string) {
 function closePaymentModal() {
   isPaymentModalOpen.value = false;
   const patientId = route.params.id as string;
-  if (authStore.user?.role === 'dentist') {
-    budgetsStore.fetchBudgets(patientId, authStore.user.id);
-  } else {
-    const doctorIdToFetch = selectedDoctorId.value === 'all' ? undefined : selectedDoctorId.value;
-    budgetsStore.fetchBudgets(patientId, doctorIdToFetch);
-  }
+  const doctorIdToFetch = (authStore.user?.role === 'dentist') 
+      ? authStore.user.id 
+      : (selectedDoctorId.value === 'all' ? undefined : selectedDoctorId.value);
+  budgetsStore.fetchBudgets(patientId, doctorIdToFetch);
 }
 
-// Cuando se actualiza el descuento en un presupuesto, recarga la lista
 function handleBudgetDiscountUpdated() {
-  const patientId = route.params.id as string;
-  if (authStore.user?.role === 'dentist') {
-    budgetsStore.fetchBudgets(patientId, authStore.user.id);
-  } else {
-    const doctorIdToFetch = selectedDoctorId.value === 'all' ? undefined : selectedDoctorId.value;
-    budgetsStore.fetchBudgets(patientId, doctorIdToFetch);
-  }
+  closePaymentModal();
 }
 
-// Handler para cuando se elimina un presupuesto desde la lista
 function handleBudgetDeleted() {
-  const patientId = route.params.id as string;
-  if (authStore.user?.role === 'dentist') {
-    budgetsStore.fetchBudgets(patientId, authStore.user.id);
-  } else {
-    const doctorIdToFetch = selectedDoctorId.value === 'all' ? undefined : selectedDoctorId.value;
-    budgetsStore.fetchBudgets(patientId, doctorIdToFetch);
-  }
+  closePaymentModal();
 }
 
 function handleOpenPrintModal(budgetId: string) {
@@ -346,20 +384,25 @@ function handleOpenPrintModal(budgetId: string) {
   isPrintModalOpen.value = true;
 }
 
-async function handleSaveHistoryEntry(data: any) {
-  const patientId = route.params.id as string;
-  const success = await clinicalHistoryStore.createHistoryEntry(patientId, data);
-  if (success) {
-    isHistoryModalOpen.value = false;
-  }
+// --- Otros ---
+function handleRegisterHistory(plannedTreatments: PlannedTreatment[]) {
+  const plan = plannedTreatments[0]; 
+  if (!plan) return;
+  const diagnosis = translateStatus(plan.toothSurfaceState.status);
+  const tooth = plan.toothSurfaceState.toothNumber;
+  const surface = plan.toothSurfaceState.surface;
+  const treatment = plan.treatment.name;
+  historyInitialData.value = {
+    description: `Paciente presenta ${diagnosis} en el diente #${tooth} (superficie ${surface}).`,
+    treatmentPerformed: `${treatment} en el diente #${tooth}.`,
+    diagnosis: diagnosis,
+  };
+  isHistoryModalOpen.value = true;
 }
 
-async function handleSaveBudget(data: any) {
-  // 'data' ya viene con todo (patientId, doctorId, items, totalAmount, discountAmount)
-  // desde el BudgetForm.vue
-  const success = await budgetsStore.createBudget(data);
-  if (success) {
-    isBudgetModalOpen.value = false;
+async function handleSaveMedicalHistory(data: any) {
+  if (selectedPatient.value) {
+    await patientsStore.updateMedicalHistory(selectedPatient.value.id, data);
   }
 }
 
@@ -375,10 +418,9 @@ async function handleGenerateConsent(templateId: string) {
   if (!selectedPatient.value) return;
   try {
     const response = await generateConsent(templateId, selectedPatient.value.id);
-    const htmlContent = response.data;
     const newWindow = window.open('', '_blank');
     if (newWindow) {
-      newWindow.document.write(htmlContent);
+      newWindow.document.write(response.data);
       newWindow.document.close();
       newWindow.print();
     }
@@ -395,244 +437,337 @@ function handlePrintReceipt(paymentId: string) {
   });
   window.open(routeData.href, '_blank');
 }
-
-// Descarga y abre/forza la descarga del documento seleccionado
-async function openDocument(doc: any) {
-  // Intenta descargar el blob usando el store helper
-  const blob = await documentsStore.downloadDocumentFile(doc);
-  if (!blob) return;
-
-  const url = URL.createObjectURL(blob);
-
-  // Si es PDF o imagen, intentamos abrir en nueva pestaña
-  const lower = (doc.fileName || '').toLowerCase();
-  if (lower.endsWith('.pdf') || lower.match(/\.(jpg|jpeg|png|gif)$/)) {
-    window.open(url, '_blank');
-    // liberamos el URL después de unos segundos
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
-    return;
-  }
-
-  // Para otros tipos, forzamos descarga
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = doc.fileName || 'download';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
-}
-
 </script>
 
-  <template>
-    <div v-if="isPatientLoading">Cargando información del paciente...</div>
-    <div v-else-if="!selectedPatient">No se encontró el paciente.</div>
-    <div v-else>
-      <div class="mb-6">
-        <h1 class="text-3xl font-bold text-text-dark">{{ selectedPatient.fullName }}</h1>
-        <p class="text-text-light">Detalles del paciente</p>
-      </div>
-      <div class="border-b border-gray-200">
-        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-          <a @click="activeTab = 'info'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Información General</a>
-          <a @click="activeTab = 'medical-history'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'medical-history' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Anamnesis</a>
-          <a @click="activeTab = 'odontogram'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'odontogram' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Odontograma</a>
-          <a @click="activeTab = 'periodontogram'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'periodontogram' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Periodontograma</a>
-          <a @click="activeTab = 'history'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Historial Clínico</a>
-          <a @click="activeTab = 'budgets'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'budgets' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Presupuestos</a>
-          <a @click="activeTab = 'appointments'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'appointments' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Citas</a>
-          <a @click="activeTab = 'documents'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'documents' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Documentos</a>
-        </nav>
-      </div>
+<template>
+  <div v-if="isPatientLoading">Cargando información del paciente...</div>
+  <div v-else-if="!selectedPatient">No se encontró el paciente.</div>
+  <div v-else>
+    <!-- Encabezado del Paciente -->
+    <div class="mb-6">
+      <h1 class="text-3xl font-bold text-text-dark">{{ selectedPatient.fullName }}</h1>
+      <p class="text-text-light">Detalles del paciente</p>
+    </div>
 
-      <div class="mt-6">
-          <div v-if="activeTab === 'documents'">
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Navegación de Pestañas -->
+    <div class="border-b border-gray-200">
+      <nav class="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
+        <a @click.prevent="activeTab = 'info'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'info' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Información General</a>
+        <a @click.prevent="activeTab = 'medical-history'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'medical-history' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Anamnesis</a>
+        <a @click.prevent="activeTab = 'odontogram'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'odontogram' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Odontograma</a>
+        <a @click.prevent="activeTab = 'periodontogram'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'periodontogram' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Periodontograma</a>
+        <a @click.prevent="activeTab = 'history'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Historial Clínico</a>
+        <a @click.prevent="activeTab = 'budgets'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'budgets' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Presupuestos</a>
+        <a @click.prevent="activeTab = 'appointments'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'appointments' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Citas</a>
+        <a @click.prevent="activeTab = 'documents'" href="#" :class="['whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm', activeTab === 'documents' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700']">Documentos</a>
+      </nav>
+    </div>
 
-    <div class="bg-white p-6 rounded-lg shadow-md">
-      <h2 class="text-xl font-bold text-text-dark mb-4">Subir Documento</h2>
-      <form @submit.prevent="handleUpload" class="space-y-4">
-        <div>
-          <label for="document-upload" class="block text-sm font-medium text-text-light">Seleccionar Archivo (PDF, JPG, PNG)</label>
-          <input @change="onFileChange" type="file" id="document-upload" class="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"/>
+    <div class="mt-6">
+      
+      <!-- Pestaña: Documentos (MEJORADA) -->
+      <div v-if="activeTab === 'documents'" class="space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- COLUMNA IZQUIERDA: ACCIONES -->
+          <div class="space-y-6 lg:col-span-1">
+            
+            <!-- Tarjeta Subida -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div class="p-4 border-b border-gray-100 bg-gray-50">
+                <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  Subir Archivo
+                </h3>
+              </div>
+              
+              <div class="p-5">
+                <div 
+                  @dragover.prevent="onDragOver"
+                  @dragleave.prevent="onDragLeave"
+                  @drop.prevent="onDrop"
+                  @click="triggerFileUpload"
+                  :class="[
+                    'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all duration-200',
+                    isDragging ? 'border-primary bg-blue-50' : 'border-gray-300 hover:border-primary hover:bg-gray-50'
+                  ]"
+                >
+                  <input 
+                    ref="fileInputRef"
+                    type="file" 
+                    class="hidden" 
+                    @change="onFileChange" 
+                    accept=".pdf,.jpg,.jpeg,.png"
+                  />
+                  
+                  <div v-if="!fileToUpload" class="space-y-2">
+                    <div class="mx-auto h-12 w-12 text-gray-400 bg-gray-100 rounded-full flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                    </div>
+                    <p class="text-sm text-gray-600 font-medium">Haz clic o arrastra aquí</p>
+                    <p class="text-xs text-gray-400">PDF, JPG, PNG</p>
+                  </div>
+
+                  <div v-else class="space-y-3">
+                    <div class="mx-auto h-12 w-12 text-green-600 bg-green-100 rounded-full flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <p class="text-sm font-bold text-gray-800 truncate px-2">{{ fileToUpload.name }}</p>
+                    <p class="text-xs text-gray-500">{{ (fileToUpload.size / 1024 / 1024).toFixed(2) }} MB</p>
+                    <button @click.stop="fileToUpload = null" class="text-xs text-red-500 hover:underline">Cancelar</button>
+                  </div>
+                </div>
+
+                <button 
+                  @click="handleUpload" 
+                  class="btn-primary w-full mt-4 flex justify-center items-center gap-2"
+                  :disabled="!fileToUpload || isDocumentsLoading"
+                >
+                  <span v-if="isDocumentsLoading" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                  {{ isDocumentsLoading ? 'Subiendo...' : 'Guardar Archivo' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Tarjeta Consentimiento -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div class="p-4 border-b border-gray-100 bg-gray-50">
+                <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                  </svg>
+                  Documentos Legales
+                </h3>
+              </div>
+              <div class="p-5">
+                <p class="text-sm text-gray-600 mb-4">Genera consentimientos informados listos para firmar.</p>
+                <button @click="isConsentModalOpen = true" class="w-full py-2.5 px-4 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 font-medium transition-colors flex justify-center items-center gap-2">
+                  Generar Consentimiento
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- COLUMNA DERECHA: LISTA -->
+          <div class="lg:col-span-2">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 h-full flex flex-col">
+              <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="font-semibold text-gray-800">Historial de Archivos</h3>
+                <span class="text-xs font-medium bg-white px-2 py-1 rounded border border-gray-200 text-gray-500">{{ documents.length }} archivos</span>
+              </div>
+
+              <div v-if="isDocumentsLoading && documents.length === 0" class="p-8 text-center text-gray-400">
+                <p>Cargando lista...</p>
+              </div>
+
+              <div v-else-if="documents.length === 0" class="flex-1 flex flex-col items-center justify-center p-12 text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-3 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p>No hay documentos subidos aún.</p>
+              </div>
+
+              <ul v-else class="divide-y divide-gray-100 overflow-y-auto max-h-[600px]">
+                <li v-for="doc in documents" :key="doc.id" class="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between group">
+                  <div class="flex items-center gap-4 overflow-hidden">
+                    <!-- Icono según tipo -->
+                    <div class="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                      :class="{
+                        'bg-red-100 text-red-600': getFileIcon(doc.fileName) === 'pdf',
+                        'bg-blue-100 text-blue-600': getFileIcon(doc.fileName) === 'image',
+                        'bg-gray-100 text-gray-600': getFileIcon(doc.fileName) === 'file'
+                      }"
+                    >
+                      <svg v-if="getFileIcon(doc.fileName) === 'pdf'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" /></svg>
+                      <svg v-else-if="getFileIcon(doc.fileName) === 'image'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>
+                      <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-gray-900 truncate cursor-pointer hover:underline" @click.prevent="openDocument(doc)">{{ doc.fileName }}</p>
+                      <p class="text-xs text-gray-500">Subido recientemente</p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button @click.prevent="openDocument(doc)" class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full" title="Ver">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    </button>
+                    <button v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'assistant'" @click="documentsStore.deleteDocument(selectedPatient.id, doc.id)" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full" title="Eliminar">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
-        <button type="submit" class="btn-primary w-full" :disabled="!fileToUpload || isDocumentsLoading">
-          {{ isDocumentsLoading ? 'Subiendo...' : 'Subir Archivo' }}
-        </button>
-      </form>
-    </div>
-
-    <div class="bg-white p-6 rounded-lg shadow-md">
-      <h2 class="text-xl font-bold text-text-dark mb-4">Archivos del Paciente</h2>
-      <div v-if="isDocumentsLoading">Cargando...</div>
-      <ul v-else-if="documents.length > 0" class="divide-y divide-gray-200">
-        <li v-for="doc in documents" :key="doc.id" class="py-3 flex justify-between items-center">
-          <a @click.prevent="openDocument(doc)" href="#" class="text-primary hover:underline font-medium">
-            {{ doc.fileName }}
-          </a>
-          <button 
-            v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'assistant'"
-            @click="documentsStore.deleteDocument(selectedPatient.id, doc.id)"
-            class="text-red-500 hover:text-red-700 text-sm font-semibold"
-          >
-            Eliminar
-          </button>
-        </li>
-      </ul>
-      <p v-else class="text-text-light">No hay documentos para este paciente.</p>
-    </div>
-  </div>
-  <div class="mt-6">
-    <button @click="isConsentModalOpen = true" class="btn-secondary">+ Generar Consentimiento</button>
-  </div>
-</div>
       </div>
 
+      <!-- Pestaña: Periodontograma -->
       <div v-if="activeTab === 'periodontogram'">
-      <Periodontogram />
-    </div>
+        <Periodontogram />
+      </div>
 
-      <div class="mt-6">
-        <div v-if="activeTab === 'info'" class="bg-white p-6 rounded-lg shadow-md">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-bold text-text-dark">Datos Personales</h2>
-            <button @click="isEditing = !isEditing" class="btn-secondary">
-              {{ isEditing ? 'Cancelar Edición' : 'Editar Información' }}
-            </button>
-          </div>
-          <div v-if="!isEditing" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div><strong class="text-text-light">Categoría:</strong> <span class="font-mono text-primary font-bold">{{ selectedPatient.category || 'N/A' }}</span></div>
-            <div><strong class="text-text-light">Código Archivo:</strong> <span class="font-mono text-primary font-bold">{{ selectedPatient.fileCode || 'N/A' }}</span></div>
-            <div><strong class="text-text-light">DNI:</strong> {{ selectedPatient.dni }}</div>
-            <div><strong class="text-text-light">Teléfono:</strong> {{ selectedPatient.phone }}</div>
-            <div><strong class="text-text-light">Email:</strong> {{ selectedPatient.email || 'N/A' }}</div>
-            <div><strong class="text-text-light">Fecha de Nac.:</strong> {{ new Date(selectedPatient.birthDate).toLocaleDateString('es-PE', { timeZone: 'UTC' }) }}</div>
-            <div><strong class="text-text-light">Edad:</strong> {{ age }} años</div>
-            <div><strong class="text-text-light">Sexo:</strong> {{ formatGender(selectedPatient.gender) }}</div>
-            <div class="md:col-span-3"><strong class="text-text-light">Dirección:</strong> {{ selectedPatient.address || 'N/A' }}</div>
-            <div><strong class="text-text-light">Departamento:</strong> {{ selectedPatient.department || 'N/A' }}</div>
-            <div><strong class="text-text-light">Provincia:</strong> {{ selectedPatient.province || 'N/A' }}</div>
-            <div><strong class="text-text-light">Distrito:</strong> {{ selectedPatient.district || 'N/A' }}</div>
-          </div>
-          <div v-else>
-            <PatientForm :initial-data="selectedPatient" :loading="isPatientLoading" @patient-saved="handlePatientUpdate" @cancel="isEditing = false" />
+      <!-- Pestaña: Información General -->
+      <div v-if="activeTab === 'info'" class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold text-text-dark">Datos Personales</h2>
+          <button @click="isEditing = !isEditing" class="btn-secondary">
+            {{ isEditing ? 'Cancelar Edición' : 'Editar Información' }}
+          </button>
+        </div>
+        <div v-if="!isEditing" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div><strong class="text-text-light">Categoría:</strong> <span class="font-mono text-primary font-bold">{{ selectedPatient.category || 'N/A' }}</span></div>
+          <div><strong class="text-text-light">Código Archivo:</strong> <span class="font-mono text-primary font-bold">{{ selectedPatient.fileCode || 'N/A' }}</span></div>
+          <div><strong class="text-text-light">DNI:</strong> {{ selectedPatient.dni }}</div>
+          <div><strong class="text-text-light">Teléfono:</strong> {{ selectedPatient.phone }}</div>
+          <div><strong class="text-text-light">Email:</strong> {{ selectedPatient.email || 'N/A' }}</div>
+          <div><strong class="text-text-light">Fecha de Nac.:</strong> {{ new Date(selectedPatient.birthDate).toLocaleDateString('es-PE', { timeZone: 'UTC' }) }}</div>
+          <div><strong class="text-text-light">Edad:</strong> {{ age }} años</div>
+          <div><strong class="text-text-light">Sexo:</strong> {{ formatGender(selectedPatient.gender) }}</div>
+          <div class="md:col-span-3"><strong class="text-text-light">Dirección:</strong> {{ selectedPatient.address || 'N/A' }}</div>
+          <div><strong class="text-text-light">Departamento:</strong> {{ selectedPatient.department || 'N/A' }}</div>
+          <div><strong class="text-text-light">Provincia:</strong> {{ selectedPatient.province || 'N/A' }}</div>
+          <div><strong class="text-text-light">Distrito:</strong> {{ selectedPatient.district || 'N/A' }}</div>
+        </div>
+        <div v-else>
+          <PatientForm :initial-data="selectedPatient" :loading="isPatientLoading" @patient-saved="handlePatientUpdate" @cancel="isEditing = false" />
+        </div>
+      </div>
+
+      <!-- Pestaña: Odontograma -->
+      <div v-if="activeTab === 'odontogram'">
+        <div v-if="isOdontogramLoading" class="text-center py-10">Cargando odontograma...</div>
+        <Odontogram v-else :whole-teeth="wholeTeeth" :surfaces="surfaces" :patient-age="typeof age === 'number' ? age : 0" :user-role="authStore.user?.role" />
+        <TreatmentPlan @generate-budget="handleGenerateBudget" @register-history="handleRegisterHistory" @clear-plan="handleClearPlan" />
+      </div>
+
+      <!-- Pestaña: Anamnesis -->
+      <div v-if="activeTab === 'medical-history'">
+        <AnamnesisHub />
+      </div>
+
+      <!-- Pestaña: Historial Clínico -->
+      <div v-if="activeTab === 'history'">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold text-text-dark">Evolución del Paciente</h2>
+          <button v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'dentist'" @click="openNewHistoryModal" class="btn-primary">
+            + Nueva Entrada
+          </button>
+        </div>
+        <div v-if="isHistoryLoading" class="text-center py-8">Cargando historial...</div>
+        <ClinicalHistoryList 
+           v-else 
+           :entries="historyEntries" 
+           @view-entry="handleViewHistoryEntry" 
+           @edit-entry="handleEditHistoryEntry"
+        />
+      </div>
+
+      <!-- Pestaña: Presupuestos -->
+      <div v-if="activeTab === 'budgets'">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold text-text-dark">Planes de Tratamiento</h2>
+          <div class="flex items-center gap-4">
+            <select v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'assistant'" v-model="selectedDoctorId" class="input-style">
+              <option value="all">Ver todos los doctores</option>
+              <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">{{ doctor.fullName }}</option>
+            </select>
+            <button @click="openNewBudgetModal" class="btn-primary">+ Nuevo Presupuesto</button>
           </div>
         </div>
+        <div v-if="isBudgetsLoading && budgets.length === 0">Cargando...</div>
+        <BudgetList v-else :budgets="filteredBudgets" @manage-payments="handleManagePayments" @print-budget="handleOpenPrintModal" @discount-updated="handleBudgetDiscountUpdated" @budget-deleted="handleBudgetDeleted" />
+      </div>
 
-        <div class="mt-6">
-        <div v-if="activeTab === 'odontogram'">
-          <div v-if="isOdontogramLoading" class="text-center py-10">Cargando odontograma...</div>
-          <Odontogram v-else :whole-teeth="wholeTeeth" :surfaces="surfaces" :patient-age="typeof age === 'number' ? age : 0" :user-role="authStore.user?.role" />
-          <TreatmentPlan @generate-budget="handleGenerateBudget" @register-history="handleRegisterHistory" @clear-plan="handleClearPlan" />
-        </div>
-        <div class="mt-6">
-    <div v-if="activeTab === 'medical-history'">
-      <AnamnesisHub />
-    </div>
-    </div>
-        </div>
-
-        <div v-if="activeTab === 'history'">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-bold text-text-dark">Evolución del Paciente</h2>
-            <button v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'dentist'" @click="openNewHistoryModal" class="btn-primary">
-        + Nueva Entrada
-      </button>
-          </div>
-          <div v-if="isHistoryLoading" class="text-center py-8">Cargando historial...</div>
-          <ClinicalHistoryList v-else :entries="historyEntries" @view-entry="handleViewHistoryEntry" />
-        </div>
-
-  <div v-if="activeTab === 'budgets'">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-bold text-text-dark">Planes de Tratamiento</h2>
-      <div class="flex items-center gap-4">
-        <select
-          v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'assistant'"
-          v-model="selectedDoctorId"
-          class="input-style"
-        >
-          <option value="all">Ver todos los doctores</option>
-          <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">
-            {{ doctor.fullName }}
-          </option>
-        </select>
-        <button @click="openNewBudgetModal" class="btn-primary">+ Nuevo Presupuesto</button>
+      <!-- Pestaña: Citas -->
+      <div v-if="activeTab === 'appointments'">
+        <h2 class="text-xl font-bold text-text-dark mb-4">Historial de Citas</h2>
+        <div v-if="isAppointmentsLoading" class="text-center py-8">Cargando citas...</div>
+        <AppointmentList v-else :appointments="patientAppointments" />
       </div>
     </div>
-    <div v-if="isBudgetsLoading && budgets.length === 0">Cargando...</div>
-  <BudgetList v-else :budgets="filteredBudgets" @manage-payments="handleManagePayments" @print-budget="handleOpenPrintModal" @discount-updated="handleBudgetDiscountUpdated" @budget-deleted="handleBudgetDeleted" />
+
+    <!-- MODALES -->
+    <Modal :isOpen="isHistoryModalOpen" @close="isHistoryModalOpen = false">
+      <template #header>
+          {{ historyInitialData && historyInitialData.id ? 'Editar Entrada' : 'Nueva Entrada de Historial' }}
+      </template>
+      <template #default>
+        <ClinicalHistoryForm 
+           v-if="isHistoryModalOpen" 
+           :initial-data="historyInitialData" 
+           :loading="isHistoryLoading" 
+           @submit="handleSaveHistoryEntry" 
+           @cancel="isHistoryModalOpen = false" 
+        />
+      </template>
+    </Modal>
+    
+    <Modal :isOpen="isBudgetModalOpen" @close="isBudgetModalOpen = false">
+      <template #header>Nuevo Presupuesto</template>
+      <template #default>
+        <BudgetForm v-if="isBudgetModalOpen" :initial-data="budgetInitialData" :loading="isBudgetsLoading" @submit="handleSaveBudget" @cancel="isBudgetModalOpen = false" />
+      </template>
+    </Modal>
+    
+    <Modal :isOpen="isHistoryDetailModalOpen" @close="isHistoryDetailModalOpen = false">
+      <template #header>Detalle de la Entrada</template>
+      <template #default>
+        <ClinicalHistoryEntryDetail 
+           v-if="isHistoryDetailModalOpen" 
+           :entry="selectedHistoryEntry" 
+           @edit="handleEditHistoryEntry"
+        />
+      </template>
+    </Modal>
+
+    <Modal :isOpen="isPaymentModalOpen" @close="closePaymentModal">
+      <template #header>Gestionar Pagos del Presupuesto</template>
+      <template #default>
+        <PaymentHistory 
+          v-if="isPaymentModalOpen" 
+          :budget-id="selectedBudgetId!" 
+          @payment-saved="closePaymentModal"
+          @print-receipt="handlePrintReceipt" />
+      </template>
+    </Modal>
+
+    <Modal :isOpen="isPrintModalOpen" @close="isPrintModalOpen = false">
+      <template #header>Opciones de Impresión</template>
+      <template #default>
+        <PrintBudgetModal 
+          v-if="isPrintModalOpen" 
+          :budget-id="budgetToPrintId!" 
+          @close="isPrintModalOpen = false" 
+        />
+      </template>
+    </Modal>
+
+    <Modal :isOpen="isConsentModalOpen" @close="isConsentModalOpen = false">
+      <template #header>Generar Consentimiento Informado</template>
+      <template #default>
+        <GenerateConsentModal 
+          v-if="isConsentModalOpen"
+          @close="isConsentModalOpen = false"
+          @generate="handleGenerateConsent"
+        />
+      </template>
+    </Modal>
   </div>
+</template>
 
-        <div v-if="activeTab === 'appointments'">
-          <h2 class="text-xl font-bold text-text-dark mb-4">Historial de Citas</h2>
-          <div v-if="isAppointmentsLoading" class="text-center py-8">Cargando citas...</div>
-          <AppointmentList v-else :appointments="patientAppointments" />
-        </div>
-      </div>
-
-      <Modal :isOpen="isHistoryModalOpen" @close="isHistoryModalOpen = false">
-        <template #header>Nueva Entrada de Historial</template>
-        <template #default>
-          <ClinicalHistoryForm v-if="isHistoryModalOpen" :initial-data="historyInitialData" :loading="isHistoryLoading" @submit="handleSaveHistoryEntry" @cancel="isHistoryModalOpen = false" />
-        </template>
-      </Modal>
-      
-      <Modal :isOpen="isBudgetModalOpen" @close="isBudgetModalOpen = false">
-        <template #header>Nuevo Presupuesto</template>
-        <template #default>
-          <BudgetForm v-if="isBudgetModalOpen" :initial-data="budgetInitialData" :loading="isBudgetsLoading" @submit="handleSaveBudget" @cancel="isBudgetModalOpen = false" />
-        </template>
-      </Modal>
-      
-      <Modal :isOpen="isHistoryDetailModalOpen" @close="isHistoryDetailModalOpen = false">
-        <template #header>Detalle de la Entrada</template>
-        <template #default>
-          <ClinicalHistoryDetail v-if="isHistoryDetailModalOpen" :entry="selectedHistoryEntry" />
-        </template>
-      </Modal>
-
-      <Modal :isOpen="isPaymentModalOpen" @close="closePaymentModal">
-    <template #header>Gestionar Pagos del Presupuesto</template>
-    <template #default>
-      <PaymentHistory 
-        v-if="isPaymentModalOpen" 
-        :budget-id="selectedBudgetId!" 
-        @payment-saved="closePaymentModal"
-        @print-receipt="handlePrintReceipt" />
-    </template>
-  </Modal>
-
-      <Modal :isOpen="isPrintModalOpen" @close="isPrintModalOpen = false">
-        <template #header>Opciones de Impresión</template>
-        <template #default>
-          <PrintBudgetModal 
-            v-if="isPrintModalOpen" 
-            :budget-id="budgetToPrintId!" 
-            @close="isPrintModalOpen = false" 
-          />
-        </template>
-      </Modal>
-
-      <Modal :isOpen="isConsentModalOpen" @close="isConsentModalOpen = false">
-        <template #header>Generar Consentimiento Informado</template>
-        <template #default>
-          <GenerateConsentModal 
-            v-if="isConsentModalOpen"
-            @close="isConsentModalOpen = false"
-            @generate="handleGenerateConsent"
-          />
-        </template>
-      </Modal>
-    </div>
-  </template>
-
-  <style scoped>
-  .btn-primary { 
-    @apply px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-80 font-semibold; 
-  }
-  .btn-secondary {
-    @apply px-4 py-2 bg-gray-200 text-text-dark rounded-lg hover:bg-gray-300 font-semibold;
-  }
-  </style>
+<style scoped>
+.btn-primary { 
+  @apply px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-80 font-semibold; 
+}
+.btn-secondary {
+  @apply px-4 py-2 bg-gray-200 text-text-dark rounded-lg hover:bg-gray-300 font-semibold;
+}
+</style>

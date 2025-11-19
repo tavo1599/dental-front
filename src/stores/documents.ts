@@ -1,7 +1,11 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { useToast } from 'vue-toastification';
-import * as service from '@/services/documentService';
+import { 
+  getDocuments, 
+  uploadDocument as uploadApi, 
+  deleteDocument as deleteApi 
+} from '@/services/documentService';
 import type { PatientDocument } from '@/types';
 
 export const useDocumentsStore = defineStore('documents', () => {
@@ -12,10 +16,11 @@ export const useDocumentsStore = defineStore('documents', () => {
   async function fetchDocuments(patientId: string) {
     isLoading.value = true;
     try {
-      const response = await service.getDocuments(patientId);
+      const response = await getDocuments(patientId);
       documents.value = response.data;
     } catch (error) {
-      toast.error('No se pudieron cargar los documentos del paciente.');
+      console.error(error);
+      toast.error('Error al cargar documentos.');
     } finally {
       isLoading.value = false;
     }
@@ -24,46 +29,42 @@ export const useDocumentsStore = defineStore('documents', () => {
   async function uploadDocument(patientId: string, file: File) {
     isLoading.value = true;
     try {
-      await service.uploadDocument(patientId, file);
+      await uploadApi(patientId, file);
       toast.success('Documento subido con éxito.');
-      // Recarga la lista para mostrar el nuevo documento
-      await fetchDocuments(patientId);
+      await fetchDocuments(patientId); // Recargar la lista
+      return true;
     } catch (error) {
+      console.error(error);
       toast.error('Error al subir el documento.');
+      return false;
     } finally {
       isLoading.value = false;
     }
   }
 
   async function deleteDocument(patientId: string, documentId: string) {
-    if (!confirm('¿Estás seguro de que deseas eliminar este documento? Esta acción no se puede deshacer.')) {
-      return;
-    }
-
-    try {
-      await service.deleteDocument(documentId);
-      toast.success('Documento eliminado con éxito.');
-      // Actualiza la lista sin volver a llamar a la API
-      documents.value = documents.value.filter(doc => doc.id !== documentId);
-    } catch (error) {
-      toast.error('Error al eliminar el documento.');
-    }
-  }
-
-  // Descarga el documento como Blob y lo retorna al caller
-  async function downloadDocumentFile(doc: PatientDocument): Promise<Blob | null> {
+    if (!confirm('¿Estás seguro de eliminar este documento?')) return;
+    
     isLoading.value = true;
     try {
-      const response = await service.downloadFileByPath(doc.filePath);
-      return response.data as Blob;
-    } catch (error: any) {
-      toast.error('No se pudo descargar el documento.');
-      console.error('Download error:', error);
-      return null;
+      await deleteApi(documentId);
+      toast.success('Documento eliminado.');
+      await fetchDocuments(patientId); // Recargar la lista
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al eliminar el documento.');
     } finally {
       isLoading.value = false;
     }
   }
 
-  return { documents, isLoading, fetchDocuments, uploadDocument, deleteDocument, downloadDocumentFile };
+  // Ya no necesitamos la acción 'downloadDocumentFile' aquí.
+
+  return {
+    documents,
+    isLoading,
+    fetchDocuments,
+    uploadDocument,
+    deleteDocument
+  };
 });
