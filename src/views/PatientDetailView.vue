@@ -32,6 +32,7 @@ import PrintBudgetModal from '@/components/PrintBudgetModal.vue';
 import TreatmentPlan from '@/components/TreatmentPlan.vue';
 import GenerateConsentModal from '@/components/GenerateConsentModal.vue';
 import Periodontogram from '@/components/Periodontogram.vue';
+import PatientFullReportModal from '@/components/PatientFullReportModal.vue';
 
 // Tipos y Utilidades
 import type { ClinicalHistoryEntry, PlannedTreatment, Treatment } from '@/types';
@@ -68,7 +69,9 @@ const { doctors } = storeToRefs(usersStore);
 const activeTab = ref('info');
 const selectedDoctorId = ref<string>('all');
 const isEditing = ref(false);
-const isDragging = ref(false); // Estado para Drag & Drop
+
+// UI Documentos (Drag & Drop)
+const isDragging = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
 // Modales
@@ -78,6 +81,7 @@ const isHistoryDetailModalOpen = ref(false);
 const isPaymentModalOpen = ref(false);
 const isPrintModalOpen = ref(false);
 const isConsentModalOpen = ref(false);
+const isReportModalOpen = ref(false);
 
 // Datos seleccionados
 const selectedHistoryEntry = ref<ClinicalHistoryEntry | null>(null);
@@ -103,12 +107,15 @@ const age = computed(() => {
 });
 
 const filteredBudgets = computed(() => {
+  // Si es dentista, solo ve los suyos (aunque el backend ya filtra, esto es visual)
   if (authStore.user?.role === 'dentist') {
     return budgets.value.filter(b => b.doctor?.id === authStore.user?.id);
   }
+  // Si es admin/asistente y selecciona "Todos"
   if (selectedDoctorId.value === 'all') {
     return budgets.value;
   }
+  // Si es admin/asistente y filtra por un doctor
   return budgets.value.filter(b => b.doctor?.id === selectedDoctorId.value);
 });
 
@@ -126,6 +133,7 @@ const formatGender = (gender?: Gender) => {
 watch(() => route.params.id, (newId) => {
   if (newId) {
     const patientId = newId as string;
+    
     // Resetea stores
     patientsStore.selectedPatient = null;
     patientsStore.medicalHistory = null;
@@ -184,6 +192,7 @@ function loadDataForTab(tab: string, patientId: string) {
       if (budgets.value.length === 0) {
         const userRole = authStore.user?.role;
         const userId = authStore.user?.id;
+
         if (userRole === 'dentist') {
           if (userId) budgetsStore.fetchBudgets(patientId, userId);
         } else if (userRole === 'admin') {
@@ -211,7 +220,7 @@ function loadDataForTab(tab: string, patientId: string) {
   }
 }
 
-// --- MANEJADORES DE DOCUMENTOS (Drag & Drop + UI Mejorada) ---
+// --- MANEJADORES DE DOCUMENTOS (Con UI Mejorada) ---
 
 function triggerFileUpload() {
   fileInputRef.value?.click();
@@ -254,15 +263,15 @@ async function handleUpload() {
   }
 }
 
-// --- FUNCIÓN OPEN DOCUMENT (CORREGIDA PARA R2) ---
+// --- FUNCIÓN OPEN DOCUMENT (R2) ---
 function openDocument(doc: any) {
   if (!doc.filePath) return;
-  
-  // Si es URL absoluta (R2), abrir directo
+
+  // 1. URL Absoluta (R2)
   if (doc.filePath.startsWith('http')) {
     window.open(doc.filePath, '_blank');
   } 
-  // Si es URL relativa (Legacy), concatenar base
+  // 2. URL Relativa (Legacy)
   else {
     const baseUrl = import.meta.env.VITE_API_BASE_URL;
     const separator = doc.filePath.startsWith('/') ? '' : '/';
@@ -270,7 +279,6 @@ function openDocument(doc: any) {
     window.open(fullUrl, '_blank');
   }
 }
-// ------------------------------------------------
 
 function handleClearPlan() {
   const patientId = route.params.id as string;
@@ -437,16 +445,55 @@ function handlePrintReceipt(paymentId: string) {
   });
   window.open(routeData.href, '_blank');
 }
+
+// --- UTILITIES ---
+function formatDate(date: string | undefined) {
+  if (!date) return 'Fecha desconocida';
+  return new Date(date).toLocaleDateString('es-PE');
+}
+
+// --- NUEVA FUNCIÓN: IR ATRÁS ---
+function goBack() {
+  router.push('/patients');
+}
 </script>
 
 <template>
   <div v-if="isPatientLoading">Cargando información del paciente...</div>
   <div v-else-if="!selectedPatient">No se encontró el paciente.</div>
   <div v-else>
-    <!-- Encabezado del Paciente -->
-    <div class="mb-6">
-      <h1 class="text-3xl font-bold text-text-dark">{{ selectedPatient.fullName }}</h1>
-      <p class="text-text-light">Detalles del paciente</p>
+    
+    <!-- ENCABEZADO DEL PACIENTE (RESPONSIVO CON BOTÓN ATRÁS) -->
+    <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      
+      <div class="flex items-center gap-3 w-full md:w-auto">
+        <!-- BOTÓN RETROCESO -->
+        <button 
+          @click="goBack" 
+          class="p-2 rounded-full hover:bg-gray-200 text-gray-600 transition-colors flex-shrink-0" 
+          title="Volver a la lista"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </button>
+        
+        <div class="min-w-0">
+          <h1 class="text-2xl md:text-3xl font-bold text-text-dark truncate">{{ selectedPatient.fullName }}</h1>
+          <p class="text-text-light text-sm">Detalles del paciente</p>
+        </div>
+      </div>
+
+      <!-- BOTÓN: HISTORIA COMPLETA -->
+      <button 
+        @click="isReportModalOpen = true"
+        class="w-full md:w-auto px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 shadow-md flex justify-center items-center gap-2 font-semibold transition-colors"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Historia Completa
+      </button>
     </div>
 
     <!-- Navegación de Pestañas -->
@@ -465,13 +512,12 @@ function handlePrintReceipt(paymentId: string) {
 
     <div class="mt-6">
       
-      <!-- Pestaña: Documentos (MEJORADA) -->
+      <!-- Pestaña: Documentos -->
       <div v-if="activeTab === 'documents'" class="space-y-6">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           <!-- COLUMNA IZQUIERDA: ACCIONES -->
           <div class="space-y-6 lg:col-span-1">
-            
             <!-- Tarjeta Subida -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div class="p-4 border-b border-gray-100 bg-gray-50">
@@ -508,8 +554,8 @@ function handlePrintReceipt(paymentId: string) {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
                     </div>
-                    <p class="text-sm text-gray-600 font-medium">Haz clic o arrastra aquí</p>
-                    <p class="text-xs text-gray-400">PDF, JPG, PNG</p>
+                    <p class="text-sm text-gray-600 font-medium">Haz clic o arrastra un archivo aquí</p>
+                    <p class="text-xs text-gray-400">PDF, JPG, PNG (Max 10MB)</p>
                   </div>
 
                   <div v-else class="space-y-3">
@@ -520,7 +566,10 @@ function handlePrintReceipt(paymentId: string) {
                     </div>
                     <p class="text-sm font-bold text-gray-800 truncate px-2">{{ fileToUpload.name }}</p>
                     <p class="text-xs text-gray-500">{{ (fileToUpload.size / 1024 / 1024).toFixed(2) }} MB</p>
-                    <button @click.stop="fileToUpload = null" class="text-xs text-red-500 hover:underline">Cancelar</button>
+                    <button 
+                      @click.stop="fileToUpload = null" 
+                      class="text-xs text-red-500 hover:underline"
+                    >Cancelar</button>
                   </div>
                 </div>
 
@@ -554,7 +603,7 @@ function handlePrintReceipt(paymentId: string) {
             </div>
           </div>
 
-          <!-- COLUMNA DERECHA: LISTA -->
+          <!-- COLUMNA DERECHA: LISTA DE ARCHIVOS -->
           <div class="lg:col-span-2">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 h-full flex flex-col">
               <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
@@ -575,6 +624,7 @@ function handlePrintReceipt(paymentId: string) {
 
               <ul v-else class="divide-y divide-gray-100 overflow-y-auto max-h-[600px]">
                 <li v-for="doc in documents" :key="doc.id" class="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between group">
+                  
                   <div class="flex items-center gap-4 overflow-hidden">
                     <!-- Icono según tipo -->
                     <div class="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -588,20 +638,31 @@ function handlePrintReceipt(paymentId: string) {
                       <svg v-else-if="getFileIcon(doc.fileName) === 'image'" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" /></svg>
                       <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" /></svg>
                     </div>
+
                     <div class="min-w-0">
                       <p class="text-sm font-medium text-gray-900 truncate cursor-pointer hover:underline" @click.prevent="openDocument(doc)">{{ doc.fileName }}</p>
-                      <p class="text-xs text-gray-500">Subido recientemente</p>
+                      <p class="text-xs text-gray-500">Documento disponible</p>
                     </div>
                   </div>
 
                   <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button @click.prevent="openDocument(doc)" class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full" title="Ver">
+                    <button 
+                      @click.prevent="openDocument(doc)" 
+                      class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"
+                      title="Ver"
+                    >
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                     </button>
-                    <button v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'assistant'" @click="documentsStore.deleteDocument(selectedPatient.id, doc.id)" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full" title="Eliminar">
+                    <button 
+                      v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'assistant'"
+                      @click="documentsStore.deleteDocument(selectedPatient.id, doc.id)"
+                      class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                      title="Eliminar"
+                    >
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                   </div>
+
                 </li>
               </ul>
             </div>
@@ -670,20 +731,35 @@ function handlePrintReceipt(paymentId: string) {
         />
       </div>
 
-      <!-- Pestaña: Presupuestos -->
+      <!-- Pestaña: Presupuestos (CON RESPONSIVIDAD Y FILTRO DE DOCTOR) -->
       <div v-if="activeTab === 'budgets'">
-        <div class="flex justify-between items-center mb-4">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
           <h2 class="text-xl font-bold text-text-dark">Planes de Tratamiento</h2>
-          <div class="flex items-center gap-4">
-            <select v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'assistant'" v-model="selectedDoctorId" class="input-style">
+          
+          <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            <!-- SELECT DE DOCTOR (VISIBLE SOLO PARA ADMIN/ASISTENTE) -->
+            <select 
+              v-if="authStore.user?.role === 'admin' || authStore.user?.role === 'assistant'" 
+              v-model="selectedDoctorId" 
+              class="input-style w-full sm:w-64"
+            >
               <option value="all">Ver todos los doctores</option>
               <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">{{ doctor.fullName }}</option>
             </select>
-            <button @click="openNewBudgetModal" class="btn-primary">+ Nuevo Presupuesto</button>
+            
+            <button @click="openNewBudgetModal" class="btn-primary w-full sm:w-auto whitespace-nowrap">+ Nuevo Presupuesto</button>
           </div>
         </div>
+        
         <div v-if="isBudgetsLoading && budgets.length === 0">Cargando...</div>
-        <BudgetList v-else :budgets="filteredBudgets" @manage-payments="handleManagePayments" @print-budget="handleOpenPrintModal" @discount-updated="handleBudgetDiscountUpdated" @budget-deleted="handleBudgetDeleted" />
+        <BudgetList 
+          v-else 
+          :budgets="filteredBudgets" 
+          @manage-payments="handleManagePayments" 
+          @print-budget="handleOpenPrintModal" 
+          @discount-updated="handleBudgetDiscountUpdated" 
+          @budget-deleted="handleBudgetDeleted" 
+        />
       </div>
 
       <!-- Pestaña: Citas -->
@@ -694,7 +770,7 @@ function handlePrintReceipt(paymentId: string) {
       </div>
     </div>
 
-    <!-- MODALES -->
+    <!-- MODALES FUERA DEL V-IF PRINCIPAL -->
     <Modal :isOpen="isHistoryModalOpen" @close="isHistoryModalOpen = false">
       <template #header>
           {{ historyInitialData && historyInitialData.id ? 'Editar Entrada' : 'Nueva Entrada de Historial' }}
@@ -760,14 +836,26 @@ function handlePrintReceipt(paymentId: string) {
         />
       </template>
     </Modal>
+
+    <!-- NUEVO: Modal de Reporte Completo -->
+    <PatientFullReportModal 
+      v-if="isReportModalOpen"
+      :patient-id="selectedPatient?.id || ''"
+      @close="isReportModalOpen = false"
+    />
+
   </div>
 </template>
 
 <style scoped>
 .btn-primary { 
-  @apply px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-80 font-semibold; 
+ @apply px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-80 font-semibold; 
 }
 .btn-secondary {
-  @apply px-4 py-2 bg-gray-200 text-text-dark rounded-lg hover:bg-gray-300 font-semibold;
+ @apply px-4 py-2 bg-gray-200 text-text-dark rounded-lg hover:bg-gray-300 font-semibold;
+}
+/* Input estilo para el select de doctor */
+.input-style {
+  @apply border border-gray-300 rounded-lg shadow-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-sm;
 }
 </style>

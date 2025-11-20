@@ -433,6 +433,7 @@ export interface Budget {
   patient: Patient;
   tenant: Tenant;
   doctor?: User;
+  payments?: Payment[];
 }
 
 export interface Payment {

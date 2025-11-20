@@ -7,7 +7,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import { useAuthStore } from '@/stores/auth';
 import { useAppointmentsStore } from '@/stores/appointments';
 import { storeToRefs } from 'pinia';
-import type { CalendarOptions, EventClickArg } from '@fullcalendar/core';
+import type { CalendarOptions } from '@fullcalendar/core';
 import Modal from '@/components/Modal.vue';
 import AppointmentForm from '@/components/AppointmentForm.vue';
 import AppointmentDetailModal from '@/components/AppointmentDetailModal.vue';
@@ -59,31 +59,27 @@ const calendarEvents = computed(() => {
   return filteredAppointments.value.map(appt => {
     const style = getStatusStyle(appt.status);
     let eventClassName = style.className ? [style.className] : [];
-    if (query) {
-    const patientName = appt.patient.fullName.toLowerCase();
-    if (!patientName.includes(query)) {
- // Si el nombre NO coincide, añadimos la clase para atenuar
-  eventClassName.push('event-faded');
-  }
-  }
     
-    // 1. Creamos objetos Date a partir de los strings UTC del backend.
-    // El navegador los convierte automáticamente a la zona horaria local.
+    // Lógica de búsqueda visual (atenuar si no coincide)
+    if (query) {
+      const patientName = appt.patient.fullName.toLowerCase();
+      if (!patientName.includes(query)) {
+        eventClassName.push('event-faded');
+      }
+    }
+    
     const startDate = new Date(appt.startTime);
     const endDate = new Date(appt.endTime);
 
-    // 2. Creamos una función para formatear la fecha a "YYYY-MM-DDTHH:mm:ss"
-    // Esto crea un string de fecha local sin información de zona horaria.
     const toLocalISOString = (date: Date) => {
       const pad = (num: number) => num.toString().padStart(2, '0');
       return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
-            `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+             `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
     };
 
     return {
       id: appt.id,
       title: appt.patient.fullName,
-      // 3. Le pasamos al calendario el string de fecha local.
       start: toLocalISOString(startDate),
       end: toLocalISOString(endDate),
       backgroundColor: style.color,
@@ -194,9 +190,10 @@ const calendarOptions: CalendarOptions = {
   eventClick: handleEventClick,
   editable: true,
   eventDrop: handleEventDrop,
-  eventResizableFromStart: true, // Permite estirar desde el inicio
-  eventResize: handleEventResize, // <-- Conecta el nuevo manejador
+  eventResizableFromStart: true,
+  eventResize: handleEventResize,
   eventClassNames: 'custom-event',
+  height: 'auto', // Permite que el calendario se ajuste mejor en móviles
 };
 
 onMounted(async () => {
@@ -204,12 +201,9 @@ onMounted(async () => {
   try {
     const response = await getDoctors();
     doctors.value = response.data;
-    
-    // Si el usuario es doctor O admin, selecciona su ID por defecto
     if (authStore.user?.role === 'dentist' || authStore.user?.role === 'admin') {
       selectedDoctorId.value = authStore.user.id;
     }
-    
   } catch (error) {
     console.error("No se pudo cargar la lista de doctores", error);
   }
@@ -217,40 +211,53 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div>
-    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-      <h1 class="text-3xl font-bold text-text-dark">Agenda de Citas</h1>
+  <div class="p-4 md:p-6"> <!-- Padding responsivo -->
+    
+    <!-- HEADER Y FILTROS RESPONSIVOS -->
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+      <h1 class="text-2xl md:text-3xl font-bold text-text-dark">Agenda de Citas</h1>
       
-      <div class="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+      <!-- Grupo de Filtros: Se apilan en móvil (flex-col) y se alinean en PC (md:flex-row) -->
+      <div class="flex flex-col md:flex-row gap-3 w-full lg:w-auto">
+        
+        <!-- Buscador -->
+        <div class="relative w-full md:w-auto">
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Buscar paciente..." 
+            class="input-style w-full md:w-56 pl-10"
+          />
+        </div>
 
-  <input 
-  v-model="searchQuery" 
-  type="text" 
-  placeholder="Buscar paciente..." 
-  class="input-style w-full sm:w-56"
-  />
-    
-    <select @change="handleStatusFilterChange" :value="selectedStatus" class="input-style w-full sm:w-48">
-      <option value="all">Todos los Estados</option>
-      <option v-for="status in AppointmentStatus" :key="status" :value="status">
-        {{ translateAppointmentStatus(status) }}
-      </option>
-    </select>
-    
-    <select v-model="selectedDoctorId" class="input-style w-full sm:w-64">
-      <option value="all">Todos los Doctores</option>
-      <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">
-        {{ doctor.fullName }}
-      </option>
-    </select>
-    
-    </div>
+        <!-- Filtro Estado -->
+        <select @change="handleStatusFilterChange" :value="selectedStatus" class="input-style w-full md:w-48">
+          <option value="all">Todos los Estados</option>
+          <option v-for="status in AppointmentStatus" :key="status" :value="status">
+            {{ translateAppointmentStatus(status) }}
+          </option>
+        </select>
+        
+        <!-- Filtro Doctor -->
+        <select v-model="selectedDoctorId" class="input-style w-full md:w-64">
+          <option value="all">Todos los Doctores</option>
+          <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">
+            {{ doctor.fullName }}
+          </option>
+        </select>
+        
+      </div>
     </div>
     
-    <div class="bg-white rounded-lg shadow-md p-6">
-      <FullCalendar ref="calendarRef" :options="calendarOptions" />
+    <!-- CONTENEDOR CALENDARIO -->
+    <div class="bg-white rounded-lg shadow-md p-2 md:p-6 overflow-x-auto">
+      <!-- Min-width para evitar que el calendario se rompa en pantallas muy angostas -->
+      <div class="min-w-[600px] md:min-w-0"> 
+         <FullCalendar ref="calendarRef" :options="calendarOptions" />
+      </div>
     </div>
 
+    <!-- MODALES -->
     <Modal :isOpen="isFormModalOpen" @close="isFormModalOpen = false">
       <template #header>Agendar Nueva Cita</template>
       <template #default>
@@ -277,18 +284,18 @@ onMounted(async () => {
     </Modal>
 
     <ConfirmationModal 
-  :isOpen="isDropConfirmModalOpen"
-  title="Reprogramar Cita"
-  message="¿Estás seguro de que deseas mover esta cita al nuevo horario?"
-  confirmButtonText="Sí, Reprogramar" @confirm="confirmReschedule"
-  @cancel="cancelReschedule"
->
-  <template #icon>
-    <img src="@/assets/diente-calendario.png" alt="Icono de calendario y diente" class="h-19 w-19" />
-  </template>
-</ConfirmationModal>
+      :isOpen="isDropConfirmModalOpen"
+      title="Reprogramar Cita"
+      message="¿Estás seguro de que deseas mover esta cita al nuevo horario?"
+      confirmButtonText="Sí, Reprogramar" @confirm="confirmReschedule"
+      @cancel="cancelReschedule"
+    >
+      <template #icon>
+        <img src="@/assets/diente-calendario.png" alt="Icono de calendario y diente" class="h-16 w-16 mx-auto" />
+      </template>
+    </ConfirmationModal>
 
-<ConfirmationModal 
+    <ConfirmationModal 
       :isOpen="isResizeConfirmModalOpen"
       title="Actualizar Duración"
       message="¿Estás seguro de que deseas cambiar la duración de esta cita?"
@@ -296,36 +303,40 @@ onMounted(async () => {
       @confirm="confirmResize"
       @cancel="cancelResize"
     >
-    <template #icon>
-    <img src="@/assets/diente-calendario.png" alt="Icono de calendario y diente" class="h-19 w-19" />
-  </template>
-  </ConfirmationModal>
+      <template #icon>
+        <img src="@/assets/diente-calendario.png" alt="Icono de calendario y diente" class="h-16 w-16 mx-auto" />
+      </template>
+    </ConfirmationModal>
   </div>
 </template>
 
 <style>
-/* Estilo para hacer los eventos del calendario un poco más estrechos */
+/* Estilos Globales para FullCalendar Events */
 .custom-event {
-  width: 85% !important;
+  width: 90% !important;
   margin: 0 auto !important;
+  border-radius: 4px;
+  font-size: 0.85em;
 }
 
-/* Estilo para citas canceladas o no asistidas */
 .event-cancelled .fc-event-title {
   text-decoration: line-through;
 }
 
-/* Estilo para citas completadas (un poco transparente) */
 .event-completed {
   opacity: 0.7;
 }
 
 .event-faded {
- opacity: 0.3 !important; /* Usamos !important para sobreescribir otros estilos */
+  opacity: 0.2 !important;
   transition: opacity 0.3s ease-in-out;
 }
-/* Al pasar el mouse, se restaura la opacidad para poder hacer clic */
 .event-faded:hover {
   opacity: 1 !important;
+}
+
+/* Inputs */
+.input-style {
+  @apply border border-gray-300 rounded-lg shadow-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all;
 }
 </style>
