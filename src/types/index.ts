@@ -517,3 +517,11 @@ export interface AuditLog {
     fullName: string;
   };
 }
+
+export interface DentalBridge {
+  id: string;
+  startTooth: number;
+  endTooth: number;
+  type: 'fixed' | 'removable'; // Por si quieres expandirlo luego
+  color: string; // 'blue' | 'red'
+}

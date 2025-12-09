@@ -6,12 +6,13 @@ import { ToothStatus as TS } from '@/types';
 
 defineProps<{}>();
 
-const emit = defineEmits(['select-status', 'select-state', 'open-delete-manager', 'close']);
+// Añadimos 'start-bridge' a los eventos emitidos
+const emit = defineEmits(['select-status', 'select-state', 'open-delete-manager', 'close', 'start-bridge']);
 
 const currentCondition = ref<'bueno' | 'malo'>('bueno');
 const selectorEl = ref<HTMLDivElement | null>(null);
 
-// Función para Tratamientos Pulpares (Texto)
+// --- 1. TRATAMIENTOS PULPARES (Top Box) ---
 function selectPulpTreatment(sub_type: string, abbreviation: string) {
   emit('select-state', {
     condition: 'Tratamiento Pulpar',
@@ -22,21 +23,21 @@ function selectPulpTreatment(sub_type: string, abbreviation: string) {
   emit('select-status', ToothStatus.ENDODONTICS); // Marca visualmente como endodoncia
 }
 
-// Función estándar
+// --- 2. ESTADOS ESTÁNDAR ---
 function selectSurfaceStatus(status: ToothStatus) {
   emit('select-status', status);
 }
 
-// --- LÓGICA INTELIGENTE: SELLANTE ---
+// --- 3. LÓGICA INTELIGENTE: SELLANTE ---
 function selectSealant() {
   if (currentCondition.value === 'bueno') {
-    emit('select-status', ToothStatus.SEALANT); // Azul
+    emit('select-status', ToothStatus.SEALANT); // Azul + S
   } else {
-    emit('select-status', ToothStatus.SEALANT_DEFECTIVE); // Rojo
+    emit('select-status', ToothStatus.SEALANT_DEFECTIVE); // Rojo + S
   }
 }
 
-// --- LÓGICA INTELIGENTE: CORONA ---
+// --- 4. LÓGICA INTELIGENTE: CORONA ---
 function selectCrown() {
   if (currentCondition.value === 'bueno') {
     emit('select-status', ToothStatus.CROWN); // Azul
@@ -45,6 +46,13 @@ function selectCrown() {
   }
 }
 
+// --- 5. NUEVA FUNCIÓN: INICIAR PUENTE ---
+function startBridgeSelection() {
+  // Emitimos el evento con el color actual para saber si es un puente "bueno" (azul) o "malo/a realizar" (rojo)
+  emit('start-bridge', currentCondition.value === 'bueno' ? 'blue' : 'red');
+}
+
+// Cierre al hacer clic fuera
 const handleClickOutside = (event: MouseEvent) => {
   if (selectorEl.value && !selectorEl.value.contains(event.target as Node)) {
     emit('close');
@@ -53,13 +61,10 @@ const handleClickOutside = (event: MouseEvent) => {
 
 onMounted(() => { document.addEventListener('mousedown', handleClickOutside); });
 onUnmounted(() => { document.removeEventListener('mousedown', handleClickOutside); });
-
-// Listas auxiliares para loops (opcional, pero aquí usamos botones manuales para mayor control)
-const surfaceStatuses = [TS.CARIES, TS.FILLED, TS.FRACTURE, TS.DISCHROMIA]; 
 </script>
 
 <template>
-  <div ref="selectorEl" class="fixed bg-white rounded-lg shadow-xl border z-50 w-[56rem] max-w-[95vw] flex flex-col max-h-[85vh]">
+  <div ref="selectorEl" class="fixed bg-white rounded-lg shadow-xl border z-50 w-[58rem] max-w-[95vw] flex flex-col max-h-[85vh]">
     
     <!-- HEADER: Selector de Estado General -->
     <div class="flex-shrink-0 bg-gray-50 p-3 border-b">
@@ -113,7 +118,7 @@ const surfaceStatuses = [TS.CARIES, TS.FILLED, TS.FRACTURE, TS.DISCHROMIA];
               <div class="w-4 h-4 rounded-full bg-blue-500 mr-3 shadow-sm border border-blue-600"></div> Restauración
             </button>
             
-            <!-- BOTÓN SELLANTE INTELIGENTE -->
+            <!-- BOTÓN SELLANTE (INTELIGENTE) -->
             <button @click="selectSealant()" class="btn-option border-gray-200 hover:bg-gray-50 text-gray-800 group">
               <div class="w-5 h-5 rounded-full mr-3 flex items-center justify-center text-[10px] font-bold text-white shadow-sm transition-colors"
                    :class="currentCondition === 'bueno' ? 'bg-blue-500' : 'bg-red-500'">S</div> 
@@ -129,25 +134,34 @@ const surfaceStatuses = [TS.CARIES, TS.FILLED, TS.FRACTURE, TS.DISCHROMIA];
           </div>
         </div>
 
-        <!-- COLUMNA 3: DIENTE COMPLETO (ICONOS VISUALES) -->
+        <!-- COLUMNA 3: DIENTE COMPLETO -->
         <div class="space-y-3">
           <h4 class="text-xs font-bold text-gray-400 uppercase border-b pb-1 tracking-wider">Diente Completo</h4>
           <div class="grid grid-cols-2 gap-2">
             
+            <!-- PUENTE (NUEVO) -->
+            <button @click="startBridgeSelection()" class="btn-icon group bg-gray-50 hover:bg-gray-100 border-gray-300" title="Crear Puente">
+               <svg class="w-8 h-8 group-hover:scale-110 transition-transform" viewBox="0 0 100 100">
+                 <circle cx="20" cy="50" r="12" class="fill-none stroke-current text-gray-600" stroke-width="4" />
+                 <circle cx="80" cy="50" r="12" class="fill-none stroke-current text-gray-600" stroke-width="4" />
+                 <line x1="32" y1="50" x2="68" y2="50" class="stroke-current text-gray-600" stroke-width="6" />
+               </svg>
+               <span class="text-xs font-bold mt-1 text-gray-700">Puente</span>
+            </button>
+
             <!-- CORONA (INTELIGENTE) -->
             <button @click="selectCrown()" class="btn-icon group relative" title="Corona">
               <div class="absolute top-1 right-1 w-2 h-2 rounded-full" :class="currentCondition === 'bueno' ? 'bg-blue-500' : 'bg-red-500'"></div>
               <svg class="w-8 h-8 group-hover:scale-110 transition-transform" viewBox="0 0 100 100">
-                <!-- El color del borde cambia según el estado -->
                 <circle cx="50" cy="50" r="40" stroke-width="8" fill="none" :class="currentCondition === 'bueno' ? 'stroke-blue-600' : 'stroke-red-600'"/>
               </svg>
-              <span class="text-xs font-medium mt-1 text-center leading-tight">Corona <br><span class="text-[9px] text-gray-400">({{ currentCondition === 'bueno' ? 'OK' : 'Defec.' }})</span></span>
+              <span class="text-xs font-medium mt-1 text-center leading-tight">Corona <br><span class="text-[9px] text-gray-400">({{ currentCondition === 'bueno' ? 'OK' : 'Mal' }})</span></span>
             </button>
             
             <!-- CORONA TEMPORAL -->
             <button @click="selectSurfaceStatus(TS.TEMPORARY_CROWN)" class="btn-icon group" title="Corona Temporal">
               <svg class="w-8 h-8 group-hover:scale-110 transition-transform" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" class="stroke-pink-500" stroke-width="8" fill="none" stroke-dasharray="12,6"/>
+                 <circle cx="50" cy="50" r="40" class="stroke-pink-500" stroke-width="8" fill="none" stroke-dasharray="10,5"/>
               </svg>
               <span class="text-xs font-medium mt-1">Corona Temp.</span>
             </button>
@@ -244,6 +258,7 @@ const surfaceStatuses = [TS.CARIES, TS.FILLED, TS.FRACTURE, TS.DISCHROMIA];
 .stroke-gray-500 { stroke: #6b7280; }
 .stroke-red-600 { stroke: #dc2626; }
 .stroke-blue-600 { stroke: #2563EB; }
+.stroke-teal-600 { stroke: #0d9488; }
 
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }

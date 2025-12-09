@@ -20,6 +20,15 @@ export const updateOdontogram = (patientId: string, updates: ToothUpdate[]) => {
 export const saveToothState = (patientId: string, data: Partial<ToothState>) => {
   return apiClient.post<ToothState>(`/patients/${patientId}/odontogram/state`, data);
 };
+
 export const clearToothState = (patientId: string, stateId: string) => {
   return apiClient.delete(`/patients/${patientId}/odontogram/state/${stateId}`);
+};
+
+export const saveBridge = (patientId: string, data: { startTooth: number, endTooth: number, color: string }) => {
+  return apiClient.post(`/patients/${patientId}/odontogram/bridge`, data);
+};
+
+export const deleteBridge = (patientId: string, bridgeId: string) => {
+  return apiClient.delete(`/patients/${patientId}/odontogram/bridge/${bridgeId}`);
 };

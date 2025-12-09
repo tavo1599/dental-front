@@ -83,6 +83,16 @@
         <svg class="w-5 h-5" viewBox="0 0 100 100"><rect x="20" y="35" width="60" height="30" rx="5" class="stroke-gray-500" stroke-width="8" fill="none"/></svg>
         <span>Póntico</span>
       </div>
+
+      <!-- NUEVO: Puente -->
+      <div class="flex items-center gap-2">
+        <svg class="w-5 h-5" viewBox="0 0 100 100">
+           <circle cx="25" cy="50" r="10" class="stroke-gray-600" stroke-width="8" fill="none" />
+           <circle cx="75" cy="50" r="10" class="stroke-gray-600" stroke-width="8" fill="none" />
+           <line x1="35" y1="50" x2="65" y2="50" class="stroke-gray-600" stroke-width="8" />
+        </svg>
+        <span>Puente</span>
+      </div>
       
       <div class="flex items-center gap-2">
         <svg class="w-5 h-5" viewBox="0 0 100 100"><g class="stroke-teal-super" stroke-width="12" stroke-linecap="round"><line x1="50" y1="20" x2="50" y2="80"/><line x1="20" y1="50" x2="80" y2="50"/></g></svg>
