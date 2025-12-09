@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 import { useTreatmentsStore } from '@/stores/treatments';
 import type { Treatment } from '@/types';
 import { storeToRefs } from 'pinia';
@@ -15,6 +15,47 @@ const formData = ref<Partial<Treatment>>({});
 
 const isConfirmModalOpen = ref(false);
 const treatmentToDeleteId = ref<string | null>(null);
+
+// --- LÓGICA DE FILTRADO Y BUSCADOR ---
+const searchQuery = ref('');
+
+const filteredTreatments = computed(() => {
+  if (!searchQuery.value) return treatments.value;
+  const query = searchQuery.value.toLowerCase();
+  return treatments.value.filter(t => 
+    t.name.toLowerCase().includes(query) || 
+    (t.description && t.description.toLowerCase().includes(query))
+  );
+});
+
+// --- LÓGICA DE PAGINACIÓN (CLIENT-SIDE) ---
+const currentPage = ref(1);
+const pageSize = 10; // 10 items por página
+
+// Si el usuario busca algo, regresamos a la página 1 automáticamente
+watch(searchQuery, () => {
+  currentPage.value = 1;
+});
+
+const totalPages = computed(() => {
+  return Math.ceil(filteredTreatments.value.length / pageSize);
+});
+
+const paginatedTreatments = computed(() => {
+  const start = (currentPage.value - 1) * pageSize;
+  const end = start + pageSize;
+  return filteredTreatments.value.slice(start, end);
+});
+
+function nextPage() {
+  if (currentPage.value < totalPages.value) currentPage.value++;
+}
+
+function prevPage() {
+  if (currentPage.value > 1) currentPage.value--;
+}
+
+// --- MANEJADORES ---
 
 onMounted(() => {
   treatmentsStore.fetchTreatments();
@@ -58,18 +99,34 @@ function handleDeleteTreatment() {
 <template>
   <div class="p-4 md:p-6">
     
-    <!-- HEADER RESPONSIVO -->
+    <!-- HEADER RESPONSIVO CON BUSCADOR -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
       <h1 class="text-2xl md:text-3xl font-bold text-text-dark">Gestión de Tratamientos</h1>
-      <button 
-        @click="openCreateModal" 
-        class="w-full md:w-auto px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-80 font-semibold shadow-sm transition-colors flex justify-center items-center gap-2"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-        </svg>
-        Nuevo Tratamiento
-      </button>
+      
+      <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+        <!-- Buscador -->
+        <div class="relative w-full md:w-64">
+           <input 
+             v-model="searchQuery" 
+             type="text" 
+             placeholder="Buscar tratamiento..." 
+             class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+           />
+           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+             <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+           </div>
+        </div>
+
+        <button 
+          @click="openCreateModal" 
+          class="w-full md:w-auto px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-80 font-semibold shadow-sm transition-colors flex justify-center items-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+          </svg>
+          Nuevo Tratamiento
+        </button>
+      </div>
     </div>
 
     <!-- CONTENIDO -->
@@ -81,9 +138,9 @@ function handleDeleteTreatment() {
         Cargando tratamientos...
       </div>
       
-      <!-- ESTADO VACÍO -->
-      <div v-else-if="treatments.length === 0" class="text-center py-12 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
-        <p>No hay tratamientos registrados.</p>
+      <!-- ESTADO VACÍO (Si no hay datos o la búsqueda no trae nada) -->
+      <div v-else-if="filteredTreatments.length === 0" class="text-center py-12 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+        <p>No se encontraron tratamientos.</p>
       </div>
 
       <div v-else>
@@ -102,7 +159,7 @@ function handleDeleteTreatment() {
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
-              <tr v-for="treatment in treatments" :key="treatment.id" class="hover:bg-gray-50 transition-colors">
+              <tr v-for="treatment in paginatedTreatments" :key="treatment.id" class="hover:bg-gray-50 transition-colors">
                 <td class="py-4 px-6 font-medium text-text-dark">{{ treatment.name }}</td>
                 <td class="py-4 px-6 text-sm text-text-light">{{ treatment.description || '-' }}</td>
                 <td class="py-4 px-6 font-bold text-gray-700">S/. {{ Number(treatment.price).toFixed(2) }}</td>
@@ -119,7 +176,7 @@ function handleDeleteTreatment() {
         <!-- VISTA MÓVIL (TARJETAS) - 'md:hidden' -->
         <!-- ========================================== -->
         <div class="md:hidden space-y-4">
-          <div v-for="treatment in treatments" :key="treatment.id" class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div v-for="treatment in paginatedTreatments" :key="treatment.id" class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
             
             <!-- Encabezado de Tarjeta -->
             <div class="flex justify-between items-start mb-2">
@@ -151,6 +208,31 @@ function handleDeleteTreatment() {
                 Eliminar
               </button>
             </div>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- PAGINACIÓN (Común para ambas vistas) -->
+        <!-- ========================================== -->
+        <div v-if="totalPages > 1" class="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4 border-t pt-4">
+          <span class="text-sm text-gray-500 order-2 sm:order-1">
+            Página <strong>{{ currentPage }}</strong> de <strong>{{ totalPages }}</strong>
+          </span>
+          <div class="flex gap-2 w-full sm:w-auto order-1 sm:order-2">
+            <button 
+              @click="prevPage" 
+              :disabled="currentPage === 1"
+              class="flex-1 sm:flex-none px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Anterior
+            </button>
+            <button 
+              @click="nextPage" 
+              :disabled="currentPage === totalPages"
+              class="flex-1 sm:flex-none px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Siguiente
+            </button>
           </div>
         </div>
 
