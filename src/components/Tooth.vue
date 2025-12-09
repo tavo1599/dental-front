@@ -32,6 +32,7 @@ const wholeToothStatus = computed(() => {
   return props.wholeStatus?.status;
 });
 
+// --- LÓGICA DE COLORES MODIFICADA ---
 const getFillClass = (surface: string) => {
   const surfaceName = getSurfaceName(surface);
   const status = props.surfaceStates?.[surfaceName]?.status;
@@ -40,16 +41,20 @@ const getFillClass = (surface: string) => {
     return 'fill-primary opacity-50';
   }
 
-  if (!status) return 'fill-gray-200 hover:fill-gray-300';
+  if (!status) return 'fill-gray-200 hover:fill-gray-300'; // Mantenemos tu color base original
+
   switch (status) {
     case ToothStatus.HEALTHY: return 'fill-white';
     case ToothStatus.CARIES: return 'fill-red-500';
     case ToothStatus.FILLED: return 'fill-blue-500';
-    case ToothStatus.SEALANT: return 'fill-yellow-sealant';
     case ToothStatus.FRACTURE: return 'fill-orange-fracture';
     case ToothStatus.DISCHROMIA: return 'fill-brown-dischromia';
     case ToothStatus.FILLED_DEFECTIVE: return 'fill-purple-defective';
-    case ToothStatus.SEALANT_DEFECTIVE: return 'fill-teal-defective';
+    
+    // --- CAMBIO AQUÍ: SELLANTES ---
+    case ToothStatus.SEALANT: return 'fill-blue-500'; // Azul para Buen Estado
+    case ToothStatus.SEALANT_DEFECTIVE: return 'fill-red-500'; // Rojo para Mal Estado / Defectuoso
+    
     default: return 'fill-transparent';
   }
 };
@@ -70,6 +75,14 @@ const getStrokeClass = (status: ToothStatus | undefined) => {
   }
 };
 
+// --- HELPER PARA MOSTRAR LA "S" ---
+const isSealant = (surface: string) => {
+  const surfaceName = getSurfaceName(surface);
+  const status = props.surfaceStates?.[surfaceName]?.status;
+  return status === ToothStatus.SEALANT || status === ToothStatus.SEALANT_DEFECTIVE;
+};
+
+// --- MANEJADORES DE EVENTOS (INTACTOS) ---
 function onSurfaceClick(surface: string, event: MouseEvent) {
   const surfaceName = getSurfaceName(surface);
   emit('surface-click', { surface: surfaceName, event });
@@ -90,6 +103,7 @@ function getSurfaceName(surface: string) {
     class="flex flex-col items-center select-none relative"
     :class="{ 'mt-3': isLowerTooth }"
   >
+    <!-- Top Box -->
     <div class="absolute -top-4 left-0 right-0 h-4 flex justify-center items-center gap-1">
       <span 
         v-for="(state, index) in topBoxStates" 
@@ -105,18 +119,42 @@ function getSurfaceName(surface: string) {
     <svg class="w-full h-full" viewBox="-10 -15 120 130">
       <g stroke="#333" stroke-width="2" class="cursor-pointer">
         <path d="M 30 90 C 30 110, 70 110, 70 90 L 50 48 Z" fill="#F3EADF" stroke-width="1.5" />
+        
         <g transform="translate(0, -10)">
+          <!-- SUPERFICIES -->
+          
+          <!-- Vestibular -->
           <path :class="getFillClass('vestibular')" @click="onSurfaceClick('vestibular', $event)" @dblclick="onSurfaceDoubleClick('vestibular', $event)" d="M 35.8,35.8 L 22.5,22.5 A 48 48 0 0 1 77.5,22.5 L 64.2,35.8 A 22 22 0 0 0 35.8,35.8 Z" transform="rotate(180 50 50)" />
+          
+          <!-- Distal -->
           <path :class="getFillClass('distal')" @click="onSurfaceClick('distal', $event)" @dblclick="onSurfaceDoubleClick('distal', $event)" d="M 35.8,35.8 L 22.5,22.5 A 48 48 0 0 1 77.5,22.5 L 64.2,35.8 A 22 22 0 0 0 35.8,35.8 Z" transform="rotate(270 50 50)" />
+          
+          <!-- Lingual -->
           <path :class="getFillClass('lingual')" @click="onSurfaceClick('lingual', $event)" @dblclick="onSurfaceDoubleClick('lingual', $event)" d="M 35.8,35.8 L 22.5,22.5 A 48 48 0 0 1 77.5,22.5 L 64.2,35.8 A 22 22 0 0 0 35.8,35.8 Z" />
+          
+          <!-- Mesial -->
           <path :class="getFillClass('mesial')" @click="onSurfaceClick('mesial', $event)" @dblclick="onSurfaceDoubleClick('mesial', $event)" d="M 35.8,35.8 L 22.5,22.5 A 48 48 0 0 1 77.5,22.5 L 64.2,35.8 A 22 22 0 0 0 35.8,35.8 Z" transform="rotate(90 50 50)" />
+          
+          <!-- Oclusal -->
           <circle :class="getFillClass('occlusal')" @click="onSurfaceClick('occlusal', $event)" @dblclick="onSurfaceDoubleClick('occlusal', $event)" cx="50" cy="50" r="22" />
+          
+          <!-- LÍNEAS DE SEPARACIÓN (Mantengo tu estilo original) -->
           <circle cx="50" cy="50" r="48" fill="none" stroke="#333" stroke-width="1.5" />
           <line x1="35.8" y1="35.8" x2="64.2" y2="64.2" stroke="#333" stroke-width="1.5" />
           <line x1="35.8" y1="64.2" x2="64.2" y2="35.8" stroke="#333" stroke-width="1.5" />
+
+          <!-- LETRA "S" PARA SELLANTES (NUEVO) -->
+          <!-- Se muestran en blanco y centradas en cada superficie si isSealant es true -->
+          <text v-if="isSealant('vestibular')" x="50" y="18" text-anchor="middle" fill="white" font-size="16" font-weight="bold" pointer-events="none">S</text>
+          <text v-if="isSealant('distal')" x="85" y="55" text-anchor="middle" fill="white" font-size="16" font-weight="bold" pointer-events="none">S</text>
+          <text v-if="isSealant('lingual')" x="50" y="90" text-anchor="middle" fill="white" font-size="16" font-weight="bold" pointer-events="none">S</text>
+          <text v-if="isSealant('mesial')" x="15" y="55" text-anchor="middle" fill="white" font-size="16" font-weight="bold" pointer-events="none">S</text>
+          <text v-if="isSealant('occlusal')" x="50" y="55" text-anchor="middle" fill="white" font-size="20" font-weight="bold" pointer-events="none">S</text>
+
         </g>
       </g>
       
+      <!-- ESTADOS DE DIENTE COMPLETO (INTACTO) -->
       <g v-if="wholeToothStatus" :class="getStrokeClass(wholeToothStatus)" stroke-width="8" fill="none" stroke-linecap="round">
         <circle v-if="wholeToothStatus === ToothStatus.CROWN || wholeToothStatus === ToothStatus.CROWN_DEFECTIVE || wholeToothStatus === ToothStatus.TEMPORARY_CROWN" cx="50" cy="40" r="48" />
         <line v-if="wholeToothStatus === ToothStatus.ENDODONTICS" x1="50" y1="40" x2="50" y2="100" />
