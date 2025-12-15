@@ -69,11 +69,7 @@ const router = createRouter({
       component: PrintLayout,
       meta: { requiresAuth: true },
       children: [
-        {
-          path: 'budget/:id',
-          name: 'print-budget',
-          component: () => import('../views/BudgetPrintView.vue'),
-        },
+        
         {
           path: 'payment/:id',
           name: 'print-payment-receipt',
