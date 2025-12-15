@@ -434,6 +434,12 @@ export interface Budget {
   tenant: Tenant;
   doctor?: User;
   payments?: Payment[];
+  isOrthodontic?: boolean;
+  orthoType?: 'preventive' | 'corrective';
+  baseTreatmentCost?: number; // Costo base del tratamiento (sin aparatología)
+  initialPayment?: number;    // Cuota inicial pactada
+  installments?: number;      // Número de meses/cuotas
+  monthlyPayment?: number;    // Monto calculado por mes
 }
 
 export interface Payment {

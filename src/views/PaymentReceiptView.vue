@@ -11,32 +11,41 @@ const budgetsStore = useBudgetsStore();
 const { selectedPayment, isLoading } = storeToRefs(budgetsStore);
 
 const isDownloading = ref(false);
-const isLogoLoaded = ref(false); // Control de carga de imagen
+const isLogoLoaded = ref(false);
 const areFormatsRendered = ref(false);
 
-// --- LÓGICA INTELIGENTE PARA EL LOGO (R2 + Cache Busting) ---
+// --- LÓGICA DE LOGO (R2) ---
 const logoSrc = computed(() => {
   const url = selectedPayment.value?.budget?.tenant?.logoUrl;
-  
   if (!url) {
-    isLogoLoaded.value = true; // Si no hay logo, no bloqueamos la impresión
+    isLogoLoaded.value = true;
     return null;
   }
-
-  const timestamp = new Date().getTime(); // Truco para evitar caché CORS
-
-  // 1. Si es URL absoluta (R2/Cloudflare)
-  if (url.startsWith('http')) {
-    return `${url}?t=${timestamp}`;
-  }
-
-  // 2. Si es relativa (Legacy)
+  const timestamp = new Date().getTime();
+  if (url.startsWith('http')) return `${url}?t=${timestamp}`;
   return `${import.meta.env.VITE_API_BASE_URL}${url}?t=${timestamp}`;
 });
-// -----------------------------------------------------------
+
+// --- DETECCIÓN ORTODONCIA ---
+const isOrtho = computed(() => {
+    const b = selectedPayment.value?.budget;
+    if (!b) return false;
+    return !!b.isOrthodontic || !!b.orthoType || (Number(b.installments) > 0);
+});
+
+// --- CÁLCULOS FINANCIEROS DEL PLAN ---
+const planDetails = computed(() => {
+    const b = selectedPayment.value?.budget;
+    if (!b) return { total: 0, paid: 0, balance: 0 };
+    
+    const total = Number(b.totalAmount) - Number(b.discountAmount || 0);
+    const paid = Number(b.paidAmount); 
+    const balance = Math.max(0, total - paid);
+    
+    return { total, paid, balance };
+});
 
 const tryPrint = () => {
-  // Esperamos a que todo esté renderizado y el logo cargado (o que no exista)
   if (areFormatsRendered.value && (isLogoLoaded.value || !logoSrc.value)) {
     window.print();
   }
@@ -50,8 +59,6 @@ onMounted(async () => {
     await budgetsStore.fetchPaymentForReceipt(paymentId);
     await nextTick();
     areFormatsRendered.value = true;
-    
-    // Si no tiene logo, marcamos como cargado manualmente para no bloquear
     if (!selectedPayment.value?.budget?.tenant?.logoUrl) {
         isLogoLoaded.value = true;
     }
@@ -69,252 +76,235 @@ async function getPDFObject() {
   const element = document.getElementById('receipt-content');
   if (!element) throw new Error('No se encontró el contenido del recibo.');
 
-  // Espera de seguridad para la imagen (CRUCIAL para que aparezca el logo)
   if (logoSrc.value && !isLogoLoaded.value) {
       await new Promise(resolve => setTimeout(resolve, 500));
   }
 
   const canvas = await html2canvas(element, { 
       scale: 2, 
-      useCORS: true, // OBLIGATORIO para R2
-      logging: false
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff'
   });
   
   const imgData = canvas.toDataURL('image/png');
   const pdf = new jsPDF('p', 'mm', 'a4');
-  const imgWidth = 210;
-  const pageHeight = 297;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  const pdfWidth = 210;
+  const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-  let heightLeft = imgHeight;
-  let position = 0;
-
-  pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-  heightLeft -= pageHeight;
-
-  while (heightLeft > 0) {
-    position = position - pageHeight;
-    pdf.addPage();
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-  }
-  
+  pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
   return pdf;
 }
 
-// --- DESCARGAR ---
+// --- ACCIONES ---
 async function downloadPDF() {
   if (!selectedPayment.value) return;
   isDownloading.value = true;
   try {
     const pdf = await getPDFObject();
-    pdf.save(`Recibo_Pago_${selectedPayment.value.budget.patient.fullName}.pdf`);
+    pdf.save(`Recibo_${selectedPayment.value.budget.patient.fullName}.pdf`);
   } catch (error) {
     console.error(error);
-    alert('Error al generar el PDF.');
+    alert('Error al generar PDF.');
   } finally {
     isDownloading.value = false;
   }
 }
 
-// --- WHATSAPP ---
 async function sendToWhatsAppWithPDF() {
   if (!selectedPayment.value) return;
+  const phone = selectedPayment.value.budget.patient.phone?.replace(/\D/g, '');
+  if (!phone) return alert('Paciente sin celular.');
   
-  let phone = selectedPayment.value.budget.patient.phone?.replace(/\D/g, '');
-  if (!phone) {
-    alert('El paciente no tiene un número de teléfono registrado.');
-    return;
-  }
-  if (phone.length === 9) phone = `51${phone}`;
-
   isDownloading.value = true;
-
   try {
     const pdf = await getPDFObject();
-    const fileName = `Recibo_${selectedPayment.value.budget.patient.fullName}.pdf`;
-    pdf.save(fileName);
+    pdf.save(`Recibo.pdf`);
 
-    const clinicName = selectedPayment.value.budget.tenant.name;
-    const patientName = selectedPayment.value.budget.patient.fullName;
+    const clinic = selectedPayment.value.budget.tenant.name;
     const amount = Number(selectedPayment.value.amount).toFixed(2);
-    const date = formatDate(selectedPayment.value.paymentDate);
     
-    const message = `Hola *${patientName}*, le saludamos de *${clinicName}*.\n\n` +
-                    `✅ *Confirmación de Pago*\n` +
-                    `Hemos recibido su abono de *S/. ${amount}* con fecha *${date}*.\n\n` +
-                    `📄 *Adjunto encontrará su recibo en PDF.*\n` +
-                    `(Por favor, revise el archivo descargado)`;
+    let message = '';
+    if (isOrtho.value) {
+        message = `Hola, confirmamos su pago de *S/. ${amount}* a su tratamiento de ortodoncia en *${clinic}*.\n` +
+                  `Saldo restante: S/. ${planDetails.value.balance.toFixed(2)}`;
+    } else {
+        message = `Hola, confirmamos su pago de *S/. ${amount}* en *${clinic}*.`;
+    }
 
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-    setTimeout(() => { window.open(url, '_blank'); }, 500);
-
-  } catch (error) {
-    console.error(error);
-    alert('Error al preparar el envío.');
+    const url = `https://wa.me/51${phone}?text=${encodeURIComponent(message)}`;
+    setTimeout(() => window.open(url, '_blank'), 500);
   } finally {
     isDownloading.value = false;
   }
 }
 
-const printReceipt = () => {
-  window.print();
-};
-
-const closeWindow = () => {
-  window.close();
-};
+const printReceipt = () => window.print();
+const closeWindow = () => window.close();
 </script>
 
 <template>
-  <div class="p-4 md:p-8 bg-gray-100 font-sans min-h-screen flex flex-col items-center">
+  <div class="p-6 bg-gray-100 font-sans min-h-screen flex flex-col items-center">
     
     <!-- BARRA DE HERRAMIENTAS -->
-    <div class="print:hidden text-center mb-6 bg-white p-4 rounded-lg shadow-md w-full max-w-3xl sticky top-0 z-50">
+    <div class="print:hidden text-center mb-6 bg-white p-4 rounded-lg shadow-md w-full max-w-3xl sticky top-0 z-50 border border-gray-200">
       <p class="text-text-light mb-3 text-sm">Opciones del Recibo</p>
-      
       <div class="flex flex-wrap justify-center gap-3">
-        <button @click="printReceipt" class="btn-secondary flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-          Imprimir
-        </button>
-
+        <button @click="printReceipt" class="btn-secondary flex items-center gap-2">Imprimir</button>
         <button @click="downloadPDF" :disabled="isDownloading" class="btn-primary flex items-center gap-2">
-           <span v-if="!isDownloading">Descargar PDF</span>
-           <span v-else>Procesando...</span>
+           <span v-if="!isDownloading">Descargar PDF</span><span v-else>Procesando...</span>
         </button>
-
-        <button @click="sendToWhatsAppWithPDF" :disabled="isDownloading" class="btn-whatsapp flex items-center gap-2 shadow-sm hover:shadow-md transition-all">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
-          Enviar PDF por WhatsApp
-        </button>
-
-        <button @click="closeWindow" class="btn-secondary text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200">Cerrar</button>
+        <button @click="sendToWhatsAppWithPDF" :disabled="isDownloading" class="btn-whatsapp flex items-center gap-2">WhatsApp</button>
+        <button @click="closeWindow" class="btn-secondary text-red-600 border-red-200">Cerrar</button>
       </div>
     </div>
 
-    <div v-if="isLoading" class="text-center py-12">Cargando boleta...</div>
+    <div v-if="isLoading" class="text-center py-12">Cargando...</div>
     
     <!-- CONTENIDO DEL RECIBO -->
-    <div v-else-if="selectedPayment" id="receipt-content" class="w-full max-w-3xl bg-white shadow-lg p-10 print:shadow-none relative">
+    <div v-else-if="selectedPayment" id="receipt-content" class="w-full max-w-3xl bg-white shadow-xl p-[15mm] print:shadow-none relative">
       
-      <!-- HEADER CON LOGO AL EXTREMO -->
-      <header class="flex justify-between items-start pb-6 border-b-2 border-primary">
-        <!-- Datos Clínica (Izquierda) -->
+      <!-- Header -->
+      <header class="flex justify-between items-start pb-6 border-b-2 border-primary mb-6">
         <div class="flex-1 pr-4">
-          <h1 class="text-3xl font-bold text-primary uppercase">{{ selectedPayment.budget.tenant.name }}</h1>
-          <p class="text-sm text-gray-600 mt-2 leading-snug">{{ selectedPayment.budget.tenant.address }}</p>
-          <p class="text-sm text-gray-600">{{ selectedPayment.budget.tenant.phone }}</p>
-          <p class="text-sm text-gray-600">{{ selectedPayment.budget.tenant.email }}</p>
+          <h1 class="text-2xl font-bold text-primary uppercase">{{ selectedPayment.budget.tenant.name }}</h1>
+          <p class="text-xs text-gray-500 mt-2">{{ selectedPayment.budget.tenant.address }}</p>
+          <p class="text-xs text-gray-500">{{ selectedPayment.budget.tenant.phone }}</p>
         </div>
-        
-        <!-- Logo (Derecha Extrema) -->
-        <div v-if="logoSrc" class="w-32 h-32 flex-shrink-0 flex items-start justify-end">
-          <!-- IMPORTANTE: crossorigin="anonymous" y @load son VITALES -->
-          <img 
-            :src="logoSrc" 
-            @load="isLogoLoaded = true" 
-            crossorigin="anonymous" 
-            alt="Logo de la Clínica" 
-            class="max-h-32 max-w-full object-contain" 
-          />
+        <div v-if="logoSrc" class="w-24 h-24 flex-shrink-0 flex justify-end">
+          <img :src="logoSrc" @load="isLogoLoaded = true" crossorigin="anonymous" class="max-h-full object-contain" />
         </div>
       </header>
 
-      <section class="mt-8 grid grid-cols-2 gap-8">
+      <!-- Info Recibo -->
+      <div class="flex justify-between items-end mb-8">
         <div>
-          <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Recibo para</h3>
-          <p class="font-bold text-lg text-text-dark">{{ selectedPayment.budget.patient.fullName }}</p>
-          <p class="text-text-light">DNI: {{ selectedPayment.budget.patient.dni }}</p>
+           <p class="text-xs text-gray-400 uppercase font-bold">Recibo para:</p>
+           <p class="text-lg font-bold text-gray-800">{{ selectedPayment.budget.patient.fullName }}</p>
+           <p class="text-sm text-gray-500">DNI: {{ selectedPayment.budget.patient.dni }}</p>
+           
+           <div v-if="isOrtho" class="mt-2 inline-block bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded border border-blue-200 uppercase font-bold">
+              Ortodoncia
+           </div>
         </div>
         <div class="text-right">
-          <h2 class="text-2xl font-bold text-gray-800">RECIBO DE PAGO</h2>
-          <p class="text-gray-600 mt-1 font-mono text-lg">N°: {{ selectedPayment.id.substring(0, 8).toUpperCase() }}</p>
+           <h2 class="text-3xl font-black text-gray-200 tracking-widest uppercase">Recibo</h2>
+           <p class="text-sm font-mono text-gray-600">N° OP: {{ selectedPayment.id.substring(0, 8).toUpperCase() }}</p>
+           <p class="text-sm text-gray-600">{{ formatDate(selectedPayment.paymentDate) }}</p>
+        </div>
+      </div>
+
+      <!-- DETALLE DE ITEMS DEL PRESUPUESTO -->
+      <section class="mb-6">
+        <h4 class="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">
+            {{ isOrtho ? 'Detalle del Plan / Tratamientos' : 'Tratamientos Incluidos' }}
+        </h4>
+        <ul class="text-sm space-y-2 text-gray-700">
+            <!-- Caso Ortodoncia: Costo Base -->
+            <li v-if="isOrtho && Number(selectedPayment.budget.baseTreatmentCost) > 0" class="flex justify-between border-b border-dashed border-gray-100 pb-1">
+                <span>• Honorarios Profesionales Base</span>
+                <!-- Se reemplazó "Global" por el monto exacto -->
+                <span class="text-gray-700 text-xs font-medium">S/. {{ Number(selectedPayment.budget.baseTreatmentCost).toFixed(2) }}</span>
+            </li>
+            
+            <!-- Items (con Cantidad y Precio) -->
+            <li v-for="item in selectedPayment.budget.items" :key="item.id" class="flex justify-between border-b border-dashed border-gray-100 pb-1 last:border-0 items-center">
+                <span>• {{ item.treatment.name }}</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-bold bg-gray-100 px-1.5 rounded text-gray-600">x{{ item.quantity }}</span>
+                    <!-- Agregado precio unitario -->
+                    <span class="text-xs font-medium text-gray-700">S/. {{ Number(item.priceAtTimeOfBudget).toFixed(2) }}</span>
+                </div>
+            </li>
+        </ul>
+        
+        <!-- Descuento Global -->
+        <div v-if="selectedPayment.budget.discountAmount > 0" class="text-right text-xs text-red-500 mt-2">
+            Descuento total aplicado al plan: - S/. {{ Number(selectedPayment.budget.discountAmount).toFixed(2) }}
         </div>
       </section>
 
-      <section class="my-8">
-        <h3 class="text-md font-semibold text-gray-700 mb-2">Tratamientos del Presupuesto Asociado</h3>
-        <table class="w-full text-left text-sm">
-          <thead class="border-b-2 border-gray-300 bg-gray-50">
-            <tr>
-              <th class="p-3 text-sm font-semibold text-gray-600 uppercase">Descripción</th>
-              <th class="p-3 text-center text-sm font-semibold text-gray-600 uppercase w-24">Cant.</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in selectedPayment.budget.items" :key="item.id" class="border-b border-gray-100">
-              <td class="p-3">{{ item.treatment.name }}</td>
-              <td class="p-3 text-center">{{ item.quantity }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+      <!-- DETALLE DEL PAGO Y ESTADO DE CUENTA -->
+      <section class="mb-8">
+        
+        <!-- CASO A: ORTODONCIA (RESUMEN FINANCIERO) -->
+        <div v-if="isOrtho" class="bg-blue-50 rounded-lg p-5 border border-blue-100">
+            <h3 class="text-sm font-bold text-blue-900 mb-3 border-b border-blue-200 pb-2 uppercase">Estado de Cuenta</h3>
+            
+            <div class="grid grid-cols-3 gap-4 text-center mb-4">
+                <div class="bg-white p-2 rounded border border-blue-100">
+                    <p class="text-[10px] text-gray-500 uppercase">Costo Total</p>
+                    <p class="font-bold text-gray-800">S/. {{ planDetails.total.toFixed(2) }}</p>
+                </div>
+                <div class="bg-white p-2 rounded border border-blue-100">
+                    <p class="text-[10px] text-gray-500 uppercase">Abonado</p>
+                    <p class="font-bold text-green-600">S/. {{ planDetails.paid.toFixed(2) }}</p>
+                </div>
+                <div class="bg-white p-2 rounded border border-blue-100">
+                    <p class="text-[10px] text-gray-500 uppercase">Saldo Restante</p>
+                    <p class="font-bold text-red-500">S/. {{ planDetails.balance.toFixed(2) }}</p>
+                </div>
+            </div>
 
-      <section class="my-8">
-        <table class="w-full text-left">
-          <thead class="border-b-2 border-gray-300 bg-gray-50">
-            <tr>
-              <th class="p-3 text-sm font-semibold text-gray-600 uppercase">Detalle del Pago</th>
-              <th class="p-3 text-right text-sm font-semibold text-gray-600 uppercase w-40">Fecha</th>
-              <th class="p-3 text-right text-sm font-semibold text-gray-600 uppercase w-40">Monto Pagado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="border-b border-gray-100">
-              <td class="p-3">
-                Abono a presupuesto 
-                <span class="font-mono text-gray-600 text-xs">#{{ selectedPayment.budget.id.substring(0, 8).toUpperCase() }}</span>
-              </td>
-              <td class="p-3 text-right">{{ formatDate(selectedPayment.paymentDate) }}</td>
-              <td class="p-3 text-right font-bold text-gray-900">S/. {{ Number(selectedPayment.amount).toFixed(2) }}</td>
-            </tr>
-          </tbody>
-        </table>
+            <!-- Bloque Azul de Pago con Fecha Agregada -->
+            <div class="bg-blue-600 text-white p-3 rounded-lg shadow-sm flex flex-col sm:flex-row justify-between items-center gap-2">
+                <div class="flex flex-col text-center sm:text-left">
+                    <span class="font-medium text-sm text-blue-100 uppercase tracking-wide">Monto Pagado</span>
+                    <span class="text-xs text-blue-200">Fecha: {{ formatDate(selectedPayment.paymentDate) }}</span>
+                </div>
+                <span class="font-bold text-3xl">S/. {{ Number(selectedPayment.amount).toFixed(2) }}</span>
+            </div>
+        </div>
+
+        <!-- CASO B: TRATAMIENTO ESTÁNDAR (TABLA DETALLADA) -->
+        <div v-else>
+            <table class="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr class="bg-gray-100 border-b border-gray-200 text-gray-600 uppercase text-xs">
+                  <th class="p-3 rounded-l-lg">Concepto</th>
+                  <th class="p-3 text-center w-32">Fecha de Pago</th>
+                  <th class="p-3 text-right w-32 rounded-r-lg">Monto</th>
+                </tr>
+              </thead>
+              <tbody class="text-gray-700">
+                <tr class="border-b border-gray-50">
+                  <td class="p-3 font-medium">Pago a cuenta del presupuesto #{{ selectedPayment.budget.id.substring(0,8).toUpperCase() }}</td>
+                  <td class="p-3 text-center text-gray-500">{{ formatDate(selectedPayment.paymentDate) }}</td>
+                  <td class="p-3 text-right font-bold text-lg">S/. {{ Number(selectedPayment.amount).toFixed(2) }}</td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <div class="mt-4 flex justify-end">
+               <div class="text-right">
+                  <p class="text-xs text-gray-500">Saldo pendiente del presupuesto:</p>
+                  <p class="font-bold text-red-500 text-lg">S/. {{ planDetails.balance.toFixed(2) }}</p>
+               </div>
+            </div>
+        </div>
+
       </section>
       
-      <footer class="mt-12">
-        <div class="flex justify-end">
-          <div class="w-full sm:w-1/2 text-right">
-            <div class="flex justify-between items-center font-bold text-xl text-primary border-t-2 border-primary pt-3">
-              <span>TOTAL PAGADO:</span>
-              <span>S/. {{ Number(selectedPayment.amount).toFixed(2) }}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="mt-24 flex justify-center">
-          <div class="border-t border-gray-400 w-64 text-center pt-2">
-            <p class="text-sm text-gray-500 mb-1">Recibí Conforme</p>
-            <p class="text-md font-semibold text-gray-800">{{ selectedPayment.budget.patient.fullName }}</p>
-          </div>
-        </div>
+      <!-- Footer -->
+      <footer class="mt-12 pt-16 border-t border-dashed border-gray-300 flex flex-col items-center gap-4">
+         <div class="w-64 border-b border-gray-400"></div>
+         <p class="text-sm font-semibold text-gray-700">Recibí Conforme</p>
+         <p class="text-[10px] text-gray-400 mt-2">Documento generado electrónicamente por SonriAndes.</p>
       </footer>
+
     </div>
   </div>
 </template>
 
 <style scoped>
-  .btn-primary {
-    @apply px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-80 font-semibold border border-transparent;
-  }
-  .btn-secondary {
-    @apply px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold transition-colors;
-  }
-  .btn-whatsapp {
-    @apply px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold border border-transparent transition-colors;
-  }
+  .btn-primary { @apply px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-80 font-semibold border border-transparent; }
+  .btn-secondary { @apply px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold; }
+  .btn-whatsapp { @apply px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold border border-transparent; }
 
   @media print {
-    body {
-      background: white;
-    }
-    body * { 
-      visibility: hidden; 
-    }
-    #receipt-content, #receipt-content * { 
-      visibility: visible; 
-    }
+    body { background: white; margin: 0; }
+    body * { visibility: hidden; }
+    #receipt-content, #receipt-content * { visibility: visible; }
     #receipt-content {
       position: absolute;
       left: 0;
@@ -325,8 +315,6 @@ const closeWindow = () => {
       box-shadow: none;
       border: none;
     }
-    .print\:hidden { 
-      display: none !important; 
-    }
+    .print\:hidden { display: none !important; }
   }
 </style>

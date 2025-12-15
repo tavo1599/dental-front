@@ -29,6 +29,7 @@ import PatientForm from '@/components/PatientForm.vue';
 import ClinicalHistoryEntryDetail from '@/components/ClinicalHistoryDetail.vue';
 import PaymentHistory from '@/components/PaymentHistory.vue';
 import PrintBudgetModal from '@/components/PrintBudgetModal.vue';
+import BudgetPrintPreviewModal from '@/components/BudgetPrintPreviewModal.vue';
 import TreatmentPlan from '@/components/TreatmentPlan.vue';
 import GenerateConsentModal from '@/components/GenerateConsentModal.vue';
 import Periodontogram from '@/components/Periodontogram.vue';
@@ -82,6 +83,10 @@ const isPaymentModalOpen = ref(false);
 const isPrintModalOpen = ref(false);
 const isConsentModalOpen = ref(false);
 const isReportModalOpen = ref(false);
+
+const isPrintOptionsOpen = ref(false);
+const isPrintPreviewOpen = ref(false);
+const printFormats = ref<string[]>([])
 
 // Datos seleccionados
 const selectedHistoryEntry = ref<ClinicalHistoryEntry | null>(null);
@@ -390,6 +395,12 @@ function handleBudgetDeleted() {
 function handleOpenPrintModal(budgetId: string) {
   budgetToPrintId.value = budgetId;
   isPrintModalOpen.value = true;
+}
+
+function handleGeneratePreview(payload: { budgetId: string, formats: string[] }) {
+  isPrintOptionsOpen.value = false; // Cierra paso 1
+  printFormats.value = payload.formats; // Guarda selección
+  isPrintPreviewOpen.value = true; // Abre paso 2 (Vista Previa A4)
 }
 
 // --- Otros ---
@@ -814,17 +825,26 @@ function goBack() {
           @print-receipt="handlePrintReceipt" />
       </template>
     </Modal>
+    
 
     <Modal :isOpen="isPrintModalOpen" @close="isPrintModalOpen = false">
-      <template #header>Opciones de Impresión</template>
+      <template #header>Imprimir Presupuesto</template>
       <template #default>
         <PrintBudgetModal 
-          v-if="isPrintModalOpen" 
+          v-if="isPrintModalOpen"
           :budget-id="budgetToPrintId!" 
           @close="isPrintModalOpen = false" 
+          @generate="handleGeneratePreview" 
         />
       </template>
     </Modal>
+
+    <BudgetPrintPreviewModal 
+       v-if="isPrintPreviewOpen"
+       :budget-id="budgetToPrintId!"
+       :formats="printFormats"
+       @close="isPrintPreviewOpen = false"
+    />
 
     <Modal :isOpen="isConsentModalOpen" @close="isConsentModalOpen = false">
       <template #header>Generar Consentimiento Informado</template>

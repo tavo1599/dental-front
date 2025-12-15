@@ -1,29 +1,44 @@
 import apiClient from './api';
-import type { Budget } from '@/types';
+import type { Budget, Payment } from '@/types';
 
-// Ahora solo pide los presupuestos de un paciente, sin más filtros.
+// Obtiene presupuestos de un paciente
 export const getBudgetsForPatient = (patientId: string, doctorId?: string) => {
-  let url = `/budgets/patient/${patientId}`;
-  if (doctorId) {
-    url += `?doctorId=${doctorId}`;
+  const params: any = {};
+  
+  // Si hay doctor seleccionado y no es 'all', lo añadimos a la consulta
+  if (doctorId && doctorId !== 'all') {
+    params.doctorId = doctorId;
   }
-  return apiClient.get<Budget[]>(url);
+
+  // --- CORRECCIÓN: Volvemos a la ruta que tu backend reconoce ---
+  return apiClient.get<Budget[]>(`/budgets/patient/${patientId}`, { params });
 };
 
 export const createBudget = (data: any) => {
-  return apiClient.post('/budgets', data);
+  return apiClient.post<Budget>('/budgets', data);
 };
 
 export const getBudgetById = (id: string) => {
   return apiClient.get<Budget>(`/budgets/${id}`);
 };
 
-// Actualiza (o establece) el descuento fijo de un presupuesto
 export const updateBudgetDiscount = (id: string, discountAmount: number) => {
   return apiClient.patch(`/budgets/${id}/discount`, { discountAmount });
 };
 
-// Elimina un presupuesto por su id
 export const deleteBudget = (id: string) => {
   return apiClient.delete(`/budgets/${id}`);
+};
+
+// --- PAGOS ---
+export const createPayment = (paymentData: any) => {
+    return apiClient.post<Payment>('/payments', paymentData);
+};
+
+export const getPaymentsByBudget = (budgetId: string) => {
+    return apiClient.get<Payment[]>(`/payments/budget/${budgetId}`);
+};
+
+export const getPaymentById = (paymentId: string) => {
+    return apiClient.get(`/payments/${paymentId}`);
 };
