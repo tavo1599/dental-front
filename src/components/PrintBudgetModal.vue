@@ -8,26 +8,33 @@ const props = defineProps<{
 // Emitimos 'generate' para decirle al padre (PatientDetailView) que abra el visor
 const emit = defineEmits(['close', 'generate']);
 
+// Opciones principales
 const printForPatient = ref(true);
 const printForDoctor = ref(false);
+
+// Opciones de Anexos
+const attachOdontogram = ref(false);
+const attachEvolution = ref(false);
 
 function handleGenerate() {
   const formats = [];
   if (printForPatient.value) formats.push('patient');
   if (printForDoctor.value) formats.push('doctor');
 
-  if (formats.length === 0) {
-    alert('Por favor, selecciona al menos un formato para imprimir.');
+  // Validamos que haya algo seleccionado (formatos o anexos)
+  if (formats.length === 0 && !attachOdontogram.value && !attachEvolution.value) {
+    alert('Por favor, selecciona al menos un documento para generar.');
     return;
   }
 
-  // --- CAMBIO IMPORTANTE ---
-  // En lugar de 'window.open' (que abre una pestaña vacía o con errores),
-  // emitimos este evento. El componente padre abrirá el 'BudgetPrintPreviewModal'
-  // que ya está preparado para mostrar Ortodoncia/Estándar, Logos R2, etc.
+  // Emitimos la configuración completa al padre
   emit('generate', { 
     budgetId: props.budgetId, 
-    formats: formats 
+    formats: formats,
+    extras: {
+        odontogram: attachOdontogram.value,
+        evolution: attachEvolution.value
+    }
   });
 }
 </script>
@@ -38,10 +45,10 @@ function handleGenerate() {
     <!-- Título y Descripción -->
     <div>
       <h3 class="text-lg font-bold text-text-dark mb-1">Imprimir Presupuesto</h3>
-      <p class="text-text-light text-sm">Selecciona los formatos que deseas generar.</p>
+      <p class="text-text-light text-sm">Selecciona los documentos que deseas generar.</p>
     </div>
 
-    <!-- Opciones -->
+    <!-- Opciones Principales -->
     <div class="space-y-3">
       
       <!-- Opción Paciente -->
@@ -58,7 +65,7 @@ function handleGenerate() {
         </div>
         <div class="ml-3 text-sm">
           <span class="block font-medium text-gray-900">Formato para Paciente</span>
-          <span class="block text-gray-500 text-xs mt-0.5">Diseño formal A4 con logo, detalles financieros y plan de pagos (si es ortodoncia).</span>
+          <span class="block text-gray-500 text-xs mt-0.5">Diseño formal con logo y detalles.</span>
         </div>
       </label>
 
@@ -76,7 +83,55 @@ function handleGenerate() {
         </div>
         <div class="ml-3 text-sm">
           <span class="block font-medium text-gray-900">Ficha Interna (Doctor)</span>
-          <span class="block text-gray-500 text-xs mt-0.5">Hoja de control técnica simplificada para archivo físico.</span>
+          <span class="block text-gray-500 text-xs mt-0.5">Hoja técnica simplificada.</span>
+        </div>
+      </label>
+
+      <!-- SEPARADOR -->
+      <div class="relative py-2">
+        <div class="absolute inset-0 flex items-center" aria-hidden="true">
+          <div class="w-full border-t border-gray-200"></div>
+        </div>
+        <div class="relative flex justify-start">
+          <span class="pr-2 bg-white text-xs font-bold text-gray-400 uppercase tracking-wider">Anexos Clínicos</span>
+        </div>
+      </div>
+
+      <!-- Opciones de Anexos (CON EL MISMO ESTILO) -->
+      
+      <!-- Opción Odontograma -->
+      <label 
+        class="flex items-start p-3 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
+        :class="attachOdontogram ? 'border-primary bg-blue-50/30' : 'border-gray-200'"
+      >
+        <div class="flex items-center h-5">
+          <input 
+            v-model="attachOdontogram" 
+            type="checkbox" 
+            class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer"
+          >
+        </div>
+        <div class="ml-3 text-sm">
+          <span class="block font-medium text-gray-900">Adjuntar Odontograma</span>
+          <span class="block text-gray-500 text-xs mt-0.5">Gráfico actual del estado dental.</span>
+        </div>
+      </label>
+
+      <!-- Opción Evolución -->
+      <label 
+        class="flex items-start p-3 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
+        :class="attachEvolution ? 'border-primary bg-blue-50/30' : 'border-gray-200'"
+      >
+        <div class="flex items-center h-5">
+          <input 
+            v-model="attachEvolution" 
+            type="checkbox" 
+            class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer"
+          >
+        </div>
+        <div class="ml-3 text-sm">
+          <span class="block font-medium text-gray-900">Adjuntar Evolución</span>
+          <span class="block text-gray-500 text-xs mt-0.5">Historial clínico de tratamientos realizados.</span>
         </div>
       </label>
 

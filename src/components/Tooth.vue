@@ -42,6 +42,22 @@ const wholeToothStatus = computed(() => {
   return props.wholeStatus?.status;
 });
 
+// --- DETECTAR SI HAY ALGÚN SELLANTE EN EL DIENTE (PARA LA "S" GRANDE) ---
+const toothSealantColor = computed(() => {
+  if (!props.surfaceStates) return null;
+  const states = Object.values(props.surfaceStates);
+  
+  // Buscamos si hay algún sellante defectuoso primero (prioridad visual rojo)
+  if (states.some(s => s.status === ToothStatus.SEALANT_DEFECTIVE)) {
+    return '#DC2626'; // Rojo
+  }
+  // Si no, buscamos sellante bueno
+  if (states.some(s => s.status === ToothStatus.SEALANT)) {
+    return '#2563EB'; // Azul
+  }
+  return null;
+});
+
 const getFillClass = (surface: string) => {
   const surfaceName = getSurfaceName(surface);
   const status = props.surfaceStates?.[surfaceName]?.status;
@@ -59,8 +75,11 @@ const getFillClass = (surface: string) => {
     case ToothStatus.FRACTURE: return 'fill-orange-500';
     case ToothStatus.DISCHROMIA: return 'fill-amber-800';
     case ToothStatus.FILLED_DEFECTIVE: return 'fill-red-500'; 
-    case ToothStatus.SEALANT: return 'fill-blue-500'; 
-    case ToothStatus.SEALANT_DEFECTIVE: return 'fill-red-500'; 
+    
+    // El fondo se queda blanco para sellantes, solo dibujamos la S arriba
+    case ToothStatus.SEALANT: return 'fill-white'; 
+    case ToothStatus.SEALANT_DEFECTIVE: return 'fill-white'; 
+    
     default: return 'fill-transparent';
   }
 };
@@ -81,12 +100,6 @@ const getStrokeClass = (status: ToothStatus | undefined) => {
   }
 };
 
-const isSealant = (surface: string) => {
-  const surfaceName = getSurfaceName(surface);
-  const status = props.surfaceStates?.[surfaceName]?.status;
-  return status === ToothStatus.SEALANT || status === ToothStatus.SEALANT_DEFECTIVE;
-};
-
 function onSurfaceClick(surface: string, event: MouseEvent) {
   const surfaceName = getSurfaceName(surface);
   emit('surface-click', { surface: surfaceName, event });
@@ -105,24 +118,24 @@ function getSurfaceName(surface: string) {
 <template>
   <div 
     class="flex flex-col items-center select-none relative"
-    :class="{ 'mt-4': isLowerTooth }"
+    :class="{ 'mt-3': isLowerTooth }"
   >
     <!-- Top Box -->
-    <div class="absolute -top-5 left-0 right-0 h-5 flex justify-center items-center gap-0.5">
+    <div class="absolute -top-4 left-0 right-0 h-4 flex justify-center items-center gap-1">
       <span 
         v-for="(state, index) in topBoxStates" 
         :key="index" 
-        :class="['font-extrabold text-[10px] leading-none px-0.5 border rounded bg-white', state.colorClass]"
+        :class="['font-bold text-xs', state.colorClass]"
       >
         {{ state.text }}
       </span>
     </div>
 
-    <span class="text-xs font-medium text-gray-500 mb-0.5">{{ toothNumber }}</span>
+    <span class="text-xs text-text-light mb-0.5">{{ toothNumber }}</span>
     
     <svg class="w-full h-full drop-shadow-sm" viewBox="-10 -25 120 140">
       
-      <!-- PUENTE -->
+      <!-- PUENTE (Capa inferior para que los puntos no tapen el texto si coinciden) -->
       <g v-if="bridgeState.color" :stroke="bridgeState.color" :fill="bridgeState.color" stroke-width="4" stroke-linecap="round">
          <g v-if="bridgeState.isStart">
             <circle cx="50" cy="-10" r="6" />
@@ -139,8 +152,8 @@ function getSurfaceName(surface: string) {
          </g>
       </g>
 
-      <g stroke="#4b5563" stroke-width="1.5" class="cursor-pointer">
-        <path d="M 30 90 C 30 110, 70 110, 70 90 L 50 48 Z" fill="#f3f4f6" stroke-width="1" />
+      <g stroke="#333" stroke-width="2" class="cursor-pointer">
+        <path d="M 30 90 C 30 110, 70 110, 70 90 L 50 48 Z" fill="#F3EADF" stroke-width="1.5" />
         
         <g transform="translate(0, -10)">
           <!-- SUPERFICIES -->
@@ -150,22 +163,30 @@ function getSurfaceName(surface: string) {
           <path :class="getFillClass('mesial')" @click="onSurfaceClick('mesial', $event)" @dblclick="onSurfaceDoubleClick('mesial', $event)" d="M 35.8,35.8 L 22.5,22.5 A 48 48 0 0 1 77.5,22.5 L 64.2,35.8 A 22 22 0 0 0 35.8,35.8 Z" transform="rotate(90 50 50)" />
           <circle :class="getFillClass('occlusal')" @click="onSurfaceClick('occlusal', $event)" @dblclick="onSurfaceDoubleClick('occlusal', $event)" cx="50" cy="50" r="22" />
           
-          <circle cx="50" cy="50" r="48" fill="none" stroke="#4b5563" stroke-width="1" />
-          <line x1="35.8" y1="35.8" x2="64.2" y2="64.2" stroke="#4b5563" stroke-width="1" />
-          <line x1="35.8" y1="64.2" x2="64.2" y2="35.8" stroke="#4b5563" stroke-width="1" />
+          <circle cx="50" cy="50" r="48" fill="none" stroke="#4b5563" stroke-width="1.5" />
+          <line x1="35.8" y1="35.8" x2="64.2" y2="64.2" stroke="#4b5563" stroke-width="1.5" />
+          <line x1="35.8" y1="64.2" x2="64.2" y2="35.8" stroke="#4b5563" stroke-width="1.5" />
 
-          <!-- "S" SELLANTE -->
-          <text v-if="isSealant('vestibular')" x="50" y="18" text-anchor="middle" fill="white" font-size="14" font-weight="bold" pointer-events="none">S</text>
-          <text v-if="isSealant('distal')" x="85" y="55" text-anchor="middle" fill="white" font-size="14" font-weight="bold" pointer-events="none">S</text>
-          <text v-if="isSealant('lingual')" x="50" y="90" text-anchor="middle" fill="white" font-size="14" font-weight="bold" pointer-events="none">S</text>
-          <text v-if="isSealant('mesial')" x="15" y="55" text-anchor="middle" fill="white" font-size="14" font-weight="bold" pointer-events="none">S</text>
-          <text v-if="isSealant('occlusal')" x="50" y="55" text-anchor="middle" fill="white" font-size="20" font-weight="bold" pointer-events="none">S</text>
+          <!-- S GRANDE (SI HAY SELLANTE) -->
+          <!-- Cambio: Grosor reducido a 'bold' (o 600) para que no sea tan gruesa -->
+          <text 
+            v-if="toothSealantColor" 
+            x="50" 
+            y="65" 
+            text-anchor="middle" 
+            :fill="toothSealantColor" 
+            font-size="50" 
+            font-weight="500" 
+            pointer-events="none" 
+            style="filter: drop-shadow(0px 0px 2px white); opacity: 0.9;"
+          >
+            S
+          </text>
+
         </g>
       </g>
       
       <!-- ESTADOS DE DIENTE COMPLETO -->
-      <!-- AQUI ESTÁ EL ARREGLO: Se agregaron @click.stop y @dblclick.stop -->
-      <!-- Apuntan a 'occlusal' por defecto para que abra el menú general del diente -->
       <g v-if="wholeToothStatus" 
          :class="getStrokeClass(wholeToothStatus)" 
          stroke-width="8" 
@@ -198,4 +219,8 @@ function getSurfaceName(surface: string) {
 
 <style scoped>
 path, circle { transition: fill 0.2s ease; }
+/* Asegurar que el texto se vea grueso y claro */
+text {
+  font-family: Arial, sans-serif;
+}
 </style>

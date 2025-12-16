@@ -87,6 +87,7 @@ const isReportModalOpen = ref(false);
 const isPrintOptionsOpen = ref(false);
 const isPrintPreviewOpen = ref(false);
 const printFormats = ref<string[]>([])
+const printExtras = ref({ odontogram: false, evolution: false });
 
 // Datos seleccionados
 const selectedHistoryEntry = ref<ClinicalHistoryEntry | null>(null);
@@ -397,9 +398,10 @@ function handleOpenPrintModal(budgetId: string) {
   isPrintModalOpen.value = true;
 }
 
-function handleGeneratePreview(payload: { budgetId: string, formats: string[] }) {
+function handleGeneratePreview(payload: { budgetId: string, formats: string[], extras: { odontogram: boolean, evolution: boolean } }) {
   isPrintOptionsOpen.value = false; // Cierra paso 1
   printFormats.value = payload.formats; // Guarda selección
+  printExtras.value = payload.extras;
   isPrintPreviewOpen.value = true; // Abre paso 2 (Vista Previa A4)
 }
 
@@ -843,6 +845,7 @@ function goBack() {
        v-if="isPrintPreviewOpen"
        :budget-id="budgetToPrintId!"
        :formats="printFormats"
+       :extras="printExtras"
        @close="isPrintPreviewOpen = false"
     />
 

@@ -35,12 +35,17 @@ const { patientAppointments } = storeToRefs(appointmentsStore);
 const isLoading = ref(true);
 const currentDate = new Date().toLocaleDateString('es-PE');
 
-// --- LOGO (R2) ---
+// --- LÓGICA DE LOGO (CLOUD R2) ---
 const logoSrc = computed(() => {
   const url = authStore.user?.tenant?.logoUrl;
   if (!url) return null;
+  
   const timestamp = new Date().getTime();
-  if (url.startsWith('http')) return `${url}?t=${timestamp}`;
+
+  if (url.startsWith('http')) {
+    return `${url}?t=${timestamp}`;
+  }
+  
   return `${import.meta.env.VITE_API_BASE_URL}${url}?t=${timestamp}`;
 });
 
@@ -80,9 +85,12 @@ const formatCurrency = (a: number) => `S/. ${Number(a).toFixed(2)}`;
 const formatGender = (gender?: string | Gender) => {
   if (!gender) return '-';
   switch (gender) {
-    case 'male': case Gender.MALE: return 'Masculino';
-    case 'female': case Gender.FEMALE: return 'Femenino';
-    case 'other': case Gender.OTHER: return 'Otro';
+    case 'male':
+    case Gender.MALE: return 'Masculino';
+    case 'female':
+    case Gender.FEMALE: return 'Femenino';
+    case 'other':
+    case Gender.OTHER: return 'Otro';
     default: return gender;
   }
 };
@@ -101,21 +109,22 @@ const translatePaymentMethod = (method: string | PaymentMethod) => {
 
 <template>
   <!-- 
-    TELEPORT: Mueve este componente FUERA de tu App principal (fuera del sidebar y layouts).
-    Lo pega directamente en el <body> del navegador.
-    Esto soluciona los problemas de corte de página.
+    TELEPORT: Mueve el modal fuera de la jerarquía de la app, directamente al body.
+    Esto facilita ocultar el resto de la app al imprimir.
   -->
   <Teleport to="body">
-    <div class="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex justify-center items-start overflow-y-auto pt-10 pb-10 print:p-0 print:block print:bg-white print:static print:h-auto print:overflow-visible">
+    <!-- 
+      Clase 'print-reset-wrapper': Identificador único para el CSS de impresión.
+    -->
+    <div class="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex justify-center items-start overflow-y-auto pt-10 pb-10 print-reset-wrapper">
       
-      <!-- CONTENIDO DEL REPORTE -->
-      <div id="printable-report" class="bg-white w-full max-w-4xl rounded-lg shadow-xl p-12 relative print:shadow-none print:w-full print:max-w-none print:p-0 print:m-0">
+      <div id="printable-report" class="bg-white w-full max-w-4xl rounded-lg shadow-xl p-8 relative print-reset-content">
         
-        <!-- Botonera (Oculta al imprimir) -->
+        <!-- Botonera -->
         <div class="absolute top-4 right-4 flex gap-2 print:hidden">
           <button @click="printReport" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-opacity-90 flex items-center gap-2 shadow-sm">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-            Imprimir
+            Imprimir / PDF
           </button>
           <button @click="emit('close')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
             Cerrar
@@ -129,9 +138,9 @@ const translatePaymentMethod = (method: string | PaymentMethod) => {
         <div v-else-if="selectedPatient" class="space-y-6 text-sm text-gray-800 font-sans print:space-y-4">
           
           <!-- 1. ENCABEZADO -->
-          <header class="border-b-2 border-primary pb-4 flex justify-between items-center">
+          <header class="border-b-2 border-primary pb-4 flex justify-between items-center print:pt-0 print:pb-2">
             <div>
-              <h1 class="text-2xl font-bold text-primary uppercase print:text-xl print:text-black">{{ authStore.user?.tenant?.name || 'Clínica Dental' }}</h1>
+              <h1 class="text-2xl font-bold text-primary uppercase print:text-lg print:text-black">{{ authStore.user?.tenant?.name || 'Clínica Dental' }}</h1>
               <p class="print:text-xs">{{ authStore.user?.tenant?.address }}</p>
               <p class="print:text-xs">{{ authStore.user?.tenant?.phone }} | {{ authStore.user?.tenant?.email }}</p>
             </div>
@@ -140,41 +149,21 @@ const translatePaymentMethod = (method: string | PaymentMethod) => {
             </div>
           </header>
           
-          <div class="text-center py-2 bg-gray-100 rounded print:bg-transparent print:border-b print:border-gray-300 print:mb-4">
-            <h2 class="text-xl font-bold uppercase print:text-base">Historia Clínica Integral</h2>
-            <p class="text-xs text-gray-500">Fecha de reporte: {{ currentDate }}</p>
+          <!-- INFO RESUMIDA (Reemplaza Sección I y II) -->
+          <div class="py-2 bg-gray-50 rounded print:bg-transparent print:border-b print:border-gray-300 print:py-2 print:mb-4">
+            <div class="text-center mb-2">
+              <h2 class="text-xl font-bold uppercase print:text-base">Historia Clínica Integral</h2>
+              <p class="text-xs text-gray-500">Fecha de reporte: {{ currentDate }}</p>
+            </div>
+            <div class="text-center font-bold text-gray-800 print:text-sm">
+               PACIENTE: {{ selectedPatient.fullName }} <span class="mx-2">|</span> DNI: {{ selectedPatient.dni }}
+               <span class="mx-2">|</span> EDAD: {{ age }} AÑOS
+            </div>
           </div>
 
-          <!-- 2. DATOS DEL PACIENTE -->
-          <section class="avoid-break">
-            <h3 class="section-title">I. DATOS DEL PACIENTE</h3>
-            <div class="grid grid-cols-3 gap-x-4 gap-y-2 print:text-xs">
-              <div><span class="font-bold">Nombre:</span> {{ selectedPatient.fullName }}</div>
-              <div><span class="font-bold">DNI:</span> {{ selectedPatient.dni }}</div>
-              
-              <!-- Se eliminó el campo "Historia Nº" como pediste -->
-              
-              <div><span class="font-bold">Edad:</span> {{ age }} años</div>
-              <div><span class="font-bold">Sexo:</span> {{ formatGender(selectedPatient.gender) }}</div>
-              <div><span class="font-bold">Celular:</span> {{ selectedPatient.phone }}</div>
-              <div class="col-span-3"><span class="font-bold">Dirección:</span> {{ selectedPatient.address }}</div>
-            </div>
-          </section>
-
-          <!-- 3. ANAMNESIS -->
-          <section v-if="medicalHistory" class="avoid-break">
-            <h3 class="section-title">II. ANAMNESIS</h3>
-            <div class="grid grid-cols-1 gap-1 print:text-xs">
-              <p><span class="font-bold">Motivo de Consulta:</span> {{ medicalHistory.mainComplaint }}</p>
-              <p><span class="font-bold">Antecedentes:</span> {{ medicalHistory.illnessHistory }}</p>
-              <p><span class="font-bold">Alergias:</span> {{ medicalHistory.allergies || 'Niega' }}</p>
-              <p><span class="font-bold">Medicación:</span> {{ medicalHistory.currentMedications || 'Ninguna' }}</p>
-            </div>
-          </section>
-
-          <!-- 4. EVOLUCIÓN (Tabla larga que fluye) -->
-          <section class="print:mb-4">
-            <h3 class="section-title">III. EVOLUCIÓN Y TRATAMIENTOS</h3>
+          <!-- I. EVOLUCIÓN (Renumerada) -->
+          <section class="section-container">
+            <h3 class="section-title">I. EVOLUCIÓN Y TRATAMIENTOS</h3>
             <table class="w-full border-collapse text-xs">
               <thead>
                 <tr class="bg-gray-100 border-b border-gray-300 print:bg-gray-200 header-row">
@@ -200,9 +189,9 @@ const translatePaymentMethod = (method: string | PaymentMethod) => {
             </table>
           </section>
 
-          <!-- 5. HISTORIAL DE CITAS -->
-          <section class="avoid-break">
-             <h3 class="section-title">IV. HISTORIAL DE CITAS</h3>
+          <!-- II. HISTORIAL DE CITAS (Renumerada) -->
+          <section class="section-container">
+             <h3 class="section-title">II. HISTORIAL DE CITAS</h3>
              <table class="w-full border-collapse text-xs">
               <thead>
                 <tr class="bg-gray-100 border-b border-gray-300 print:bg-gray-200 header-row">
@@ -226,11 +215,11 @@ const translatePaymentMethod = (method: string | PaymentMethod) => {
              </table>
           </section>
 
-          <!-- 6. RESUMEN ECONÓMICO -->
-          <section class="print:mb-4">
-            <h3 class="section-title">V. RESUMEN ECONÓMICO</h3>
+          <!-- III. RESUMEN ECONÓMICO (Renumerada) -->
+          <section class="section-container">
+            <h3 class="section-title">III. RESUMEN ECONÓMICO</h3>
             
-            <div v-for="budget in budgets" :key="budget.id" class="mb-4 border rounded p-3 avoid-break print:border-gray-400">
+            <div v-for="budget in budgets" :key="budget.id" class="mb-4 border rounded p-3 avoid-card-break print:border-gray-400">
               <div class="flex justify-between font-bold bg-gray-50 p-1 rounded mb-2 print:bg-gray-100">
                  <span>Presupuesto {{ formatDate(budget.creationDate) }}</span>
                  <div class="text-right">
@@ -247,7 +236,7 @@ const translatePaymentMethod = (method: string | PaymentMethod) => {
               
               <table class="w-full text-xs mb-2">
                  <tr v-for="item in budget.items" :key="item.id">
-                   <td class="pl-2">• {{ item.treatment?.name || 'Tratamiento no disponible' }}</td>
+                   <td class="pl-2">• {{ item.treatment?.name || 'Tratamiento' }}</td>
                    <td class="text-right w-20">x{{ item.quantity }}</td>
                  </tr>
               </table>
@@ -270,10 +259,10 @@ const translatePaymentMethod = (method: string | PaymentMethod) => {
             <div v-if="budgets.length === 0" class="text-gray-400 text-xs italic">No hay información financiera.</div>
           </section>
 
-          <!-- 7. ODONTOGRAMA (AL FINAL Y EN PÁGINA NUEVA) -->
+          <!-- IV. ODONTOGRAMA (Renumerada y al final) -->
           <section class="odontogram-page">
             <div class="print-only-header">
-              <h3 class="section-title">VI. ODONTOGRAMA ACTUAL</h3>
+              <h3 class="section-title">IV. ODONTOGRAMA ACTUAL</h3>
               <p class="text-xs text-gray-500">Paciente: {{ selectedPatient.fullName }}</p>
             </div>
 
@@ -287,7 +276,7 @@ const translatePaymentMethod = (method: string | PaymentMethod) => {
           </section>
 
           <!-- Footer -->
-          <footer class="mt-8 pt-4 border-t text-center text-xs text-gray-400 print:hidden">
+          <footer class="mt-8 pt-4 border-t text-center text-xs text-gray-400 print:fixed print:bottom-0 print:w-full print:bg-white">
              Resumen generado por el sistema de gestión clínica SonriAndes.
           </footer>
         </div>
@@ -301,7 +290,7 @@ const translatePaymentMethod = (method: string | PaymentMethod) => {
   @apply font-bold text-primary border-b mb-2;
 }
 
-/* Forzar impresión de colores de fondo (crucial para odontograma) */
+/* Forzar impresión de colores de fondo */
 * {
   -webkit-print-color-adjust: exact !important;
   print-color-adjust: exact !important;
@@ -314,44 +303,51 @@ const translatePaymentMethod = (method: string | PaymentMethod) => {
     size: auto;
   }
 
-  /* 1. Ocultar TODO el cuerpo de la app */
-  body > *:not(#printable-report-wrapper) { 
+  /* REGLA CRÍTICA: Ocultar todo lo que no sea nuestro wrapper.
+    body > * ocultará #app, los tooltips, y cualquier cosa extraña.
+  */
+  body > *:not(.print-reset-wrapper) { 
     display: none !important; 
   }
 
-  /* 2. Resetear el cuerpo para que no corte páginas */
+  /* Resetear html y body para eliminar el scroll de la app */
   html, body {
     height: auto !important;
     overflow: visible !important;
     position: static !important;
     background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   
-  /* 3. Hacer visible el contenedor teletransportado */
-  /* Nota: Usamos selectores genéricos porque Teleport mueve el div al body */
-  body > div.fixed {
-    position: static !important;
-    display: block !important;
+  /* Configuración del wrapper del reporte */
+  .print-reset-wrapper {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
     width: 100% !important;
     height: auto !important;
     overflow: visible !important;
     background: white !important;
     padding: 0 !important;
     margin: 0 !important;
+    display: block !important;
+    z-index: 9999 !important; /* Asegurar que esté encima de todo */
   }
 
   #printable-report {
     width: 100% !important;
     max-width: none !important;
     box-shadow: none !important;
-    margin: 0 !important;
+    /* Margen interno para la impresión */
+    margin: 0 !important; 
     padding: 0 !important;
     overflow: visible !important;
     height: auto !important;
     display: block !important;
+    position: static !important;
   }
   
-  /* Estilos de texto */
   .section-title {
     color: black !important;
     border-bottom: 2px solid #000;
@@ -359,23 +355,22 @@ const translatePaymentMethod = (method: string | PaymentMethod) => {
     break-after: avoid;
   }
   
-  /* Paginación Inteligente */
-  .avoid-break {
+  .avoid-row-break, .avoid-card-break {
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
-  .avoid-row-break {
+  .avoid-page-break {
     break-inside: avoid;
-    page-break-inside: avoid;
   }
 
-  /* --- ODONTOGRAMA (PÁGINA NUEVA Y VERTICAL) --- */
+  /* Odontograma en página nueva */
   .odontogram-page {
     break-before: page;
     page-break-before: always; 
     display: block;
     margin-top: 20px;
+    clear: both;
   }
   
   .odontogram-vertical-container {

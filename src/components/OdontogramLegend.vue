@@ -6,87 +6,87 @@
 
       <!-- Estados de Superficie -->
       <div class="flex items-center gap-2">
-        <div class="w-4 h-4 rounded-full bg-white border border-gray-300"></div>
+        <div class="w-5 h-5 rounded-full bg-white border border-gray-400"></div>
         <span>Sano</span>
       </div>
       
       <div class="flex items-center gap-2">
-        <div class="w-4 h-4 rounded-full bg-red-500"></div>
+        <div class="w-5 h-5 rounded-full bg-red-500 border border-red-600"></div>
         <span>Caries / Mal Estado</span>
       </div>
       
       <div class="flex items-center gap-2">
-        <div class="w-4 h-4 rounded-full bg-blue-500"></div>
+        <div class="w-5 h-5 rounded-full bg-blue-500 border border-blue-600"></div>
         <span>Restauración (Buen Estado)</span>
       </div>
 
-      <!-- NUEVO: Sellantes -->
+      <!-- NUEVO: Sellantes (S de color sobre fondo blanco) -->
       <div class="flex items-center gap-2">
-        <div class="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-[10px]">S</div>
+        <div class="w-5 h-5 rounded-full bg-white border border-gray-300 flex items-center justify-center text-blue-600 font-extrabold text-xs">S</div>
         <span>Sellante (Bueno)</span>
       </div>
       
       <div class="flex items-center gap-2">
-        <div class="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-[10px]">S</div>
+        <div class="w-5 h-5 rounded-full bg-white border border-gray-300 flex items-center justify-center text-red-600 font-extrabold text-xs">S</div>
         <span>Sellante (Defectuoso)</span>
       </div>
 
       <div class="flex items-center gap-2">
-        <div class="w-4 h-4 rounded-full bg-orange-500"></div>
+        <div class="w-5 h-5 rounded-full bg-orange-500 border border-orange-600"></div>
         <span>Fractura</span>
       </div>
       
       <div class="flex items-center gap-2">
-        <div class="w-4 h-4 rounded-full bg-amber-800"></div>
+        <div class="w-5 h-5 rounded-full bg-amber-800 border border-amber-900"></div>
         <span>Discoloración</span>
       </div>
 
       <!-- Estados de Diente Completo -->
       
-      <!-- NUEVO: Coronas -->
+      <!-- Coronas -->
       <div class="flex items-center gap-2">
-        <svg class="w-5 h-5" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" class="stroke-blue-600" stroke-width="10" fill="none"/></svg>
+        <svg class="w-6 h-6" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" class="stroke-blue-600" stroke-width="10" fill="none"/></svg>
         <span>Corona (Buena)</span>
       </div>
       
       <div class="flex items-center gap-2">
-        <svg class="w-5 h-5" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" class="stroke-red-600" stroke-width="10" fill="none"/></svg>
+        <svg class="w-6 h-6" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" class="stroke-red-600" stroke-width="10" fill="none"/></svg>
         <span>Corona (Defectuosa)</span>
       </div>
       
       <div class="flex items-center gap-2">
-        <svg class="w-5 h-5" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" class="stroke-pink-500" stroke-width="10" fill="none" stroke-dasharray="10,5"/></svg>
+        <svg class="w-6 h-6" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" class="stroke-pink-500" stroke-width="10" fill="none" stroke-dasharray="10,5"/></svg>
         <span>Corona Temporal</span>
       </div>
 
       <div class="flex items-center gap-2">
-        <svg class="w-5 h-5" viewBox="0 0 100 100"><line x1="50" y1="20" x2="50" y2="80" class="stroke-purple-600" stroke-width="10" stroke-linecap="round"/></svg>
+        <svg class="w-6 h-6" viewBox="0 0 100 100"><line x1="50" y1="20" x2="50" y2="80" class="stroke-purple-600" stroke-width="10" stroke-linecap="round"/></svg>
         <span>Endodoncia</span>
       </div>
 
       <div class="flex items-center gap-2">
-        <svg class="w-5 h-5" viewBox="0 0 100 100"><g class="stroke-black" stroke-width="10" stroke-linecap="round"><line x1="20" y1="20" x2="80" y2="80"/><line x1="20" y1="80" x2="80" y2="20"/></g></svg>
+        <svg class="w-6 h-6" viewBox="0 0 100 100"><g class="stroke-black" stroke-width="10" stroke-linecap="round"><line x1="20" y1="20" x2="80" y2="80"/><line x1="20" y1="80" x2="80" y2="20"/></g></svg>
         <span>Ausente / Extraído</span>
       </div>
       
       <div class="flex items-center gap-2">
-        <svg class="w-5 h-5" viewBox="0 0 100 100"><g class="stroke-red-600" stroke-width="10" stroke-linecap="round"><line x1="20" y1="20" x2="80" y2="80"/><line x1="20" y1="80" x2="80" y2="20"/></g></svg>
+        <svg class="w-6 h-6" viewBox="0 0 100 100"><g class="stroke-red-600" stroke-width="10" stroke-linecap="round"><line x1="20" y1="20" x2="80" y2="80"/><line x1="20" y1="80" x2="80" y2="20"/></g></svg>
         <span>Extracción Indicada</span>
       </div>
       
       <div class="flex items-center gap-2">
-        <svg class="w-5 h-5" viewBox="0 0 100 100"><g class="stroke-gray-600" stroke-width="8" stroke-linecap="round"><line x1="50" y1="20" x2="50" y2="80"/><line x1="30" y1="35" x2="70" y2="35"/><line x1="30" y1="50" x2="70" y2="50"/><line x1="30" y1="65" x2="70" y2="65"/></g></svg>
+        <svg class="w-6 h-6" viewBox="0 0 100 100"><g class="stroke-gray-600" stroke-width="8" stroke-linecap="round"><line x1="50" y1="20" x2="50" y2="80"/><line x1="30" y1="35" x2="70" y2="35"/><line x1="30" y1="50" x2="70" y2="50"/><line x1="30" y1="65" x2="70" y2="65"/></g></svg>
         <span>Implante</span>
       </div>
       
       <div class="flex items-center gap-2">
-        <svg class="w-5 h-5" viewBox="0 0 100 100"><rect x="20" y="35" width="60" height="30" rx="5" class="stroke-gray-500" stroke-width="8" fill="none"/></svg>
+        <svg class="w-6 h-6" viewBox="0 0 100 100"><rect x="20" y="35" width="60" height="30" rx="5" class="stroke-gray-500" stroke-width="8" fill="none"/></svg>
         <span>Póntico</span>
       </div>
 
-      <!-- NUEVO: Puente -->
+      <!-- Puente -->
       <div class="flex items-center gap-2">
-        <svg class="w-5 h-5" viewBox="0 0 100 100">
+        <svg class="w-6 h-6" viewBox="0 0 100 100">
            <circle cx="25" cy="50" r="10" class="stroke-gray-600" stroke-width="8" fill="none" />
            <circle cx="75" cy="50" r="10" class="stroke-gray-600" stroke-width="8" fill="none" />
            <line x1="35" y1="50" x2="65" y2="50" class="stroke-gray-600" stroke-width="8" />
