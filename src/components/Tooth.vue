@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { PropType } from 'vue';
 import { ToothStatus, type Tooth, type ToothSurfaceState, type ToothState } from '@/types';
+// Eliminamos la dependencia de translateStatus externo para garantizar traducción local
+// import { translateStatus } from '@/utils/formatters'; 
 
 const props = defineProps({
   toothNumber: { type: Number, required: true },
@@ -17,47 +19,119 @@ const props = defineProps({
 
 const emit = defineEmits(['surface-click', 'surface-double-click']);
 
+const isHovered = ref(false);
+
 const isLowerTooth = computed(() => {
   const num = props.toothNumber;
   return (num >= 31 && num <= 48) || (num >= 71 && num <= 85);
 });
 
-// Detectar cuadrantes "reversos"
 const isReverseQuadrant = computed(() => {
   const t = props.toothNumber;
   return (t >= 11 && t <= 18) || (t >= 41 && t <= 48) || (t >= 51 && t <= 55) || (t >= 81 && t <= 85);
 });
 
+// --- TRADUCCIÓN LOCAL DE ESTADOS (Para asegurar español) ---
+const formatToothStatus = (status: string) => {
+  const map: Record<string, string> = {
+    [ToothStatus.HEALTHY]: 'Sano',
+    [ToothStatus.CARIES]: 'Caries',
+    [ToothStatus.FILLED]: 'Restauración (Buen Estado)',
+    [ToothStatus.FILLED_DEFECTIVE]: 'Restauración (Defectuosa)',
+    [ToothStatus.FILLED_EVOLVED]: 'Restauración (Evolucionada)',
+    [ToothStatus.SEALANT]: 'Sellante (Buen Estado)',
+    [ToothStatus.SEALANT_DEFECTIVE]: 'Sellante (Defectuoso)',
+    [ToothStatus.SEALANT_EVOLVED]: 'Sellante (Evolucionado)',
+    [ToothStatus.FRACTURE]: 'Fractura',
+    [ToothStatus.DISCHROMIA]: 'Discoloración',
+    [ToothStatus.CROWN]: 'Corona (Buen Estado)',
+    [ToothStatus.CROWN_DEFECTIVE]: 'Corona (Defectuosa)',
+    [ToothStatus.CROWN_EVOLVED]: 'Corona (Evolucionada)',
+    [ToothStatus.TEMPORARY_CROWN]: 'Corona Temporal',
+    [ToothStatus.ENDODONTICS]: 'Endodoncia',
+    [ToothStatus.ENDODONTICS_EVOLVED]: 'Endodoncia (Evolucionada)',
+    [ToothStatus.IMPLANT]: 'Implante',
+    [ToothStatus.PONTIC]: 'Póntico',
+    [ToothStatus.EXTRACTION_NEEDED]: 'Extracción Indicada',
+    [ToothStatus.EXTRACTED]: 'Ausente / Extraído',
+    [ToothStatus.SUPERNUMERARY]: 'Supernumerario'
+  };
+  return map[status] || status;
+};
+
+// --- TOOLTIP ---
+const tooltipInfo = computed(() => {
+  const info: string[] = [];
+
+  // 1. Estado Diente Completo
+  if (props.wholeStatus && props.wholeStatus.status !== ToothStatus.HEALTHY) {
+    info.push(formatToothStatus(props.wholeStatus.status));
+  }
+
+  // 2. Tratamientos Pulpares (Top Box)
+  if (props.toothStates && props.toothStates.length > 0) {
+    const statusMap: Record<string, string> = {
+       'bueno': 'Buen Estado',
+       'malo': 'Defectuoso',
+       'evolucionado': 'Evolucionado'
+    };
+    props.toothStates.forEach(state => {
+      // Usamos el mapa o capitalizamos si no está
+      const statusLabel = statusMap[state.status as string] || state.status;
+      info.push(`${state.abbreviation}: ${statusLabel}`);
+    });
+  }
+
+  // 3. Estados de Superficie
+  if (props.surfaceStates) {
+    Object.entries(props.surfaceStates).forEach(([surface, state]) => {
+      if (state.status !== ToothStatus.HEALTHY) {
+        const surfMap: Record<string, string> = { 
+            vestibular: 'V', distal: 'D', lingual: 'L', mesial: 'M', occlusal: 'O', palatal: 'P' 
+        };
+        const surfLabel = surfMap[surface] || surface;
+        info.push(`${surfLabel}: ${formatToothStatus(state.status)}`);
+      }
+    });
+  }
+
+  return info;
+});
+
+// --- TOP BOX (Textos arriba del diente) ---
 const topBoxStates = computed(() => {
   if (!props.toothStates || props.toothStates.length === 0) {
     return [];
   }
-  return props.toothStates.map(state => ({
-    text: state.abbreviation,
-    colorClass: state.status === 'bueno' ? 'text-blue-600' : 'text-red-600',
-  }));
+  return props.toothStates.map(state => {
+     let color = 'text-blue-600'; 
+     if (state.status === 'malo') color = 'text-red-600';
+     if ((state.status as string) === 'evolucionado') color = 'text-green-600';
+     
+     return {
+        text: state.abbreviation,
+        colorClass: color,
+     };
+  });
 });
 
 const wholeToothStatus = computed(() => {
   return props.wholeStatus?.status;
 });
 
-// --- DETECTAR SI HAY ALGÚN SELLANTE EN EL DIENTE (PARA LA "S" GRANDE) ---
+// --- COLOR DE LA "S" (SELLANTE) ---
 const toothSealantColor = computed(() => {
   if (!props.surfaceStates) return null;
   const states = Object.values(props.surfaceStates);
   
-  // Buscamos si hay algún sellante defectuoso primero (prioridad visual rojo)
-  if (states.some(s => s.status === ToothStatus.SEALANT_DEFECTIVE)) {
-    return '#DC2626'; // Rojo
-  }
-  // Si no, buscamos sellante bueno
-  if (states.some(s => s.status === ToothStatus.SEALANT)) {
-    return '#2563EB'; // Azul
-  }
+  if (states.some(s => s.status === ToothStatus.SEALANT_DEFECTIVE)) return '#DC2626'; // Rojo
+  if (states.some(s => s.status === ToothStatus.SEALANT_EVOLVED)) return '#16a34a'; // Verde
+  if (states.some(s => s.status === ToothStatus.SEALANT)) return '#2563EB'; // Azul
+  
   return null;
 });
 
+// --- COLORES DE RELLENO ---
 const getFillClass = (surface: string) => {
   const surfaceName = getSurfaceName(surface);
   const status = props.surfaceStates?.[surfaceName]?.status;
@@ -65,21 +139,23 @@ const getFillClass = (surface: string) => {
   if (props.isSelected(props.toothNumber, surfaceName)) {
     return 'fill-primary opacity-50';
   }
-
   if (!status) return 'fill-gray-100 hover:fill-gray-200 transition-colors';
 
   switch (status) {
     case ToothStatus.HEALTHY: return 'fill-white';
     case ToothStatus.CARIES: return 'fill-red-500';
-    case ToothStatus.FILLED: return 'fill-blue-500';
+    case ToothStatus.FILLED_DEFECTIVE: return 'fill-red-500';
     case ToothStatus.FRACTURE: return 'fill-orange-500';
     case ToothStatus.DISCHROMIA: return 'fill-amber-800';
-    case ToothStatus.FILLED_DEFECTIVE: return 'fill-red-500'; 
+    case ToothStatus.FILLED: return 'fill-blue-500';
+    case ToothStatus.FILLED_EVOLVED: return 'fill-green-500';
     
-    // El fondo se queda blanco para sellantes, solo dibujamos la S arriba
-    case ToothStatus.SEALANT: return 'fill-white'; 
-    case ToothStatus.SEALANT_DEFECTIVE: return 'fill-white'; 
-    
+    // Los sellantes van en blanco, la S va encima
+    case ToothStatus.SEALANT: 
+    case ToothStatus.SEALANT_DEFECTIVE: 
+    case ToothStatus.SEALANT_EVOLVED:
+        return 'fill-white';
+        
     default: return 'fill-transparent';
   }
 };
@@ -88,12 +164,14 @@ const getStrokeClass = (status: ToothStatus | undefined) => {
   if (!status) return 'stroke-gray-400';
   switch (status) {
     case ToothStatus.CROWN: return 'stroke-blue-600'; 
-    case ToothStatus.CROWN_DEFECTIVE: return 'stroke-red-600';
-    case ToothStatus.TEMPORARY_CROWN: return 'stroke-pink-500';
     case ToothStatus.ENDODONTICS: return 'stroke-purple-600';
+    case ToothStatus.CROWN_DEFECTIVE: return 'stroke-red-600';
+    case ToothStatus.EXTRACTION_NEEDED: return 'stroke-red-600';
+    case ToothStatus.CROWN_EVOLVED: return 'stroke-green-600';
+    case ToothStatus.ENDODONTICS_EVOLVED: return 'stroke-green-600';
+    case ToothStatus.TEMPORARY_CROWN: return 'stroke-pink-500';
     case ToothStatus.IMPLANT: return 'stroke-gray-600';
     case ToothStatus.PONTIC: return 'stroke-gray-500';
-    case ToothStatus.EXTRACTION_NEEDED: return 'stroke-red-600';
     case ToothStatus.EXTRACTED: return 'stroke-black';
     case ToothStatus.SUPERNUMERARY: return 'stroke-teal-600';
     default: return 'stroke-gray-400';
@@ -117,16 +195,29 @@ function getSurfaceName(surface: string) {
 
 <template>
   <div 
-    class="flex flex-col items-center select-none relative"
+    class="flex flex-col items-center select-none relative group" 
     :class="{ 'mt-3': isLowerTooth }"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
   >
+    
+    <!-- TOOLTIP (Texto en español asegurado) -->
+    <div 
+        v-if="isHovered && tooltipInfo.length > 0" 
+        class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-[100] w-max max-w-[200px] bg-gray-900 text-white text-[10px] rounded p-2 shadow-xl pointer-events-none transition-opacity duration-200"
+    >
+        <div class="font-bold border-b border-gray-700 pb-1 mb-1 text-center">Diente {{ toothNumber }}</div>
+        <ul class="list-disc list-inside space-y-0.5 text-left">
+            <li v-for="(info, index) in tooltipInfo" :key="index" class="truncate">
+                {{ info }}
+            </li>
+        </ul>
+        <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+    </div>
+
     <!-- Top Box -->
     <div class="absolute -top-4 left-0 right-0 h-4 flex justify-center items-center gap-1">
-      <span 
-        v-for="(state, index) in topBoxStates" 
-        :key="index" 
-        :class="['font-bold text-xs', state.colorClass]"
-      >
+      <span v-for="(state, index) in topBoxStates" :key="index" :class="['font-bold text-xs', state.colorClass]">
         {{ state.text }}
       </span>
     </div>
@@ -135,7 +226,7 @@ function getSurfaceName(surface: string) {
     
     <svg class="w-full h-full drop-shadow-sm" viewBox="-10 -25 120 140">
       
-      <!-- PUENTE (Capa inferior para que los puntos no tapen el texto si coinciden) -->
+      <!-- PUENTE -->
       <g v-if="bridgeState.color" :stroke="bridgeState.color" :fill="bridgeState.color" stroke-width="4" stroke-linecap="round">
          <g v-if="bridgeState.isStart">
             <circle cx="50" cy="-10" r="6" />
@@ -167,8 +258,7 @@ function getSurfaceName(surface: string) {
           <line x1="35.8" y1="35.8" x2="64.2" y2="64.2" stroke="#4b5563" stroke-width="1.5" />
           <line x1="35.8" y1="64.2" x2="64.2" y2="35.8" stroke="#4b5563" stroke-width="1.5" />
 
-          <!-- S GRANDE (SI HAY SELLANTE) -->
-          <!-- Cambio: Grosor reducido a 'bold' (o 600) para que no sea tan gruesa -->
+          <!-- S GRANDE -->
           <text 
             v-if="toothSealantColor" 
             x="50" 
@@ -176,13 +266,12 @@ function getSurfaceName(surface: string) {
             text-anchor="middle" 
             :fill="toothSealantColor" 
             font-size="50" 
-            font-weight="500" 
+            font-weight="600" 
             pointer-events="none" 
             style="filter: drop-shadow(0px 0px 2px white); opacity: 0.9;"
           >
             S
           </text>
-
         </g>
       </g>
       
@@ -196,8 +285,8 @@ function getSurfaceName(surface: string) {
          @click.stop="onSurfaceClick('occlusal', $event)"
          @dblclick.stop="onSurfaceDoubleClick('occlusal', $event)"
       >
-        <circle v-if="wholeToothStatus === ToothStatus.CROWN || wholeToothStatus === ToothStatus.CROWN_DEFECTIVE || wholeToothStatus === ToothStatus.TEMPORARY_CROWN" cx="50" cy="40" r="48" />
-        <line v-if="wholeToothStatus === ToothStatus.ENDODONTICS" x1="50" y1="40" x2="50" y2="100" />
+        <circle v-if="wholeToothStatus === ToothStatus.CROWN || wholeToothStatus === ToothStatus.CROWN_DEFECTIVE || wholeToothStatus === ToothStatus.CROWN_EVOLVED || wholeToothStatus === ToothStatus.TEMPORARY_CROWN" cx="50" cy="40" r="48" />
+        <line v-if="wholeToothStatus === ToothStatus.ENDODONTICS || wholeToothStatus === ToothStatus.ENDODONTICS_EVOLVED" x1="50" y1="40" x2="50" y2="100" />
         <g v-if="wholeToothStatus === ToothStatus.EXTRACTION_NEEDED || wholeToothStatus === ToothStatus.EXTRACTED">
           <line x1="10" y1="0" x2="90" y2="100" />
           <line x1="10" y1="100" x2="90" y2="0" />
@@ -219,7 +308,6 @@ function getSurfaceName(surface: string) {
 
 <style scoped>
 path, circle { transition: fill 0.2s ease; }
-/* Asegurar que el texto se vea grueso y claro */
 text {
   font-family: Arial, sans-serif;
 }
