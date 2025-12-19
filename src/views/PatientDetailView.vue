@@ -37,7 +37,7 @@ import PatientFullReportModal from '@/components/PatientFullReportModal.vue';
 
 // Tipos y Utilidades
 import type { ClinicalHistoryEntry, PlannedTreatment, Treatment } from '@/types';
-import { Gender } from '@/types';
+import { Gender, OdontogramRecordType } from '@/types';
 import { translateStatus } from '@/utils/formatters';
 import { generateConsent } from '@/services/consentTemplateService';
 
@@ -59,7 +59,7 @@ const consentTemplatesStore = useConsentTemplatesStore();
 
 // --- Refs de Stores ---
 const { selectedPatient, medicalHistory, odontopediatricHistory, isLoading: isPatientLoading } = storeToRefs(patientsStore);
-const { wholeTeeth, surfaces, isLoading: isOdontogramLoading } = storeToRefs(odontogramStore);
+const { wholeTeeth, surfaces, isLoading: isOdontogramLoading, currentRecordType } = storeToRefs(odontogramStore);
 const { entries: historyEntries, isLoading: isHistoryLoading } = storeToRefs(clinicalHistoryStore);
 const { budgets, isLoading: isBudgetsLoading } = storeToRefs(budgetsStore);
 const { patientAppointments, isLoading: isAppointmentsLoading } = storeToRefs(appointmentsStore);
@@ -144,8 +144,7 @@ watch(() => route.params.id, (newId) => {
     patientsStore.selectedPatient = null;
     patientsStore.medicalHistory = null;
     patientsStore.odontopediatricHistory = null;
-    odontogramStore.wholeTeeth = {};
-    odontogramStore.surfaces = {};
+    odontogramStore.reset();
     clinicalHistoryStore.entries = [];
     budgetsStore.budgets = [];
     appointmentsStore.patientAppointments = [];
@@ -224,6 +223,14 @@ function loadDataForTab(tab: string, patientId: string) {
       }
       break;
   }
+}
+
+// --- MANEJADORES DE ODONTOGRAMA ---
+// Función para cambiar entre Inicial y Evolución
+async function handleOdontogramViewChange(type: OdontogramRecordType) {
+    if (selectedPatient.value) {
+        await odontogramStore.setViewMode(selectedPatient.value.id, type);
+    }
 }
 
 // --- MANEJADORES DE DOCUMENTOS (Con UI Mejorada) ---
@@ -716,10 +723,46 @@ function goBack() {
       </div>
 
       <!-- Pestaña: Odontograma -->
+      <!-- PESTAÑA ODONTOGRAMA (Con Switch Inicial/Actual) -->
       <div v-if="activeTab === 'odontogram'">
-        <div v-if="isOdontogramLoading" class="text-center py-10">Cargando odontograma...</div>
-        <Odontogram v-else :whole-teeth="wholeTeeth" :surfaces="surfaces" :patient-age="typeof age === 'number' ? age : 0" :user-role="authStore.user?.role" />
-        <TreatmentPlan @generate-budget="handleGenerateBudget" @register-history="handleRegisterHistory" @clear-plan="handleClearPlan" />
+         <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+            <h2 class="text-xl font-bold text-text-dark">Odontograma</h2>
+            <!-- Switch -->
+            <div class="bg-gray-100 p-1 rounded-lg flex items-center shadow-inner">
+                <button 
+                    @click="handleOdontogramViewChange(OdontogramRecordType.INITIAL)"
+                    :class="['px-4 py-2 rounded-md text-sm font-medium transition-all duration-200', currentRecordType === OdontogramRecordType.INITIAL ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700']"
+                >
+                    Inicial (Ingreso)
+                </button>
+                <button 
+                    @click="handleOdontogramViewChange(OdontogramRecordType.EVOLUTION)"
+                    :class="['px-4 py-2 rounded-md text-sm font-medium transition-all duration-200', currentRecordType === OdontogramRecordType.EVOLUTION ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700']"
+                >
+                    Actual (Evolución)
+                </button>
+            </div>
+         </div>
+
+         <!-- Aviso visual si es Inicial -->
+         <div v-if="currentRecordType === OdontogramRecordType.INITIAL" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r-lg">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-yellow-700">
+                        <strong>Modo Histórico:</strong> Estás viendo el estado inicial del paciente. Para registrar nuevos tratamientos, cambia a <strong>Actual</strong>.
+                    </p>
+                </div>
+            </div>
+         </div>
+
+         <div v-if="isOdontogramLoading" class="text-center py-10">Cargando odontograma...</div>
+         <Odontogram v-else :whole-teeth="wholeTeeth" :surfaces="surfaces" :patient-age="Number(age)" :user-role="authStore.user?.role" />
+         <TreatmentPlan @generate-budget="handleGenerateBudget" @register-history="handleRegisterHistory" @clear-plan="handleClearPlan" />
       </div>
 
       <!-- Pestaña: Anamnesis -->

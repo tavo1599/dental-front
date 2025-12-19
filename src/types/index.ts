@@ -58,6 +58,7 @@ export interface Tooth {
   id: string;
   toothNumber: number;
   status: ToothStatus;
+  recordType?: OdontogramRecordType;
 }
 
 export enum PaymentMethod {
@@ -387,6 +388,7 @@ export interface ToothSurfaceState {
   toothNumber: number;
   surface: string;
   status: ToothStatus;
+  recordType?: OdontogramRecordType;
 }
 
 export interface ToothState {
@@ -539,4 +541,9 @@ export interface DentalBridge {
   endTooth: number;
   type: 'fixed' | 'removable'; // Por si quieres expandirlo luego
   color: string; // 'blue' | 'red'
+}
+
+export enum OdontogramRecordType {
+  INITIAL = 'initial',       // Odontograma de Ingreso
+  EVOLUTION = 'evolution',   // Odontograma Actual
 }

@@ -1,23 +1,25 @@
 import apiClient from './api';
-// 1. Importa los tipos correctos
-import type { OdontogramData, ToothState, ToothUpdate } from '@/types';
+import type { OdontogramData, ToothUpdate, ToothState } from '@/types';
+// Importamos el enum para usarlo en los tipos si es necesario
+import { OdontogramRecordType } from '@/types';
 
-/**
- * Obtiene todos los datos del odontograma (antiguos y nuevos).
- */
-export const getOdontogram = (patientId: string) => {
-  return apiClient.get<OdontogramData>(`/patients/${patientId}/odontogram`);
+// Ahora acepta el tipo (Initial/Evolution)
+export const getOdontogram = (patientId: string, type: OdontogramRecordType) => {
+  // Enviamos ?type=initial o ?type=evolution
+  return apiClient.get<OdontogramData>(`/patients/${patientId}/odontogram`, {
+    params: { type }
+  });
 };
 
-/**
- * [LEGACY] Actualiza el estado de las superficies o del diente completo (tabla 'tooth').
- */
-export const updateOdontogram = (patientId: string, updates: ToothUpdate[]) => {
-  return apiClient.patch<OdontogramData>(`/patients/${patientId}/odontogram`, { updates });
+// Ahora acepta el recordType en el cuerpo
+export const updateOdontogram = (patientId: string, updates: ToothUpdate[], recordType: OdontogramRecordType) => {
+  return apiClient.patch<OdontogramData>(`/patients/${patientId}/odontogram`, { 
+    updates,
+    recordType // <-- Se envía al backend
+  });
 };
 
-// --- NUEVAS FUNCIONES PARA EL "TOP BOX" ---
-export const saveToothState = (patientId: string, data: Partial<ToothState>) => {
+export const saveToothState = (patientId: string, data: any) => {
   return apiClient.post<ToothState>(`/patients/${patientId}/odontogram/state`, data);
 };
 
@@ -25,7 +27,7 @@ export const clearToothState = (patientId: string, stateId: string) => {
   return apiClient.delete(`/patients/${patientId}/odontogram/state/${stateId}`);
 };
 
-export const saveBridge = (patientId: string, data: { startTooth: number, endTooth: number, color: string }) => {
+export const saveBridge = (patientId: string, data: any) => {
   return apiClient.post(`/patients/${patientId}/odontogram/bridge`, data);
 };
 

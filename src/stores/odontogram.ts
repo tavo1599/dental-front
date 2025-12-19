@@ -6,11 +6,11 @@ import {
   updateOdontogram as updateApi,
   saveToothState as saveToothStateApi,
   clearToothState as clearToothStateApi,
-  // IMPORTANTE: Importamos las funciones del servicio para puentes
   saveBridge as saveBridgeApi,
   deleteBridge as deleteBridgeApi
 } from '@/services/odontogramService';
 import type { Tooth, ToothSurfaceState, OdontogramData, ToothState, ToothUpdate, DentalBridge } from '@/types';
+import { OdontogramRecordType } from '@/types'; // Asegúrate de tener este Enum en tus types
 
 // Tipos para los mapas (mejoran la legibilidad)
 type WholeToothMap = Record<number, Tooth>;
@@ -24,8 +24,12 @@ export const useOdontogramStore = defineStore('odontogram', () => {
   const wholeTeeth = ref<WholeToothMap>({});
   const surfaces = ref<SurfaceStateMap>({});
   const toothStates = ref<ToothStateMap>({});
-  const bridges = ref<DentalBridge[]>([]); // Estado de puentes
+  const bridges = ref<DentalBridge[]>([]); 
   const isLoading = ref(false);
+
+  // --- NUEVO ESTADO: TIPO DE REGISTRO ---
+  // Por defecto trabajamos sobre la Evolución (Estado Actual)
+  const currentRecordType = ref<OdontogramRecordType>(OdontogramRecordType.EVOLUTION);
 
   // Helper para procesar los datos que vienen del backend
   function processOdontogramData(data: OdontogramData) {
@@ -48,22 +52,27 @@ export const useOdontogramStore = defineStore('odontogram', () => {
       return acc;
     }, {} as ToothStateMap);
 
-    // Asignamos a los refs
     wholeTeeth.value = teethMap;
     surfaces.value = surfacesMap;
     toothStates.value = statesMap;
     
-    // CARGAMOS LOS PUENTES REALES DE LA BD
-    // El backend debe devolver el array 'bridges' dentro de OdontogramData
-    // Usamos (data as any) para evitar el error de tipo si la interfaz no está actualizada
+    // Convertimos a any temporalmente para evitar error de tipado si la interfaz no se actualizó aún
     bridges.value = (data as any).bridges || []; 
   }
 
-  // Acción: Cargar Odontograma
+  // --- NUEVA ACCIÓN: CAMBIAR MODO (INICIAL <-> EVOLUCIÓN) ---
+  async function setViewMode(patientId: string, type: OdontogramRecordType) {
+    currentRecordType.value = type;
+    await fetchOdontogram(patientId);
+  }
+
+  // Acción: Cargar Odontograma (Ahora recibe el tipo)
   async function fetchOdontogram(patientId: string) {
     isLoading.value = true;
     try {
-      const response = await getApi(patientId);
+      // Pasamos el tipo actual al servicio.
+      // Nota: Tendrás que actualizar tu servicio para aceptar este segundo parámetro opcional.
+      const response = await getApi(patientId, currentRecordType.value);
       processOdontogramData(response.data);
     } catch (error) {
       console.error(error);
@@ -75,8 +84,12 @@ export const useOdontogramStore = defineStore('odontogram', () => {
 
   // Acción: Actualizar (Superficies/Dientes)
   async function updateOdontogram(patientId: string, updates: ToothUpdate[]) {
+    // Bloqueo de seguridad (Opcional): Impedir editar el inicial si se desea
+    // if (currentRecordType.value === OdontogramRecordType.INITIAL) { ... }
+
     try {
-      const response = await updateApi(patientId, updates);
+      // Pasamos el recordType al servicio para que sepa dónde guardar
+      const response = await updateApi(patientId, updates, currentRecordType.value);
       processOdontogramData(response.data);
       toast.success('Odontograma actualizado.');
     } catch (error) {
@@ -87,13 +100,15 @@ export const useOdontogramStore = defineStore('odontogram', () => {
   // Acción: Guardar Estado Complejo (Top Box)
   async function saveToothState(patientId: string, data: Partial<ToothState>) {
     try {
-      const response = await saveToothStateApi(patientId, data);
+      // Inyectamos el recordType en los datos a guardar
+      const payload = { ...data, recordType: currentRecordType.value };
+      const response = await saveToothStateApi(patientId, payload);
       const newState = response.data;
 
       if (!toothStates.value[newState.toothNumber]) {
         toothStates.value[newState.toothNumber] = [];
       }
-      // Reemplazar si existe o agregar
+      
       const index = toothStates.value[newState.toothNumber].findIndex(s => s.condition === newState.condition);
       if (index > -1) {
         toothStates.value[newState.toothNumber][index] = newState;
@@ -121,21 +136,18 @@ export const useOdontogramStore = defineStore('odontogram', () => {
 
   // --- ACCIÓN REAL: AÑADIR PUENTE ---
   async function addBridge(patientId: string, start: number, end: number, color: string = 'red') {
-    // Aseguramos el orden para simplificar la lógica visual
     const min = Math.min(start, end);
     const max = Math.max(start, end);
 
     try {
-      // Llamada real al backend
       const response = await saveBridgeApi(patientId, {
         startTooth: min,
         endTooth: max,
-        color
+        color,
+        recordType: currentRecordType.value // <-- Importante: Guardar en la capa correcta
       });
       
-      // Agregamos el puente devuelto por la BD a la lista local
       bridges.value.push(response.data);
-      
       toast.success('Puente registrado correctamente.');
     } catch (error) {
       console.error(error);
@@ -146,12 +158,8 @@ export const useOdontogramStore = defineStore('odontogram', () => {
   // --- ACCIÓN REAL: BORRAR PUENTE ---
   async function removeBridge(patientId: string, bridgeId: string) {
     try {
-      // Llamada real al backend
       await deleteBridgeApi(patientId, bridgeId);
-      
-      // Actualizamos estado local eliminando el puente de la lista
       bridges.value = bridges.value.filter(b => b.id !== bridgeId);
-      
       toast.success('Puente eliminado.');
     } catch (error) {
       console.error(error);
@@ -159,12 +167,13 @@ export const useOdontogramStore = defineStore('odontogram', () => {
     }
   }
 
-  // Resetear todo (útil al cambiar de paciente)
+  // Resetear todo
   function reset() {
     wholeTeeth.value = {};
     surfaces.value = {};
     toothStates.value = {};
-    bridges.value = []; // <-- Limpiamos puentes
+    bridges.value = [];
+    currentRecordType.value = OdontogramRecordType.EVOLUTION; // Reset a evolución por defecto
   }
 
   return { 
@@ -172,13 +181,15 @@ export const useOdontogramStore = defineStore('odontogram', () => {
     surfaces, 
     isLoading, 
     toothStates, 
-    bridges, // <-- Exportamos el estado nuevo
+    bridges, 
+    currentRecordType, // Exportamos el tipo actual para que la vista pueda usarlo
     fetchOdontogram, 
     updateOdontogram,
     saveToothState, 
     clearToothState,
-    addBridge, // <-- Exportamos la acción nueva
-    removeBridge, // <-- Exportamos la acción nueva
+    addBridge,
+    removeBridge,
+    setViewMode, // Exportamos la función para cambiar de vista
     reset
   };
 });
