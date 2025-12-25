@@ -3,10 +3,14 @@ import { useAuthStore } from '@/stores/auth';
 import { useAppointmentsStore } from '@/stores/appointments';
 import { onMounted, computed, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useRoute } from 'vue-router'; // <-- Importamos useRoute
+import { useRoute } from 'vue-router';
 import IconLogout from '@/components/icons/IconLogout.vue';
 import ImpersonationBanner from '@/components/ImpersonationBanner.vue';
 import AnnouncementBanner from '@/components/AnnouncementBanner.vue';
+
+// --- IMPORTS NAVIDEÑOS ---
+import ChristmasLights from '@/components/ChristmasLights.vue';
+import ChristmasHatWrapper from '@/components/ChristmasHatWrapper.vue';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -57,21 +61,26 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col h-screen bg-gray-100 font-sans overflow-hidden">
+  <div class="flex flex-col h-screen bg-gray-100 font-sans overflow-hidden relative">
+    
+    <!-- 1. LUCES NAVIDEÑAS -->
+    <ChristmasLights />
+
     <ImpersonationBanner />
     <AnnouncementBanner />
 
     <!-- HEADER MÓVIL (Solo visible en pantallas pequeñas 'md:hidden') -->
-    <div class="md:hidden bg-slate-800 text-white p-4 flex items-center justify-between shadow-md flex-shrink-0 z-20">
+    <div class="md:hidden bg-slate-800 text-white p-4 flex items-center justify-between shadow-md flex-shrink-0 z-20 relative">
       <div class="flex items-center gap-2">
-        <img src="/logo.svg" class="h-8 w-8" alt="Logo" />
-        <span class="font-bold text-lg tracking-wide">SonriAndes</span>
+        <ChristmasHatWrapper>
+           <img src="/logo.svg" class="h-8 w-8 relative z-10" alt="Logo" />
+        </ChristmasHatWrapper>
+        <span class="font-bold text-lg tracking-wide ml-2">SonriAndes</span>
       </div>
       <button 
         @click="isSidebarOpen = !isSidebarOpen" 
         class="p-2 rounded hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500"
       >
-        <!-- Icono Hamburguesa -->
         <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
@@ -80,8 +89,7 @@ onMounted(() => {
 
     <div class="flex flex-1 overflow-hidden relative">
       
-      <!-- BACKDROP (Fondo oscuro para móvil) -->
-      <!-- Se muestra solo si el menú está abierto en móvil -->
+      <!-- BACKDROP -->
       <div 
         v-if="isSidebarOpen" 
         class="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden transition-opacity"
@@ -89,18 +97,10 @@ onMounted(() => {
       ></div>
 
       <!-- SIDEBAR (ASIDE) -->
-      <!-- 
-        Clases clave:
-        - fixed inset-y-0 left-0 z-40: Para que flote en móvil.
-        - transform transition-transform: Para la animación de deslizar.
-        - -translate-x-full: Oculto por defecto en móvil.
-        - md:relative md:translate-x-0: Siempre visible y estático en escritorio.
-      -->
       <aside 
         class="fixed inset-y-0 left-0 z-40 w-64 bg-slate-800 flex flex-col transition-transform duration-300 ease-in-out transform md:relative md:translate-x-0 flex-shrink-0 shadow-xl md:shadow-none"
         :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'"
       >
-        <!-- Botón cerrar (Solo móvil) -->
         <div class="flex justify-end p-2 md:hidden">
            <button @click="isSidebarOpen = false" class="text-slate-400 hover:text-white p-2">
              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -109,16 +109,23 @@ onMounted(() => {
            </button>
         </div>
 
-        <div class="py-4 flex flex-col justify-center border-b border-slate-700 text-center">
-          <div v-if="logoSrc" class="px-4 mb-2">
-            <img :src="logoSrc" alt="Logo de la Clínica" class="max-h-24 w-auto mx-auto object-contain" />
+        <!-- HEADER DEL SIDEBAR -->
+        <!-- Aumentado py-4 a py-6 para dar espacio vertical al gorro -->
+        <div class="py-6 flex flex-col justify-center border-b border-slate-700 text-center relative">
+          
+          <!-- LOGO DE CLÍNICA -->
+          <div v-if="logoSrc" class="px-4 mb-3 flex justify-center">
+            <!-- ChristmasHatWrapper se ajustará al ancho de la imagen gracias a inline-flex -->
+            <ChristmasHatWrapper>
+               <img :src="logoSrc" alt="Logo Clínica" class="max-h-24 object-contain relative z-10" />
+            </ChristmasHatWrapper>
           </div>
     
-          <p v-if="authStore.user?.tenant" class="text-lg text-white font-bold text-center px-2 leading-tight">
+          <p v-if="authStore.user?.tenant" class="text-lg text-white font-bold text-center px-2 leading-tight relative z-10 mt-1">
             {{ authStore.user.tenant.name }}
           </p>
 
-          <div class="mt-3 flex items-center justify-center gap-2 opacity-70">
+          <div class="mt-4 flex items-center justify-center gap-2 opacity-70">
             <img src="/logo.svg" class="h-4 w-4" alt="Logo de SonriAndes" />
             <span class="text-xs text-slate-300 font-semibold uppercase tracking-wider">SonriAndes</span>
           </div>
@@ -155,7 +162,7 @@ onMounted(() => {
              Reportes
           </RouterLink>
           <RouterLink v-if="authStore.user?.role === 'admin'" to="/settings" class="nav-item" active-class="active">
-             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 01.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
              Configuración
           </RouterLink>
         </nav>
