@@ -12,6 +12,9 @@ import Modal from '@/components/Modal.vue';
 import AppointmentForm from '@/components/AppointmentForm.vue';
 import AppointmentDetailModal from '@/components/AppointmentDetailModal.vue';
 import ConfirmationModal from '@/components/ConfirmationModal.vue';
+// --- IMPORTACIÓN NUEVA ---
+import AppointmentReportModal from '@/components/AppointmentReportModal.vue'; 
+// -------------------------
 import type { Appointment, User } from '@/types';
 import { AppointmentStatus } from '@/types';
 import { translateAppointmentStatus } from '@/utils/formatters';
@@ -28,6 +31,9 @@ const isFormModalOpen = ref(false);
 const isDetailModalOpen = ref(false);
 const isDropConfirmModalOpen = ref(false);
 const isResizeConfirmModalOpen = ref(false);
+// --- ESTADO NUEVO ---
+const isReportModalOpen = ref(false); 
+// --------------------
 const selectedDateInfo = ref<any>(null);
 const selectedAppointment = ref<Appointment | null>(null);
 const dropEventInfo = ref<any>(null);
@@ -217,8 +223,8 @@ onMounted(async () => {
     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
       <h1 class="text-2xl md:text-3xl font-bold text-text-dark">Agenda de Citas</h1>
       
-      <!-- Grupo de Filtros: Se apilan en móvil (flex-col) y se alinean en PC (md:flex-row) -->
-      <div class="flex flex-col md:flex-row gap-3 w-full lg:w-auto">
+      <!-- Grupo de Filtros -->
+      <div class="flex flex-col md:flex-row gap-3 w-full lg:w-auto items-end md:items-center">
         
         <!-- Buscador -->
         <div class="relative w-full md:w-auto">
@@ -245,6 +251,18 @@ onMounted(async () => {
             {{ doctor.fullName }}
           </option>
         </select>
+
+        <!-- BOTÓN NUEVO: REPORTES -->
+        <button 
+          @click="isReportModalOpen = true"
+          class="input-style bg-white hover:bg-gray-50 flex items-center justify-center gap-2 cursor-pointer text-gray-700 font-medium h-[42px] w-full md:w-auto"
+          title="Generar Reportes"
+        >
+           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+           </svg>
+           <span>Reportes</span>
+        </button>
         
       </div>
     </div>
@@ -282,6 +300,12 @@ onMounted(async () => {
         />
       </template>
     </Modal>
+
+    <!-- MODAL NUEVO: REPORTES -->
+    <AppointmentReportModal 
+      v-if="isReportModalOpen" 
+      @close="isReportModalOpen = false" 
+    />
 
     <ConfirmationModal 
       :isOpen="isDropConfirmModalOpen"
