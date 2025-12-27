@@ -10,6 +10,7 @@ import OdontogramLegend from './OdontogramLegend.vue';
 import DeleteStateModal from './DeleteStateModal.vue';
 import { translateStatus } from '@/utils/formatters';
 import { storeToRefs } from 'pinia';
+import { OdontogramRecordType } from '@/types';
 
 const props = defineProps<{
   wholeTeeth: Record<number, Tooth>;
@@ -20,7 +21,7 @@ const props = defineProps<{
 
 const route = useRoute();
 const odontogramStore = useOdontogramStore();
-const { toothStates, bridges } = storeToRefs(odontogramStore);
+const { toothStates, bridges, currentRecordType } = storeToRefs(odontogramStore);
 
 const selectedToothNumber = ref<number | null>(null);
 const selectionMode = ref(false);
@@ -61,10 +62,17 @@ const pediatricQuadrants = {
   lowerLeft: [75, 74, 73, 72, 71],
 };
 
+// --- LISTA CORREGIDA: Incluye los estados evolucionados ---
 const surfaceOnlyStatuses = [
-  ToothStatus.CARIES, ToothStatus.FILLED,
-  ToothStatus.FILLED_DEFECTIVE, ToothStatus.SEALANT,
-  ToothStatus.SEALANT_DEFECTIVE, ToothStatus.FRACTURE, ToothStatus.DISCHROMIA
+  ToothStatus.CARIES, 
+  ToothStatus.FILLED,
+  ToothStatus.FILLED_DEFECTIVE, 
+  ToothStatus.FILLED_EVOLVED, // <-- AGREGADO (Verde)
+  ToothStatus.SEALANT,
+  ToothStatus.SEALANT_DEFECTIVE, 
+  ToothStatus.SEALANT_EVOLVED, // <-- AGREGADO (Verde)
+  ToothStatus.FRACTURE, 
+  ToothStatus.DISCHROMIA
 ];
 
 const selectedToothExistingStates = computed(() => {
@@ -122,44 +130,38 @@ function handleSurfaceClick(toothNumber: number, surfaceData: { surface: string,
   }
 
   // 3. MODO NORMAL (Click Simple)
-  // Limpiamos cualquier timer anterior
   if (clickTimer) clearTimeout(clickTimer);
 
-  // Aumentamos el delay a 400ms para asegurar que el doble clic tenga tiempo de registrarse
   clickTimer = window.setTimeout(() => {
     // Verificamos si el diente tiene algún estado (superficie o completo)
     const state = props.surfaces[toothNumber]?.[surfaceData.surface] ?? props.wholeTeeth[toothNumber];
     
-    if (state && state.id && state.status !== ToothStatus.HEALTHY) {
-      // SI TIENE ESTADO -> Abrir Planificador
+    // Si tiene estado y NO estamos en modo inicial (histórico), abrimos planificador
+    // Si estamos en modo inicial, abrimos selector para corregir/editar el histórico
+    if (state && state.id && state.status !== ToothStatus.HEALTHY && currentRecordType.value !== OdontogramRecordType.INITIAL) {
       selectedSurfaceStateId.value = state.id;
       plannerPosition.value = getSmartPosition(surfaceData.event);
       isPlannerOpen.value = true;
-      // Aseguramos que el selector esté cerrado
       isSelectorOpen.value = false;
     } else {
-      // SI ESTÁ SANO -> Abrir Selector
+      // SI ESTÁ SANO o es Modo Inicial -> Abrir Selector para diagnosticar
       selectedToothNumber.value = toothNumber;
       openSelector(toothNumber, surfaceData);
     }
     clickTimer = null;
-  }, 400); // <-- TIEMPO AUMENTADO
+  }, 400); 
 }
 
 function handleSurfaceDoubleClick(toothNumber: number, surfaceData: { surface: string, event: MouseEvent }) {
   if (props.userRole !== 'admin' && props.userRole !== 'dentist') return;
   
   // 4. MODO DOBLE CLIC
-  // Cancelamos inmediatamente el timer del click simple
   if (clickTimer) {
       clearTimeout(clickTimer);
       clickTimer = null;
   }
   
-  // CORRECCIÓN CRÍTICA: Cerramos el planificador si se llegó a abrir por error
   isPlannerOpen.value = false;
-  
-  // Abrimos el Selector de Estados para editar/corregir
   selectedToothNumber.value = toothNumber;
   openSelector(toothNumber, surfaceData);
 }
@@ -187,9 +189,13 @@ function handleStatusUpdate(newStatus: ToothStatus) {
     toothNumber,
     status: newStatus,
   };
+  
+  // AQUÍ ES DONDE OCURRÍA EL ERROR:
+  // Ahora, como FILLED_EVOLVED está en la lista, entrará aquí y enviará la superficie correcta.
   if (surfaceOnlyStatuses.includes(newStatus)) {
     payload.surface = surface;
   }
+  
   odontogramStore.updateOdontogram(patientId, [payload]);
   isSelectorOpen.value = false;
 }
@@ -268,7 +274,6 @@ function applyBulkUpdate() {
   selectionMode.value = false;
 }
 
-// --- CÁLCULO VISUAL DEL PUENTE ---
 function getBridgeProps(toothNumber: number) {
   const result = {
     isStart: false,
@@ -282,7 +287,10 @@ function getBridgeProps(toothNumber: number) {
   );
 
   if (bridge) {
-    result.color = bridge.color === 'blue' ? '#2563EB' : '#DC2626';
+    // Puentes evolucionados en verde, malos en rojo, buenos en azul
+    if (bridge.color === 'green') result.color = '#16a34a';
+    else result.color = bridge.color === 'blue' ? '#2563EB' : '#DC2626';
+    
     if (toothNumber === bridge.startTooth) result.isStart = true;
     else if (toothNumber === bridge.endTooth) result.isEnd = true;
     else result.isMiddle = true;
@@ -395,7 +403,8 @@ function getBridgeProps(toothNumber: number) {
       <span class="font-semibold text-text-dark whitespace-nowrap">{{ selectedSurfaces.length }} sup. seleccionada(s)</span>
       <select v-model="bulkStatus" class="input-style text-sm">
         <option :value="null">Cambiar a...</option>
-        <option v-for="status in ToothStatus" :key="status" :value="status">{{ translateStatus(status) }}</option>
+        <option v-for="status in surfaceOnlyStatuses" :key="status" :value="status">{{ translateStatus(status) }}</option>
+        <option :value="ToothStatus.HEALTHY">Sano</option>
       </select>
       <button @click="applyBulkUpdate" class="btn-primary text-sm" :disabled="!bulkStatus">Aplicar</button>
     </div>

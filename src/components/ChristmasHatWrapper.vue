@@ -32,8 +32,7 @@
   left: -20px; 
   width: 60px; 
   height: 60px;
-  z-index: 50;
-  transform: rotate(-25deg);
+  z-index: 50;  transform: rotate(-25deg);
   pointer-events: none;
   filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.3));
 }
