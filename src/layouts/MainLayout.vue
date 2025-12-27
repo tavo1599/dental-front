@@ -11,6 +11,7 @@ import AnnouncementBanner from '@/components/AnnouncementBanner.vue';
 // --- IMPORTS NAVIDEÑOS ---
 import ChristmasLights from '@/components/ChristmasLights.vue';
 import ChristmasHatWrapper from '@/components/ChristmasHatWrapper.vue';
+import VirtualAssistant from '@/components/VirtualAssistant.vue';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -207,6 +208,7 @@ onMounted(() => {
         </div>
       </main>
     </div>
+    <VirtualAssistant />
   </div>
 </template>
 
