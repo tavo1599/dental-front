@@ -110,6 +110,20 @@ export interface Tenant {
   address: string | null;
   phone: string | null;
   email: string | null;
+
+  domainSlug?: string;
+  websiteConfig?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    welcomeMessage?: string;
+    aboutUs?: string;
+    heroImageUrl?: string;
+    facebookUrl?: string;
+    instagramUrl?: string;
+    whatsappNumber?: string;
+    showStaff?: boolean;
+    addressCoordinates?: { lat: number; lng: number };
+  };
 }
 
 export interface Patient {

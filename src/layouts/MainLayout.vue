@@ -119,7 +119,7 @@ onMounted(() => {
           <!-- LOGO DE CLÍNICA CON SOMBRERO -->
           <div v-if="logoSrc" class="px-4 mb-3 flex justify-center">
             <NewYearHatWrapper>
-               <img :src="logoSrc" alt="Logo Clínica" class="max-h-28 object-contain relative z-10" />
+               <img :src="logoSrc" alt="Logo Clínica" class="max-h-24 object-contain relative z-10" />
             </NewYearHatWrapper>
           </div>
     

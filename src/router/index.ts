@@ -7,20 +7,61 @@ import LoginView from '../views/LoginView.vue'
 import MainLayout from '@/layouts/MainLayout.vue'
 import SuperAdminLayout from '@/layouts/SuperAdminLayout.vue'
 import PrintLayout from '@/layouts/PrintLayout.vue'
+// Importación de la vista pública (Website Builder)
+import ClinicWebsiteView from '../views/public/ClinicWebsiteView.vue';
 
-const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
-    // --- RUTAS PÚBLICAS ---
+// Función para detectar subdominio
+const getSubdomain = () => {
+  const host = window.location.host;
+  const parts = host.split('.');
+  // En localhost: 'clinica.localhost' -> ['clinica', 'localhost']
+  // En prod: 'clinica.sonriandes.com' -> ['clinica', 'sonriandes', 'com']
+  
+  // Ajuste para localhost simple
+  if (host.includes('localhost') && parts.length === 1) return null;
+  
+  if (parts.length >= 2) return parts[0]; // Retorna el primer segmento
+  return null;
+};
+
+const subdomain = getSubdomain();
+
+// Determinamos si es la App Principal o una Web de Clínica
+// 'app' = Sistema
+// 'www' = Landing (si llegara aquí por error DNS)
+// null = Localhost raíz o dominio raíz
+const isAppSubdomain = subdomain === 'app' || subdomain === 'www' || subdomain === null || subdomain === 'localhost';
+
+let routes = [];
+
+if (!isAppSubdomain) {
+  // ==========================================
+  // MODO 1: SITIO WEB PÚBLICO DE CLÍNICA
+  // ==========================================
+  // Carga cuando el subdominio NO es 'app' (ej: 'clinica-sur.sonriandes.com')
+  routes = [
+    {
+      path: '/:pathMatch(.*)*', // Captura cualquier ruta y muestra siempre la web
+      name: 'clinic-website',
+      component: ClinicWebsiteView,
+    }
+  ];
+} else {
+  // ==========================================
+  // MODO 2: SISTEMA DE GESTIÓN (APP)
+  // ==========================================
+  // Carga cuando es 'app.sonriandes.com' o local
+  routes = [
+    // --- RUTAS PÚBLICAS DEL SISTEMA ---
     {
       path: '/login',
       name: 'login',
       component: LoginView,
     },
     {
-    path: '/privacy-policy',
-    name: 'privacy-policy',
-    component: () => import('../views/PrivacyPolicyView.vue'),
+      path: '/privacy-policy',
+      name: 'privacy-policy',
+      component: () => import('../views/PrivacyPolicyView.vue'),
     },
     {
       path: '/terms-and-conditions',
@@ -69,7 +110,6 @@ const router = createRouter({
       component: PrintLayout,
       meta: { requiresAuth: true },
       children: [
-        
         {
           path: 'payment/:id',
           name: 'print-payment-receipt',
@@ -78,7 +118,7 @@ const router = createRouter({
       ],
     },
 
-    // --- RUTAS DE CLÍNICA ---
+    // --- RUTAS DE CLÍNICA (MAIN) ---
     {
       path: '/',
       component: MainLayout,
@@ -145,7 +185,6 @@ const router = createRouter({
             {
               path: 'consents',
               name: 'settings-consents',
-              // --- RUTA CORREGIDA ---
               component: () => import('@/views/settings/ConsentManagementView.vue'),
               meta: { requiresAdmin: true },
             },
@@ -165,16 +204,34 @@ const router = createRouter({
               path: 'appearance',
               name: 'settings-appearance',
               component: () => import('../views/settings/AppearanceView.vue'),
-              meta: { requiresAdmin: true } },
+              meta: { requiresAdmin: true } 
+            },
+            { 
+              path: 'website',
+              name: 'settings-website',
+              component: () => import('../views/settings/WebsiteManagementView.vue'),
+              meta: { requiresAdmin: true }
+            },
           ]
         },
       ],
     },
-  ],
+  ];
+}
+
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: routes,
 })
 
-// Navigation Guard (sin cambios)
+// Navigation Guard
 router.beforeEach(async (to, from, next) => {
+  // 1. Si estamos en modo Sitio Web Público, permitimos todo sin auth
+  if (!isAppSubdomain) {
+     return next();
+  }
+
+  // 2. Si estamos en modo Sistema, aplicamos seguridad
   const authStore = useAuthStore();
 
   // Si no hay usuario pero sí hay token, espera a que se verifique
