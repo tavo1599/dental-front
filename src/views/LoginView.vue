@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import LogoDental from '@/components/icons/LogoDental.vue' // 1. Importa el componente
+import LogoDental from '@/components/icons/LogoDental.vue' 
 import { useAuthStore } from '@/stores/auth';
 import { RouterLink } from 'vue-router';
 
@@ -9,16 +9,25 @@ const email = ref('')
 const password = ref('')
 
 async function handleLogin() {
-  console.log('Login attempt:', {
-    email: email.value,
-    password: password.value,
-  })
   await authStore.login(email.value, password.value);
 }
 </script>
 
 <template>
-  <div class="flex items-stretch min-h-screen">
+  <div class="flex items-stretch min-h-screen relative">
+    
+    <!-- ENLACE DIRECTO A LANDING PAGE -->
+    <a 
+      href="https://sonriandes.com" 
+      class="absolute top-4 right-4 md:top-6 md:right-8 text-sm font-bold text-gray-500 hover:text-primary transition-colors flex items-center gap-2 z-10"
+    >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+        Ir a Página Principal
+    </a>
+
+    <!-- Lado Izquierdo (Banner) -->
     <div class="hidden lg:flex w-1/2 bg-primary items-center justify-center p-12 text-white text-center">
       <div class="text-center">
         <LogoDental alt="Logo de sistema" class="mx-auto h-24 w-auto text-white text-center" />
@@ -28,6 +37,7 @@ async function handleLogin() {
       </div>
     </div>
 
+    <!-- Lado Derecho (Formulario) -->
     <div class="flex flex-col justify-center items-center w-full lg:w-1/2 bg-light-gray p-8">
       <div class="w-full max-w-md">
         <div class="bg-white p-8 rounded-xl shadow-lg">
