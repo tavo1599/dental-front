@@ -212,6 +212,11 @@ if (!isAppSubdomain) {
               component: () => import('../views/settings/WebsiteManagementView.vue'),
               meta: { requiresAdmin: true }
             },
+            {
+              path: 'profile',
+              name: 'settings-profile',
+              component: () => import('../views/settings/UserProfileView.vue'),
+            },
           ]
         },
       ],

@@ -77,12 +77,6 @@ export enum ExpenseCategory {
   MARKETING = 'marketing',
   OTHER = 'otros',
 }
-
-
-// ===================================================================
-// INTERFACES (Estructuras de Datos)
-// ===================================================================
-
 export interface User {
   id: string;
   fullName: string;
@@ -90,6 +84,11 @@ export interface User {
   role: string;
   phone?: string;
   tenant?: Tenant;
+  // --- NUEVOS CAMPOS PARA PERFIL (Solución al error) ---
+  specialty?: string;
+  cmp?: string;
+  photoUrl?: string;
+  bio?: string;
 }
 
 export interface Tenant {
@@ -111,11 +110,13 @@ export interface Tenant {
   phone: string | null;
   email: string | null;
 
+  // --- NUEVOS CAMPOS ---
   domainSlug?: string;
   websiteConfig?: {
     primaryColor?: string;
     secondaryColor?: string;
     welcomeMessage?: string;
+    subTitle?: string;
     aboutUs?: string;
     heroImageUrl?: string;
     facebookUrl?: string;
@@ -123,6 +124,10 @@ export interface Tenant {
     whatsappNumber?: string;
     showStaff?: boolean;
     addressCoordinates?: { lat: number; lng: number };
+    services?: any[];
+    tiktokUrl?: string;
+    youtubeUrl?: string;
+    schedule?: string;
   };
 }
 
@@ -143,6 +148,7 @@ export interface Patient {
   orthodonticHistory: OrthodonticAnamnesis | null;
   category?: string;
   fileCode?: string;
+  tenant?: Tenant;
 }
 
 export interface MedicalHistory {
@@ -242,8 +248,6 @@ export enum VerticalRelation {
   DEEP_BITE = 'deep_bite',
   OPEN_BITE = 'open_bite',
 }
-
-// --- AÑADE ESTA INTERFACE ---
 export interface IOrthoGeneralAnalysis {
   mainComplaint: string | null;
   medicalHistory: string | null;
@@ -257,7 +261,6 @@ export interface IOrthoGeneralAnalysis {
   needsGeneralTreatment: string | null;
 }
 
-// PDF Sección 2: ANÁLISIS FACIAL
 export interface IOrthoFacialAnalysis {
   facialType: 'mesofacial' | 'dolicofacial' | 'braquifacial' | null;
   convexity: 'recto' | 'concavo' | 'convexo' | null;
@@ -290,10 +293,7 @@ export interface IOrthoFacialAnalysis {
   };
 }
 
-// Tipo para relaciones Caninas/Molares
 type SagittalRelation = 'claseI' | 'claseII' | 'claseIII' | 'mediaClaseII' | 'tresCuartosClaseII' | 'completaClaseII' | 'mediaClaseIII' | 'tresCuartosClaseIII' | 'completaClaseIII' | null;
-
-// PDF Sección 3: ANÁLISIS OCLUSAL
 export interface IOrthoOcclusalAnalysis {
   manipulation: 'rc_mih_igual' | 'rc_mih_diferente' | null;
   transversal: {
@@ -335,13 +335,10 @@ export interface IOrthoOcclusalAnalysis {
   familyMalocclusion: string | null;
 }
 
-// PDF Sección 5: DIAGNOSTICO FUNCIONAL
 export interface IOrthoFunctionalAnalysis {
   respirationType: string | null;
-  // (Se puede expandir fácil)
 }
 
-// --- EL TIPO PRINCIPAL DE LA ANAMNESIS DE ORTODONCIA ---
 export type OrthodonticAnamnesis = {
   id: string;
   generalAnalysis: IOrthoGeneralAnalysis;

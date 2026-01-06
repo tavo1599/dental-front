@@ -76,9 +76,9 @@ onMounted(() => {
       
       <div class="flex items-center gap-2">
         
-        <NewYearHatWrapper>
+        
            <img src="/logo.svg" class="h-8 w-8 relative z-10" alt="Logo" />
-        </NewYearHatWrapper>
+        
         <span class="font-bold text-lg tracking-wide ml-2">SonriAndes</span>
       </div>
       <button 
@@ -115,12 +115,12 @@ onMounted(() => {
 
         <!-- HEADER DEL SIDEBAR -->
         <div class="py-6 flex flex-col justify-center border-b border-slate-700 text-center relative">
-          <FireworksHeader />
+          
           <!-- LOGO DE CLÍNICA CON SOMBRERO -->
           <div v-if="logoSrc" class="px-4 mb-3 flex justify-center">
-            <NewYearHatWrapper>
+            
                <img :src="logoSrc" alt="Logo Clínica" class="max-h-24 object-contain relative z-10" />
-            </NewYearHatWrapper>
+            
           </div>
     
           <p v-if="authStore.user?.tenant" class="text-lg text-white font-bold text-center px-2 leading-tight relative z-10 mt-1">
