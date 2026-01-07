@@ -55,7 +55,7 @@ import LogoDental from '@/components/icons/LogoDental.vue'
           <p>Implementamos medidas de seguridad técnicas y organizativas para proteger sus datos, incluyendo encriptación SSL, contraseñas hasheadas y bases de datos seguras, de conformidad con la Ley N° 29733.</p>
 
           <h2>6. Derechos ARCO</h2>
-          <p>Como titular de sus datos personales (administrador de la clínica), tiene derecho a ejercer sus derechos de Acceso, Rectificación, Cancelación y Oposición. Puede solicitarlo enviando un correo a [Tu Correo de Soporte]. La clínica es la responsable de atender las solicitudes ARCO de sus pacientes.</p>
+          <p>Como titular de sus datos personales (administrador de la clínica), tiene derecho a ejercer sus derechos de Acceso, Rectificación, Cancelación y Oposición. Puede solicitarlo enviando un correo a dentalsoft9@gmail.com. La clínica es la responsable de atender las solicitudes ARCO de sus pacientes.</p>
 
           <h2>7. Tiempo de Conservación</h2>
           <p>Conservaremos los datos de su clínica mientras mantenga una cuenta activa. Los datos serán eliminados de forma segura después de 90 días tras la cancelación del servicio, a menos que se solicite su eliminación inmediata.</p>
