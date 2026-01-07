@@ -260,7 +260,24 @@ onMounted(() => {
                     <hr class="border-gray-100 my-2">
                     <p class="text-xs font-bold text-gray-400 uppercase">Redes Sociales (URLs)</p>
 
-                    
+                    <div class="grid grid-cols-1 gap-3">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-600 font-bold text-xs">FB</div>
+                            <input v-model="form.websiteConfig.facebookUrl" type="text" class="input pl-10" placeholder="facebook.com/tuclinica">
+                        </div>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-pink-500 font-bold text-xs">IG</div>
+                            <input v-model="form.websiteConfig.instagramUrl" type="text" class="input pl-10" placeholder="instagram.com/tuclinica">
+                        </div>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-black font-bold text-xs">TK</div>
+                            <input v-model="form.websiteConfig.tiktokUrl" type="text" class="input pl-10" placeholder="tiktok.com/@tuclinica">
+                        </div>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-red-600 font-bold text-xs">YT</div>
+                            <input v-model="form.websiteConfig.youtubeUrl" type="text" class="input pl-10" placeholder="youtube.com/c/tuclinica">
+                        </div>
+                    </div>
                 </div>
 
             </div>

@@ -15,7 +15,7 @@ import LogoDental from '@/components/icons/LogoDental.vue'
         <p class="text-sm text-gray-500 mb-6">Última actualización: 17 de Octubre de 2025</p>
 
         <div class="prose max-w-none text-gray-700">
-          <p>Estos Términos y Condiciones ("Términos") rigen el uso de SonriAndes ("Software", "Servicio"), un software como servicio (SaaS) proporcionado por [Nombre de tu Empresa] ("nosotros"). Al registrarse y utilizar nuestro Servicio, usted ("la Clínica", "el Usuario") acepta estos Términos en su totalidad.</p>
+          <p>Estos Términos y Condiciones ("Términos") rigen el uso de SonriAndes ("Software", "Servicio"), un software como servicio (SaaS) proporcionado por Sonriandes ("nosotros"). Al registrarse y utilizar nuestro Servicio, usted ("la Clínica", "el Usuario") acepta estos Términos en su totalidad.</p>
 
           <h2>1. Descripción del Servicio</h2>
           <p>SonriAndes es una plataforma de software para la gestión de clínicas dentales, que incluye gestión de pacientes, agenda, odontograma, facturación y otras herramientas clínicas y administrativas.</p>
