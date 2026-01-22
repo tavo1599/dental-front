@@ -56,8 +56,21 @@ export const useAppointmentsStore = defineStore('appointments', () => {
       
       toast.success('Cita creada con éxito.');
       return true;
-    } catch (error) {
-      toast.error('Error al crear la cita.');
+    } catch (error: any) {
+      // --- CAPTURA DE ERROR DE CRUCE ---
+      if (error.response && error.response.status === 400) {
+        const msg = error.response.data.message;
+        // Detectamos si el mensaje es sobre el cruce de horarios
+        if (msg && (msg.includes('ya tiene una cita') || msg.includes('horario'))) {
+             toast.error("⚠️ CRUCE DE HORARIOS: Ese espacio acaba de ser ocupado. Se actualizará la agenda.");
+             // Recargamos la agenda para que el usuario vea la cita conflictiva
+             await fetchAppointments();
+        } else {
+             toast.error(msg || 'Error de validación al crear la cita.');
+        }
+      } else {
+        toast.error('Error al crear la cita.');
+      }
       return false;
     } finally {
       isLoading.value = false;
@@ -69,8 +82,18 @@ export const useAppointmentsStore = defineStore('appointments', () => {
       await updateTimeApi(id, data);
       toast.success('Cita reprogramada con éxito.');
       await fetchAppointments();
-    } catch (error) {
-      toast.error('No se pudo reprogramar la cita.');
+    } catch (error: any) { // Capturar 'any' para leer response
+       if (error.response && error.response.status === 400) {
+           const msg = error.response.data.message;
+           if (msg && (msg.includes('ya tiene una cita') || msg.includes('horario'))) {
+               toast.error("⚠️ CRUCE: No se puede mover aquí, el horario está ocupado.");
+               await fetchAppointments(); // Revertir visualmente
+               return;
+           }
+       }
+       toast.error('No se pudo reprogramar la cita.');
+       // En caso de error genérico también recargamos para asegurar consistencia visual
+       await fetchAppointments();
     }
   }
 
