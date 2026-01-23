@@ -5,6 +5,7 @@ import apiClient from '@/services/api';
 import PublicNavbar from '@/components/public/PublicNavbar.vue';
 import PublicHero from '@/components/public/PublicHero.vue';
 import PublicTreatments from '@/components/public/PublicTreatments.vue';
+import PublicDoctors from '@/components/public/PublicDoctors.vue'; // Nuevo import
 
 const route = useRoute();
 const tenantData = ref<any>(null);
@@ -97,12 +98,6 @@ const getLogoUrl = () => {
     return `${import.meta.env.VITE_API_BASE_URL}${url}`;
 };
 
-const getDoctorPhoto = (photoUrl?: string) => {
-    if (!photoUrl) return 'https://via.placeholder.com/300x300?text=Doctor'; 
-    if (photoUrl.startsWith('http')) return photoUrl;
-    return `${import.meta.env.VITE_API_BASE_URL}${photoUrl}`;
-};
-
 const publicDoctors = computed(() => {
     if (!tenantData.value?.users) return [];
     return tenantData.value.users.filter((u: any) => u.role === 'dentist' || u.role === 'admin');
@@ -159,10 +154,11 @@ onMounted(() => {
       <!-- TRATAMIENTOS MODULAR -->
       <PublicTreatments :treatments="treatments" />
 
-      <!-- EQUIPO (Placeholder) -->
-      <section id="doctores" class="py-32 bg-white text-center text-gray-500">
-         [Componente Doctores Aquí]
-      </section>
+      <!-- EQUIPO MODULAR -->
+      <PublicDoctors 
+         v-if="tenantData.websiteConfig?.showStaff"
+         :doctors="publicDoctors" 
+      />
 
       <!-- NOSOTROS (Placeholder) -->
       <section id="nosotros" class="py-32 bg-gray-50 text-center text-gray-500">

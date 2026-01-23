@@ -77,7 +77,7 @@ const scrollToSection = (id: string) => {
         <!-- 2. MENÚ ESCRITORIO (Centrado/Derecha) -->
         <div class="hidden md:flex items-center space-x-8">
           <button @click="scrollToSection('inicio')" class="nav-link">Inicio</button>
-          <button @click="scrollToSection('especialidades')" class="nav-link">Especialidades</button>
+          <button @click="scrollToSection('especialidades')" class="nav-link">Tratamientos</button>
           <button @click="scrollToSection('doctores')" class="nav-link" v-if="tenantData?.websiteConfig?.showStaff">Doctores</button>
           <button @click="scrollToSection('nosotros')" class="nav-link">Nosotros</button>
           <button @click="scrollToSection('contacto')" class="nav-link">Contacto</button>

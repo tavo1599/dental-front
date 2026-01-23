@@ -36,7 +36,7 @@ const getIconPath = (item: any) => {
          
          <!-- Título de Sección -->
          <div class="text-center mb-16 max-w-2xl mx-auto">
-             <span class="text-primary font-bold uppercase tracking-wider text-xs mb-2 block">Especialidades</span>
+             <span class="text-primary font-bold uppercase tracking-wider text-xs mb-2 block">Tratamientos</span>
              <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6">Soluciones Integrales para tu Sonrisa</h2>
              <div class="h-1 w-24 bg-gradient-to-r from-primary to-transparent mx-auto rounded-full"></div>
          </div>
