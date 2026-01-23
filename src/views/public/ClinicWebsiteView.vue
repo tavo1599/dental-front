@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import apiClient from '@/services/api';
 
@@ -51,6 +51,21 @@ const getSubdomain = () => {
   return null;
 };
 
+// Función para iniciar animaciones DESPUÉS de cargar datos
+const initAnimations = () => {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target); // Dejar de observar una vez animado
+      }
+    });
+  }, { threshold: 0.1 });
+
+  // Seleccionamos todos los elementos animados
+  document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
+};
+
 const loadTenantData = async () => {
   const slug = getSubdomain();
   detectedSlug.value = slug || 'Ninguno';
@@ -81,6 +96,9 @@ const loadTenantData = async () => {
     }
   } finally {
     isLoading.value = false;
+    // Esperamos a que el DOM se actualice (v-if="!isLoading") para iniciar animaciones
+    await nextTick();
+    initAnimations();
   }
 };
 
@@ -123,19 +141,6 @@ const whatsappLink = computed(() => {
 
 onMounted(() => {
   loadTenantData();
-  
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-      }
-    });
-  }, { threshold: 0.15 }); // Umbral del 15% para disparar la animación
-
-  // Pequeño delay para asegurar que el DOM esté listo antes de observar
-  setTimeout(() => {
-    document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
-  }, 100);
 });
 </script>
 
@@ -175,10 +180,10 @@ onMounted(() => {
       
       <PublicNavbar :tenant-data="tenantData" />
 
-      <!-- HERO MODULAR -->
+      <!-- HERO MODULAR (Onda inferior Gris para conectar con Features) -->
       <PublicHero :tenant-data="tenantData" :whatsapp-link="whatsappLink" />
 
-      <!-- 2. SECCIÓN: POR QUÉ ELEGIRNOS -->
+      <!-- 2. SECCIÓN: POR QUÉ ELEGIRNOS (MODULAR) -->
       <PublicFeatures class="animate-on-scroll opacity-0" />
 
       <!-- 3. TRATAMIENTOS (Fondo Blanco para contraste) -->
@@ -187,7 +192,7 @@ onMounted(() => {
       </div>
 
       <!-- Separador Onda hacia Doctores -->
-      <div class="w-full overflow-hidden leading-[0] rotate-180 bg-white">
+      <div class="w-full overflow-hidden leading-[0] bg-white">
         <svg class="relative block w-[calc(100%+1.3px)] h-[50px] md:h-[80px]" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
             <path d="M985.66,92.83C906.67,72,823.78,31,743.84,14.19c-82.26-17.34-168.06-16.33-250.45.39-57.84,11.73-114,31.07-172,41.86A600.21,600.21,0,0,1,0,27.35V120H1200V95.8C1132.19,118.92,1055.71,111.31,985.66,92.83Z" class="fill-slate-50"></path>
         </svg>
