@@ -19,6 +19,7 @@ const error = ref(false);
 const errorDetail = ref(''); 
 const detectedSlug = ref('');
 const isProduction = import.meta.env.PROD;
+const mainContainer = ref<HTMLElement | null>(null);
 
 const defaultPrimary = '#2563EB';
 const defaultSecondary = '#1E40AF';
@@ -57,12 +58,11 @@ const initAnimations = () => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         entry.target.classList.add('visible');
-        observer.unobserve(entry.target); // Dejar de observar una vez animado
+        observer.unobserve(entry.target);
       }
     });
-  }, { threshold: 0.1 });
+  }, { threshold: 0.1, root: mainContainer.value }); // Observamos dentro del contenedor principal
 
-  // Seleccionamos todos los elementos animados
   document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
 };
 
@@ -96,7 +96,6 @@ const loadTenantData = async () => {
     }
   } finally {
     isLoading.value = false;
-    // Esperamos a que el DOM se actualice (v-if="!isLoading") para iniciar animaciones
     await nextTick();
     initAnimations();
   }
@@ -145,10 +144,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 font-sans text-slate-800 clinic-theme scroll-smooth overflow-x-hidden">
+  <!-- 
+    CORRECCIÓN DE SCROLL: 
+    Usamos 'fixed inset-0' para ocupar toda la pantalla y 'overflow-y-auto' para gestionar el scroll aquí mismo.
+    Esto evita que el scroll del 'body' (si existe por estilos globales) cree una doble barra.
+  -->
+  <div ref="mainContainer" class="fixed inset-0 w-full h-full bg-slate-50 font-sans text-slate-800 clinic-theme overflow-y-auto overflow-x-hidden scroll-smooth">
     
     <!-- LOADING -->
-    <div v-if="isLoading" class="h-screen flex items-center justify-center bg-gray-50 fixed inset-0 z-[60]">
+    <div v-if="isLoading" class="h-full flex items-center justify-center bg-gray-50">
       <div class="flex flex-col items-center gap-4">
         <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-primary"></div>
         <p class="text-gray-400 text-sm animate-pulse">Cargando...</p>
@@ -156,7 +160,7 @@ onMounted(() => {
     </div>
 
     <!-- ERROR -->
-    <div v-else-if="error" class="h-screen flex flex-col items-center justify-center bg-gray-50 text-center p-6">
+    <div v-else-if="error" class="h-full flex flex-col items-center justify-center bg-gray-50 text-center p-6">
       <h1 class="text-6xl font-bold text-gray-300 mb-4">404</h1>
       <p class="text-xl text-gray-600 mb-2">No encontramos la clínica.</p>
       
@@ -180,13 +184,13 @@ onMounted(() => {
       
       <PublicNavbar :tenant-data="tenantData" />
 
-      <!-- HERO MODULAR (Onda inferior Gris para conectar con Features) -->
+      <!-- HERO MODULAR -->
       <PublicHero :tenant-data="tenantData" :whatsapp-link="whatsappLink" />
 
-      <!-- 2. SECCIÓN: POR QUÉ ELEGIRNOS (MODULAR) -->
+      <!-- 2. SECCIÓN: POR QUÉ ELEGIRNOS -->
       <PublicFeatures class="animate-on-scroll opacity-0" />
 
-      <!-- 3. TRATAMIENTOS (Fondo Blanco para contraste) -->
+      <!-- 3. TRATAMIENTOS -->
       <div class="bg-white pb-20 relative z-20"> 
           <PublicTreatments :treatments="treatments" class="animate-on-scroll opacity-0 !bg-white" />
       </div>
@@ -198,7 +202,7 @@ onMounted(() => {
         </svg>
       </div>
 
-      <!-- 4. DOCTORES (Fondo Gris Suave) -->
+      <!-- 4. DOCTORES -->
       <div class="bg-slate-50">
         <PublicDoctors 
            v-if="tenantData.websiteConfig?.showStaff"
@@ -207,10 +211,10 @@ onMounted(() => {
         />
       </div>
 
-      <!-- 5. NOSOTROS (Fondo Blanco) -->
+      <!-- 5. NOSOTROS -->
       <PublicAbout :tenant-data="tenantData" class="animate-on-scroll opacity-0 !bg-white" />
 
-      <!-- 6. CONTACTO (Footer Oscuro) -->
+      <!-- 6. CONTACTO -->
       <PublicContact :tenant-data="tenantData" class="animate-on-scroll opacity-0" />
 
     </div>
@@ -223,7 +227,8 @@ onMounted(() => {
 .bg-primary { background-color: var(--clinic-primary); }
 .border-primary { border-color: var(--clinic-primary); }
 
-html { scroll-behavior: smooth; }
+/* Ajuste importante: Si usamos un div con scroll propio, scroll-behavior debe estar aquí, no en html */
+.scroll-smooth { scroll-behavior: smooth; }
 
 /* Clase auxiliar para el color de relleno del SVG */
 .fill-gray-50 { fill: #f9fafb; }
