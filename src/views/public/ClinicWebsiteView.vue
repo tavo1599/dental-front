@@ -103,6 +103,19 @@ const updateMetaTags = () => {
     document.title = tenantData.value?.name || 'Clínica Dental';
 };
 
+const getLogoUrl = () => {
+    const url = tenantData.value?.logoUrl;
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    return `${import.meta.env.VITE_API_BASE_URL}${url}`;
+};
+
+const getDoctorPhoto = (photoUrl?: string) => {
+    if (!photoUrl) return 'https://via.placeholder.com/300x300?text=Doctor'; 
+    if (photoUrl.startsWith('http')) return photoUrl;
+    return `${import.meta.env.VITE_API_BASE_URL}${photoUrl}`;
+};
+
 const publicDoctors = computed(() => {
     if (!tenantData.value?.users) return [];
     return tenantData.value.users.filter((u: any) => u.role === 'dentist' || u.role === 'admin');
@@ -118,7 +131,6 @@ const whatsappLink = computed(() => {
 onMounted(() => {
   loadTenantData();
   
-  // Simple observador para animaciones al hacer scroll
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -129,7 +141,7 @@ onMounted(() => {
 
   setTimeout(() => {
     document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
-  }, 500); // Pequeño delay para asegurar renderizado
+  }, 500);
 });
 </script>
 
@@ -148,6 +160,7 @@ onMounted(() => {
     <div v-else-if="error" class="h-screen flex flex-col items-center justify-center bg-gray-50 text-center p-6">
       <h1 class="text-6xl font-bold text-gray-300 mb-4">404</h1>
       <p class="text-xl text-gray-600 mb-2">No encontramos la clínica.</p>
+      
       <div v-if="!isProduction" class="mt-4 bg-orange-50 border border-orange-200 p-4 rounded text-left max-w-md">
          <p class="text-xs font-bold text-orange-800 uppercase mb-1">Diagnóstico DEV:</p>
          <ul class="text-xs text-orange-700 space-y-1 list-disc pl-4">
@@ -163,60 +176,76 @@ onMounted(() => {
       
       <PublicNavbar :tenant-data="tenantData" />
 
-      <!-- 1. HERO MODULAR (Con onda inferior invertida ya incluida en el componente) -->
+      <!-- HERO MODULAR (Onda inferior Gris para conectar con Features) -->
       <PublicHero :tenant-data="tenantData" :whatsapp-link="whatsappLink" />
 
-      <!-- 2. SECCIÓN: POR QUÉ ELEGIRNOS (NUEVA) -->
-      <section id="features" class="relative py-20 bg-white z-10 -mt-1">
+      <!-- 2. SECCIÓN: POR QUÉ ELEGIRNOS -->
+      <!-- Fondo 'bg-slate-50' para que coincida con la onda del Hero, evitando la línea gris -->
+      <!-- Padding bottom 'pb-48' aumentado para que la onda inferior no tape el contenido -->
+      <section id="features" class="relative py-24 bg-slate-50 z-10 -mt-1 pb-48">
          <div class="container mx-auto px-4">
+             
+             <!-- Título de Sección Agregado -->
+             <div class="text-center mb-16 max-w-3xl mx-auto animate-on-scroll opacity-0">
+                 <span class="text-primary font-bold uppercase tracking-wider text-xs mb-2 block">Nuestra Diferencia</span>
+                 <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">¿Por qué elegirnos?</h2>
+                 <p class="text-gray-600 text-lg">Nos dedicamos a brindarte la mejor experiencia dental con estándares de calidad superiores.</p>
+                 <div class="h-1 w-20 bg-primary mx-auto rounded-full mt-6"></div>
+             </div>
+
              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                  <div 
                     v-for="(feature, index) in defaultFeatures" 
                     :key="index"
-                    class="animate-on-scroll opacity-0 translate-y-10 transition-all duration-700 ease-out p-6 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-lg hover:-translate-y-1 group"
+                    class="animate-on-scroll opacity-0 translate-y-10 transition-all duration-700 ease-out p-8 rounded-2xl bg-white shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-2 group"
                     :style="{ transitionDelay: `${index * 100}ms` }"
                  >
-                    <div class="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-primary mb-4 text-2xl group-hover:bg-primary group-hover:text-white transition-colors">
+                    <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-primary mb-6 text-2xl group-hover:bg-primary group-hover:text-white transition-colors duration-300">
                         <span v-if="feature.icon === 'tech'">⚡</span>
                         <span v-else-if="feature.icon === 'cert'">🎓</span>
                         <span v-else-if="feature.icon === 'user'">💙</span>
                         <span v-else>✨</span>
                     </div>
-                    <h3 class="font-bold text-gray-900 mb-2">{{ feature.title }}</h3>
+                    <h3 class="font-bold text-lg text-gray-900 mb-3">{{ feature.title }}</h3>
                     <p class="text-sm text-gray-500 leading-relaxed">{{ feature.description }}</p>
                  </div>
              </div>
          </div>
 
-         <!-- Onda de transición hacia Tratamientos -->
+         <!-- Onda de transición hacia Tratamientos (BLANCA para conectar con la siguiente sección blanca) -->
          <div class="absolute bottom-0 left-0 w-full overflow-hidden leading-[0]">
-            <svg class="relative block w-[calc(100%+1.3px)] h-[50px] md:h-[100px]" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
-                <path d="M985.66,92.83C906.67,72,823.78,31,743.84,14.19c-82.26-17.34-168.06-16.33-250.45.39-57.84,11.73-114,31.07-172,41.86A600.21,600.21,0,0,1,0,27.35V120H1200V95.8C1132.19,118.92,1055.71,111.31,985.66,92.83Z" class="fill-slate-50"></path>
+            <svg class="relative block w-[calc(100%+1.3px)] h-[80px] md:h-[120px]" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" class="fill-white"></path>
             </svg>
          </div>
       </section>
 
-      <!-- 3. TRATAMIENTOS (Fondo gris suave) -->
-      <div class="bg-slate-50 pb-20"> <!-- Wrapper para color de fondo continuo -->
-          <PublicTreatments :treatments="treatments" class="animate-on-scroll opacity-0" />
+      <!-- 3. TRATAMIENTOS (Fondo Blanco para contraste) -->
+      <!-- Usamos !bg-white para forzar el fondo blanco sobre el componente si trae gris por defecto -->
+      <div class="bg-white pb-20 relative z-20"> 
+          <PublicTreatments :treatments="treatments" class="animate-on-scroll opacity-0 !bg-white" />
       </div>
 
-      <!-- Separador Onda hacia Doctores -->
+      <!-- Separador Onda hacia Doctores (Blanco a Blanco o Blanco a Gris según Doctores) -->
       <div class="w-full overflow-hidden leading-[0] rotate-180 bg-white">
         <svg class="relative block w-[calc(100%+1.3px)] h-[50px] md:h-[80px]" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <!-- Transición hacia el gris de la sección Doctores/Nosotros si fuera el caso, o decorativo -->
             <path d="M985.66,92.83C906.67,72,823.78,31,743.84,14.19c-82.26-17.34-168.06-16.33-250.45.39-57.84,11.73-114,31.07-172,41.86A600.21,600.21,0,0,1,0,27.35V120H1200V95.8C1132.19,118.92,1055.71,111.31,985.66,92.83Z" class="fill-slate-50"></path>
         </svg>
       </div>
 
-      <!-- 4. DOCTORES (Fondo Blanco) -->
-      <PublicDoctors 
-         v-if="tenantData.websiteConfig?.showStaff"
-         :doctors="publicDoctors" 
-         class="animate-on-scroll opacity-0"
-      />
+      <!-- 4. DOCTORES (Fondo Gris Suave) -->
+      <div class="bg-slate-50">
+        <PublicDoctors 
+           v-if="tenantData.websiteConfig?.showStaff"
+           :doctors="publicDoctors" 
+           class="animate-on-scroll opacity-0 !bg-slate-50"
+        />
+      </div>
 
-      <!-- 5. NOSOTROS (Fondo con diseño) -->
-      <PublicAbout :tenant-data="tenantData" class="animate-on-scroll opacity-0" />
+      <!-- 5. NOSOTROS (Fondo Blanco) -->
+      <!-- PublicAbout suele tener su propio fondo, aseguramos que se vea bien -->
+      <PublicAbout :tenant-data="tenantData" class="animate-on-scroll opacity-0 !bg-white" />
 
       <!-- 6. CONTACTO (Footer Oscuro) -->
       <PublicContact :tenant-data="tenantData" />
@@ -232,7 +261,6 @@ onMounted(() => {
 
 html { scroll-behavior: smooth; }
 
-/* Colores de relleno para las ondas SVG */
 .fill-white { fill: #ffffff; }
 .fill-slate-50 { fill: #f8fafc; } 
 .fill-gray-900 { fill: #111827; }
