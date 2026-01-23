@@ -111,7 +111,7 @@ const scrollToSection = (id: string) => {
     <div v-show="isMobileMenuOpen" class="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-lg">
       <div class="px-4 pt-2 pb-6 space-y-2 flex flex-col">
         <button @click="scrollToSection('inicio')" class="mobile-nav-link">Inicio</button>
-        <button @click="scrollToSection('especialidades')" class="mobile-nav-link">Especialidades</button>
+        <button @click="scrollToSection('especialidades')" class="mobile-nav-link">Tratamientos</button>
         <button @click="scrollToSection('doctores')" class="mobile-nav-link" v-if="tenantData?.websiteConfig?.showStaff">Doctores</button>
         <button @click="scrollToSection('nosotros')" class="mobile-nav-link">Nosotros</button>
         <button @click="scrollToSection('contacto')" class="mobile-nav-link">Contactanos</button>

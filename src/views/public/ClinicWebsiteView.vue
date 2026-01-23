@@ -3,6 +3,8 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import apiClient from '@/services/api';
 import PublicNavbar from '@/components/public/PublicNavbar.vue';
+import PublicHero from '@/components/public/PublicHero.vue'; // Nuevo
+import PublicTreatments from '@/components/public/PublicTreatments.vue'; // Nuevo
 
 const route = useRoute();
 const tenantData = ref<any>(null);
@@ -15,85 +17,27 @@ const isProduction = import.meta.env.PROD;
 const defaultPrimary = '#2563EB';
 const defaultSecondary = '#1E40AF';
 
-// --- DATOS POR DEFECTO PARA TRATAMIENTOS ---
-// Se mostrarán si la clínica no ha configurado los suyos
+// --- DATOS POR DEFECTO ---
 const defaultTreatments = [
-  {
-    title: 'Ortodoncia',
-    description: 'Corregimos la posición de tus dientes con brackets metálicos, estéticos o alineadores invisibles.',
-    iconType: 'braces'
-  },
-  {
-    title: 'Implantes Dentales',
-    description: 'Recupera tu sonrisa y funcionalidad completa con implantes de titanio de alta calidad.',
-    iconType: 'implant'
-  },
-  {
-    title: 'Estética Dental',
-    description: 'Diseño de sonrisa, carillas de porcelana y blanqueamiento para una sonrisa radiante.',
-    iconType: 'esthetic'
-  },
-  {
-    title: 'Odontopediatría',
-    description: 'Atención especializada, paciente y divertida para el cuidado dental de tus hijos.',
-    iconType: 'kids'
-  },
-  {
-    title: 'Endodoncia',
-    description: 'Salvamos tus dientes dañados eliminando el dolor y la infección de raíz.',
-    iconType: 'endo'
-  },
-  {
-    title: 'Cirugía Oral',
-    description: 'Extracciones de terceros molares y cirugías complejas con máxima seguridad.',
-    iconType: 'surgery'
-  }
+  { title: 'Ortodoncia', description: 'Corregimos la posición de tus dientes con brackets metálicos, estéticos o alineadores invisibles.', iconType: 'braces' },
+  { title: 'Implantes Dentales', description: 'Recupera tu sonrisa y funcionalidad completa con implantes de titanio de alta calidad.', iconType: 'implant' },
+  { title: 'Estética Dental', description: 'Diseño de sonrisa, carillas de porcelana y blanqueamiento para una sonrisa radiante.', iconType: 'esthetic' },
+  { title: 'Odontopediatría', description: 'Atención especializada, paciente y divertida para el cuidado dental de tus hijos.', iconType: 'kids' },
+  { title: 'Endodoncia', description: 'Salvamos tus dientes dañados eliminando el dolor y la infección de raíz.', iconType: 'endo' },
+  { title: 'Cirugía Oral', description: 'Extracciones de terceros molares y cirugías complejas con máxima seguridad.', iconType: 'surgery' }
 ];
 
 const treatments = computed(() => {
-    // Si la clínica tiene servicios configurados, úsalos
     if (tenantData.value?.websiteConfig?.services && tenantData.value.websiteConfig.services.length > 0) {
         return tenantData.value.websiteConfig.services;
     }
-    // Si no, usa los por defecto
     return defaultTreatments;
 });
 
-// Helper para iconos SVG según el tipo o palabra clave
-const getIconPath = (item: any) => {
-    // Si viene un 'iconType' explícito
-    let key = item.iconType || '';
-    
-    // Si no, intentamos adivinar por el título
-    if (!key && item.title) {
-        const t = item.title.toLowerCase();
-        if (t.includes('orto') || t.includes('bracket')) key = 'braces';
-        else if (t.includes('implant')) key = 'implant';
-        else if (t.includes('estétic') || t.includes('blanquea') || t.includes('diseño')) key = 'esthetic';
-        else if (t.includes('niño') || t.includes('pedia')) key = 'kids';
-        else if (t.includes('endo') || t.includes('conducto')) key = 'endo';
-        else if (t.includes('cirug') || t.includes('extrac')) key = 'surgery';
-        else key = 'general';
-    }
-
-    switch (key) {
-        case 'braces': return 'M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z';
-        case 'implant': return 'M12 2a1 1 0 011 1v14a1 1 0 01-1 1H7a1 1 0 01-1-1V3a1 1 0 011-1h5zm0 18a1 1 0 011 1v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-1a1 1 0 011-1h5z'; // Simplificado
-        case 'esthetic': return 'M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
-        case 'kids': return 'M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'; // Reusamos carita feliz por ahora
-        case 'endo': return 'M13 10V3L4 14h7v7l9-11h-7z'; // Rayo
-        case 'surgery': return 'M12 4v16m8-8H4'; // Cruz médica simple
-        default: return 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'; // Check genérico
-    }
-};
-
 const getSubdomain = () => {
-  if (!isProduction && route.query.slug) {
-     return route.query.slug as string;
-  }
+  if (!isProduction && route.query.slug) return route.query.slug as string;
   const host = window.location.host;
   const parts = host.split('.');
-  
   if (parts.length >= 2) {
       if (parts[0] === 'www' || parts[0] === 'app') return null;
       return parts[0].toLowerCase();
@@ -119,10 +63,8 @@ const loadTenantData = async () => {
   try {
     const response = await apiClient.get(`/public/tenants/${slug}`);
     tenantData.value = response.data;
-    
     updateColors();
     updateMetaTags();
-
   } catch (e: any) {
     console.error("Error cargando clínica:", e);
     error.value = true;
@@ -140,7 +82,6 @@ const updateColors = () => {
     if (!tenantData.value?.websiteConfig) return;
     const { primaryColor, secondaryColor } = tenantData.value.websiteConfig;
     const root = document.documentElement;
-    
     if (primaryColor) root.style.setProperty('--clinic-primary', primaryColor);
     if (secondaryColor) root.style.setProperty('--clinic-secondary', secondaryColor);
 };
@@ -156,12 +97,23 @@ const getLogoUrl = () => {
     return `${import.meta.env.VITE_API_BASE_URL}${url}`;
 };
 
-const getHeroImage = () => {
-    const url = tenantData.value?.websiteConfig?.heroImageUrl;
-    if (url && url.startsWith('http')) return `url('${url}')`;
-    if (url) return `url('${import.meta.env.VITE_API_BASE_URL}${url}')`;
-    return null; 
+const getDoctorPhoto = (photoUrl?: string) => {
+    if (!photoUrl) return 'https://via.placeholder.com/300x300?text=Doctor'; 
+    if (photoUrl.startsWith('http')) return photoUrl;
+    return `${import.meta.env.VITE_API_BASE_URL}${photoUrl}`;
 };
+
+const publicDoctors = computed(() => {
+    if (!tenantData.value?.users) return [];
+    return tenantData.value.users.filter((u: any) => u.role === 'dentist' || u.role === 'admin');
+});
+
+const whatsappLink = computed(() => {
+    const number = tenantData.value?.websiteConfig?.whatsappNumber;
+    if (!number) return null;
+    const text = encodeURIComponent(`Hola ${tenantData.value.name}, quisiera agendar una cita.`);
+    return `https://wa.me/${number}?text=${text}`;
+});
 
 onMounted(() => {
   loadTenantData();
@@ -193,98 +145,137 @@ onMounted(() => {
             <code>http://localhost:5173/?slug=oralclean</code>
          </p>
       </div>
-
       <a href="https://sonriandes.com" class="mt-8 px-6 py-2 bg-primary text-white rounded-full font-bold hover:opacity-90">Ir a SonriAndes</a>
     </div>
 
     <!-- SITIO WEB -->
     <div v-else>
       
-      <!-- NAVBAR -->
       <PublicNavbar :tenant-data="tenantData" />
 
-      <!-- SECCIÓN INICIO (HERO) CON ONDAS -->
-      <header id="inicio" class="relative bg-gray-900 pt-32 pb-48 lg:pt-48 lg:pb-64 overflow-hidden flex items-center justify-center">
-         <!-- Fondo -->
-         <div class="absolute inset-0 z-0">
-             <div 
-                class="absolute inset-0 bg-cover bg-center"
-                :style="{ backgroundImage: getHeroImage() || 'url(https://images.unsplash.com/photo-1629909613654-28e377c37b09?q=80&w=2068&auto=format&fit=crop)' }"
-             ></div>
-             <div class="absolute inset-0 bg-gradient-to-r from-gray-900/95 via-gray-900/70 to-transparent"></div>
-         </div>
+      <!-- HERO MODULAR -->
+      <PublicHero :tenant-data="tenantData" :whatsapp-link="whatsappLink" />
 
-         <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="max-w-3xl">
-               <h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white mb-6 leading-tight drop-shadow-lg">
-                  {{ tenantData.websiteConfig?.welcomeMessage || `Bienvenido a ${tenantData.name}` }}
-               </h1>
-               <p v-if="tenantData.websiteConfig?.subTitle" class="text-xl md:text-2xl text-gray-200 mb-8 font-light border-l-4 border-primary pl-4">
-                  {{ tenantData.websiteConfig.subTitle }}
-               </p>
-               <div class="flex flex-col sm:flex-row gap-4">
-                  <a href="#contacto" class="px-8 py-4 bg-primary text-white rounded-full font-bold text-lg shadow-xl hover:bg-opacity-90 transition-transform transform hover:-translate-y-1 text-center">
-                     Agendar Cita
-                  </a>
-                  <a href="#tratamientos" class="px-8 py-4 bg-white/10 backdrop-blur-md border border-white/30 text-white rounded-full font-bold text-lg hover:bg-white/20 transition-all text-center">
-                     Nuestros Tratamientos
-                  </a>
-               </div>
-            </div>
-         </div>
+      <!-- TRATAMIENTOS MODULAR -->
+      <PublicTreatments :treatments="treatments" />
 
-         <!-- DIVISOR ONDA (Wave) -->
-         <div class="absolute bottom-0 left-0 w-full overflow-hidden leading-[0]">
-            <svg class="relative block w-[calc(100%+1.3px)] h-[80px] md:h-[150px]" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
-                <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" class="fill-gray-50"></path>
-            </svg>
-         </div>
-      </header>
+      <!-- EQUIPO (Aún en este archivo, se puede modularizar luego) -->
+      <section id="doctores" v-if="tenantData.websiteConfig?.showStaff && publicDoctors.length > 0" class="py-24 bg-white">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div class="text-center mb-16">
+                  <span class="text-primary font-bold uppercase tracking-wider text-xs mb-2 block">Profesionales</span>
+                  <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900">Nuestro Equipo Médico</h2>
+              </div>
 
-      <!-- SECCIÓN TRATAMIENTOS (Dinámica) -->
-      <section id="tratamientos" class="py-24 bg-gray-50">
-         <div class="container mx-auto px-4">
-             
-             <!-- Título de Sección -->
-             <div class="text-center mb-16 max-w-2xl mx-auto">
-                 <h2 class="text-primary font-bold uppercase tracking-wider text-sm mb-3">Especialidades</h2>
-                 <h3 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Soluciones Integrales para tu Sonrisa</h3>
-                 <div class="h-1 w-20 bg-primary mx-auto rounded-full"></div>
-             </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+                  <div v-for="doc in publicDoctors" :key="doc.id" class="group">
+                      <div class="relative overflow-hidden rounded-2xl shadow-lg aspect-[3/4] mb-6">
+                          <img :src="getDoctorPhoto(doc.photoUrl)" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Doctor" />
+                          <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
+                          
+                          <div class="absolute bottom-0 left-0 p-6 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                             <h4 class="text-xl font-bold">{{ doc.fullName }}</h4>
+                             <p class="text-white/80 text-sm">{{ doc.specialty || 'Cirujano Dentista' }}</p>
+                          </div>
+                      </div>
+                      <p v-if="doc.cmp" class="text-xs text-gray-400 uppercase tracking-widest text-center">COP: {{ doc.cmp }}</p>
+                  </div>
+              </div>
+          </div>
+      </section>
 
-             <!-- Grid de Tratamientos -->
-             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                 <div 
-                    v-for="(item, index) in treatments" 
-                    :key="index"
-                    class="bg-white p-8 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 group flex flex-col items-center text-center"
-                 >
-                    <!-- Icono Dinámico -->
-                    <div class="w-16 h-16 bg-blue-50 text-primary rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="getIconPath(item)" />
-                        </svg>
-                    </div>
-                    
-                    <h4 class="text-xl font-bold text-gray-900 mb-3">{{ item.title }}</h4>
-                    <p class="text-gray-600 leading-relaxed text-sm">{{ item.description }}</p>
+      <!-- NOSOTROS -->
+      <section id="nosotros" class="py-24 bg-gray-50 border-t border-gray-100">
+         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+             <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                 <div class="order-2 lg:order-1">
+                     <span class="text-primary font-bold uppercase tracking-wider text-xs mb-2 block">Nuestra Historia</span>
+                     <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6">Sobre {{ tenantData.name }}</h2>
+                     <div class="text-lg text-gray-600 leading-relaxed space-y-4 whitespace-pre-line text-justify">
+                        {{ tenantData.websiteConfig?.aboutUs || 'Somos una clínica dental comprometida con la excelencia y el cuidado de tu salud bucal.' }}
+                     </div>
+                     <div class="mt-8">
+                        <a href="#contacto" class="text-primary font-bold hover:underline flex items-center gap-2">
+                           Ven a conocernos <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                        </a>
+                     </div>
+                 </div>
+                 <div class="order-1 lg:order-2">
+                     <div class="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
+                         <img src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?q=80&w=2068&auto=format&fit=crop" class="w-full h-auto object-cover transform transition-transform hover:scale-105 duration-700" alt="Consultorio" />
+                     </div>
                  </div>
              </div>
-
          </div>
       </section>
 
-      <section id="doctores" class="py-32 bg-white text-center text-gray-500">
-         [Componente Doctores Aquí]
-      </section>
+      <!-- CONTACTO -->
+      <section id="contacto" class="bg-gray-900 text-white pt-24 pb-12">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16 border-b border-gray-800 pb-16">
+                  
+                  <!-- Info Brand -->
+                  <div class="lg:col-span-1">
+                      <div class="flex items-center gap-2 mb-6">
+                         <img v-if="getLogoUrl()" :src="getLogoUrl()!" class="h-8 w-auto brightness-0 invert" alt="Logo" />
+                         <span class="text-xl font-bold">{{ tenantData.name }}</span>
+                      </div>
+                      <p class="text-gray-400 text-sm leading-relaxed mb-6">Comprometidos con tu sonrisa y bienestar dental con tecnología de punta.</p>
+                      
+                      <!-- Redes Sociales -->
+                      <div class="flex gap-3">
+                          <a v-if="tenantData.websiteConfig?.facebookUrl" :href="tenantData.websiteConfig.facebookUrl" target="_blank" class="w-9 h-9 rounded-full bg-gray-800 flex items-center justify-center hover:bg-primary transition-colors text-white">
+                              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg>
+                          </a>
+                          <a v-if="tenantData.websiteConfig?.instagramUrl" :href="tenantData.websiteConfig.instagramUrl" target="_blank" class="w-9 h-9 rounded-full bg-gray-800 flex items-center justify-center hover:bg-pink-600 transition-colors text-white">
+                              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          </a>
+                          <a v-if="tenantData.websiteConfig?.tiktokUrl" :href="tenantData.websiteConfig.tiktokUrl" target="_blank" class="w-9 h-9 rounded-full bg-gray-800 flex items-center justify-center hover:bg-black hover:border-white border border-transparent transition-colors text-white">
+                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.65-1.62-1.12-1.76-2.5-3.52-5-5.28-7.5zm-5.04 1.02c.02 0 .04 0 .06.01.03.01.06.02.09.02 1.32.02 2.64.02 3.96.03v15.6c-.01 2.94-2.4 5.33-5.34 5.33-2.94.01-5.33-2.38-5.33-5.33-.01-2.94 2.39-5.33 5.33-5.33.68 0 1.36.14 1.99.42l.62-3.88c-4.99-.97-9.87 2.27-10.84 7.26-.97 4.99 2.27 9.87 7.26 10.84 4.99.97 9.87-2.27 10.84-7.26.17-.85.22-1.72.16-2.58v-9.56c1.78 1.27 3.94 1.95 6.14 1.94v-4.04c-3.23.08-6.1-1.89-7.38-4.83l-3.23 5.5z"/></svg>
+                          </a>
+                      </div>
+                  </div>
 
-      <section id="nosotros" class="py-32 bg-gray-50 text-center text-gray-500">
-         [Componente Nosotros Aquí]
-      </section>
+                  <!-- Ubicación -->
+                  <div class="lg:col-span-1">
+                      <h4 class="text-white font-bold mb-4 uppercase text-xs tracking-wider">Ubicación</h4>
+                      <p class="text-gray-400 mb-2 flex items-start gap-2 text-sm">
+                          <svg class="w-5 h-5 flex-shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                          {{ tenantData.address }}
+                      </p>
+                      <p class="text-gray-400 mb-2 flex items-center gap-2 text-sm">
+                          <svg class="w-5 h-5 flex-shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                          {{ tenantData.phone }}
+                      </p>
+                  </div>
 
-      <section id="contacto" class="py-32 bg-gray-900 text-white text-center">
-         [Componente Contacto Aquí]
-      </section>
+                  <!-- Horario -->
+                  <div class="lg:col-span-1">
+                      <h4 class="text-white font-bold mb-4 uppercase text-xs tracking-wider">Horario</h4>
+                      <div class="p-4 bg-gray-800 rounded-lg border border-gray-700 text-sm">
+                          <p class="text-gray-300 font-mono">{{ tenantData.websiteConfig?.schedule || 'Lunes a Sábado: 9am - 8pm' }}</p>
+                      </div>
+                  </div>
+
+                  <!-- Mapa (Embed simple) -->
+                  <div class="lg:col-span-1">
+                      <div class="rounded-xl overflow-hidden bg-gray-800 h-40 flex items-center justify-center border border-gray-700">
+                          <p class="text-gray-500 text-xs flex flex-col items-center">
+                              <svg class="w-6 h-6 mb-1 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0121 18.382V7.618a1 1 0 01-.806-.984A3 3 0 0115 5.236V4.472a3 3 0 01.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
+                              Mapa
+                          </p>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="flex flex-col md:flex-row justify-between items-center text-xs text-gray-500">
+                  <p>&copy; {{ new Date().getFullYear() }} {{ tenantData.name }}. Todos los derechos reservados.</p>
+                  <p class="mt-2 md:mt-0">
+                      Powered by <a href="https://sonriandes.com" target="_blank" class="text-gray-400 hover:text-white transition-colors font-bold">SonriAndes</a>
+                  </p>
+              </div>
+          </div>
+      </footer>
 
     </div>
   </div>
