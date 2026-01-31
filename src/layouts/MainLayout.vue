@@ -8,10 +8,7 @@ import IconLogout from '@/components/icons/IconLogout.vue';
 import ImpersonationBanner from '@/components/ImpersonationBanner.vue';
 import AnnouncementBanner from '@/components/AnnouncementBanner.vue';
 
-// --- IMPORTS AÑO NUEVO ---
-// Reemplazamos ChristmasLights y ChristmasHatWrapper
-import FireworksHeader from '@/components/FireworksHeader.vue';
-import NewYearHatWrapper from '@/components/NewYearHatWrapper.vue';
+// --- ASISTENTE VIRTUAL ---
 import VirtualAssistant from '@/components/VirtualAssistant.vue';
 
 const route = useRoute();
@@ -65,20 +62,13 @@ onMounted(() => {
 <template>
   <div class="flex flex-col h-screen bg-gray-100 font-sans overflow-hidden relative">
     
-    <!-- 1. FUEGOS ARTIFICIALES (Año Nuevo) -->
-    
-
     <ImpersonationBanner />
     <AnnouncementBanner />
 
     <!-- HEADER MÓVIL (Solo visible en pantallas pequeñas 'md:hidden') -->
     <div class="md:hidden bg-slate-800 text-white p-4 flex items-center justify-between shadow-md flex-shrink-0 z-20 relative">
-      
       <div class="flex items-center gap-2">
-        
-        
-           <img src="/logo.svg" class="h-8 w-8 relative z-10" alt="Logo" />
-        
+        <img src="/logo.svg" class="h-8 w-8" alt="Logo" />
         <span class="font-bold text-lg tracking-wide ml-2">SonriAndes</span>
       </div>
       <button 
@@ -114,16 +104,19 @@ onMounted(() => {
         </div>
 
         <!-- HEADER DEL SIDEBAR -->
-        <div class="py-6 flex flex-col justify-center border-b border-slate-700 text-center relative">
+        <div class="py-8 flex flex-col justify-center border-b border-slate-700 text-center relative">
           
-          <!-- LOGO DE CLÍNICA CON SOMBRERO -->
-          <div v-if="logoSrc" class="px-4 mb-3 flex justify-center">
-            
-               <img :src="logoSrc" alt="Logo Clínica" class="max-h-24 object-contain relative z-10" />
-            
+          <!-- LOGO DE CLÍNICA -->
+          <div v-if="logoSrc" class="px-4 flex justify-center items-center">
+             <!-- Logo aumentado: max-h-32 (128px) y max-w-[200px] -->
+             <img 
+               :src="logoSrc" 
+               alt="Logo Clínica" 
+               class="w-auto h-auto max-w-[200px] max-h-32 object-contain" 
+             />
           </div>
     
-          <p v-if="authStore.user?.tenant" class="text-lg text-white font-bold text-center px-2 leading-tight relative z-10 mt-1">
+          <p v-if="authStore.user?.tenant" class="text-lg text-white font-bold text-center px-4 leading-tight">
             {{ authStore.user.tenant.name }}
           </p>
 
@@ -164,7 +157,7 @@ onMounted(() => {
              Reportes
           </RouterLink>
           <RouterLink v-if="authStore.user?.role === 'admin'" to="/settings" class="nav-item" active-class="active">
-             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 01.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
              Configuración
           </RouterLink>
         </nav>
@@ -209,14 +202,20 @@ onMounted(() => {
         </div>
       </main>
     </div>
+
+    <!-- 2. ASISTENTE VIRTUAL -->
     <VirtualAssistant />
   </div>
 </template>
 
 <style scoped>
 @keyframes scroll {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 .animate-scroll {
@@ -226,7 +225,7 @@ onMounted(() => {
   display: inline-block;
 }
 
-/* Estilos para los items de navegación */
+/* Estilos para los items de navegación con iconos */
 .nav-item {
   @apply flex items-center px-4 py-3 text-slate-300 hover:bg-slate-700 hover:text-white rounded-lg transition-colors duration-150;
 }
