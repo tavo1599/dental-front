@@ -38,19 +38,22 @@ const mapsLink = computed(() => {
                     Comprometidos con tu sonrisa y bienestar dental, utilizando tecnología de punta y un trato humano.
                   </p>
                   
-                  <!-- Redes Sociales -->
+                  <!-- Redes Sociales usando imágenes descargadas -->
                   <div class="flex gap-3">
                       <a v-if="tenantData?.websiteConfig?.facebookUrl" :href="tenantData.websiteConfig.facebookUrl" target="_blank" class="social-btn facebook">
-                          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/></svg>
+                          <img src="/icons/facebook.png" alt="Facebook" class="w-5 h-5 object-contain" />
                       </a>
+                      
                       <a v-if="tenantData?.websiteConfig?.instagramUrl" :href="tenantData.websiteConfig.instagramUrl" target="_blank" class="social-btn instagram">
-                          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          <img src="/icons/instagram.png" alt="Instagram" class="w-5 h-5 object-contain" />
                       </a>
+                      
                       <a v-if="tenantData?.websiteConfig?.tiktokUrl" :href="tenantData.websiteConfig.tiktokUrl" target="_blank" class="social-btn tiktok">
-                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.65-1.62-1.12-1.76-2.5-3.52-5-5.28-7.5zm-5.04 1.02c.02 0 .04 0 .06.01.03.01.06.02.09.02 1.32.02 2.64.02 3.96.03v15.6c-.01 2.94-2.4 5.33-5.34 5.33-2.94.01-5.33-2.38-5.33-5.33-.01-2.94 2.39-5.33 5.33-5.33.68 0 1.36.14 1.99.42l.62-3.88c-4.99-.97-9.87 2.27-10.84 7.26-.97 4.99 2.27 9.87 7.26 10.84 4.99.97 9.87-2.27 10.84-7.26.17-.85.22-1.72.16-2.58v-9.56c1.78 1.27 3.94 1.95 6.14 1.94v-4.04c-3.23.08-6.1-1.89-7.38-4.83l-3.23 5.5z"/></svg>
+                          <img src="/icons/tiktok.png" alt="TikTok" class="w-5 h-5 object-contain" />
                       </a>
+
                       <a v-if="tenantData?.websiteConfig?.youtubeUrl" :href="tenantData.websiteConfig.youtubeUrl" target="_blank" class="social-btn youtube">
-                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/></svg>
+                          <img src="/icons/youtube.png" alt="YouTube" class="w-5 h-5 object-contain" />
                       </a>
                   </div>
               </div>

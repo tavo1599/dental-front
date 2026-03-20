@@ -8,13 +8,33 @@ const props = defineProps<{
 const isMobileMenuOpen = ref(false);
 const isScrolled = ref(false);
 
-// Detectar scroll para cambiar estilo del navbar
-const handleScroll = () => {
-  isScrolled.value = window.scrollY > 50;
+// Detectar scroll para cambiar estilo del navbar (ahora lee el contenedor)
+const handleScroll = (e?: Event) => {
+  const target = e?.target as HTMLElement;
+  if (target) {
+    isScrolled.value = target.scrollTop > 50;
+  } else {
+    isScrolled.value = window.scrollY > 50;
+  }
 };
 
-onMounted(() => window.addEventListener('scroll', handleScroll));
-onUnmounted(() => window.removeEventListener('scroll', handleScroll));
+onMounted(() => {
+  const container = document.getElementById('main-scroll-container');
+  if (container) {
+    container.addEventListener('scroll', handleScroll);
+  } else {
+    window.addEventListener('scroll', handleScroll);
+  }
+});
+
+onUnmounted(() => {
+  const container = document.getElementById('main-scroll-container');
+  if (container) {
+    container.removeEventListener('scroll', handleScroll);
+  } else {
+    window.removeEventListener('scroll', handleScroll);
+  }
+});
 
 // Helpers visuales
 const logoSrc = computed(() => {
@@ -30,21 +50,34 @@ const whatsappLink = computed(() => {
   return `https://wa.me/${number}?text=${text}`;
 });
 
-// Función para scroll suave
+// Función para scroll suave adaptada al contenedor fijo
 const scrollToSection = (id: string) => {
   isMobileMenuOpen.value = false; // Cerrar menú móvil al hacer clic
   const element = document.getElementById(id);
+  const container = document.getElementById('main-scroll-container');
+
   if (element) {
     const offset = 80; // Compensar la altura del navbar fijo
-    const bodyRect = document.body.getBoundingClientRect().top;
-    const elementRect = element.getBoundingClientRect().top;
-    const elementPosition = elementRect - bodyRect;
-    const offsetPosition = elementPosition - offset;
-
-    window.scrollTo({
-      top: offsetPosition,
-      behavior: 'smooth'
-    });
+    
+    if (container) {
+      // Scroll dentro del contenedor fijo
+      const containerRect = container.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+      const targetPosition = elementRect.top - containerRect.top + container.scrollTop - offset;
+      
+      container.scrollTo({
+        top: targetPosition,
+        behavior: 'smooth'
+      });
+    } else {
+      // Fallback estándar por si no encuentra el contenedor
+      const bodyRect = document.body.getBoundingClientRect().top;
+      const elementRect = element.getBoundingClientRect().top;
+      window.scrollTo({
+        top: elementRect - bodyRect - offset,
+        behavior: 'smooth'
+      });
+    }
   }
 };
 </script>
@@ -77,7 +110,7 @@ const scrollToSection = (id: string) => {
         <!-- 2. MENÚ ESCRITORIO (Centrado/Derecha) -->
         <div class="hidden md:flex items-center space-x-8">
           <button @click="scrollToSection('inicio')" class="nav-link">Inicio</button>
-          <button @click="scrollToSection('especialidades')" class="nav-link">Tratamientos</button>
+          <button @click="scrollToSection('tratamientos')" class="nav-link">Especialidades</button>
           <button @click="scrollToSection('doctores')" class="nav-link" v-if="tenantData?.websiteConfig?.showStaff">Doctores</button>
           <button @click="scrollToSection('nosotros')" class="nav-link">Nosotros</button>
           <button @click="scrollToSection('contacto')" class="nav-link">Contacto</button>
@@ -111,7 +144,7 @@ const scrollToSection = (id: string) => {
     <div v-show="isMobileMenuOpen" class="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-lg">
       <div class="px-4 pt-2 pb-6 space-y-2 flex flex-col">
         <button @click="scrollToSection('inicio')" class="mobile-nav-link">Inicio</button>
-        <button @click="scrollToSection('especialidades')" class="mobile-nav-link">Tratamientos</button>
+        <button @click="scrollToSection('tratamientos')" class="mobile-nav-link">Especialidades</button>
         <button @click="scrollToSection('doctores')" class="mobile-nav-link" v-if="tenantData?.websiteConfig?.showStaff">Doctores</button>
         <button @click="scrollToSection('nosotros')" class="mobile-nav-link">Nosotros</button>
         <button @click="scrollToSection('contacto')" class="mobile-nav-link">Contactanos</button>
