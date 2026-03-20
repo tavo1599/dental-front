@@ -41,19 +41,19 @@ const mapsLink = computed(() => {
                   <!-- Redes Sociales usando imágenes descargadas -->
                   <div class="flex gap-3">
                       <a v-if="tenantData?.websiteConfig?.facebookUrl" :href="tenantData.websiteConfig.facebookUrl" target="_blank" class="social-btn facebook">
-                          <img src="/icons/facebook.png" alt="Facebook" class="w-5 h-5 object-contain" />
+                          <img src="/icons/facebook.svg" alt="Facebook" class="w-5 h-5 object-contain" />
                       </a>
                       
                       <a v-if="tenantData?.websiteConfig?.instagramUrl" :href="tenantData.websiteConfig.instagramUrl" target="_blank" class="social-btn instagram">
-                          <img src="/icons/instagram.png" alt="Instagram" class="w-5 h-5 object-contain" />
+                          <img src="/icons/instagram.svg" alt="Instagram" class="w-5 h-5 object-contain" />
                       </a>
                       
                       <a v-if="tenantData?.websiteConfig?.tiktokUrl" :href="tenantData.websiteConfig.tiktokUrl" target="_blank" class="social-btn tiktok">
-                          <img src="/icons/tiktok.png" alt="TikTok" class="w-5 h-5 object-contain" />
+                          <img src="/icons/tiktok.svg" alt="TikTok" class="w-5 h-5 object-contain" />
                       </a>
 
                       <a v-if="tenantData?.websiteConfig?.youtubeUrl" :href="tenantData.websiteConfig.youtubeUrl" target="_blank" class="social-btn youtube">
-                          <img src="/icons/youtube.png" alt="YouTube" class="w-5 h-5 object-contain" />
+                          <img src="/icons/youtube.svg" alt="YouTube" class="w-5 h-5 object-contain" />
                       </a>
                   </div>
               </div>
