@@ -156,20 +156,20 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-8xl mx-auto px-4 py-8 pb-20">
+  <div class="max-w-6xl mx-auto px-4 py-8 pb-20">
     
     <!-- Encabezado con Fondo Decorativo -->
     <div class="relative mb-20 md:mb-24">
        <!-- Banner de fondo -->
-       <div class="h-48 w-full bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl shadow-lg relative overflow-hidden">
+       <div class="h-48 md:h-56 w-full bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl shadow-lg relative overflow-hidden">
           <div class="absolute inset-0 bg-[url('/pattern.svg')] opacity-10"></div> <!-- Patrón opcional -->
-          <div class="absolute bottom-4 right-6 text-white/80 text-sm font-medium backdrop-blur-sm bg-white/10 px-3 py-1 rounded-full">
+          <div class="absolute top-4 right-6 text-white/80 text-sm font-medium backdrop-blur-sm bg-white/10 px-3 py-1 rounded-full">
             {{ authStore.user?.tenant?.name || 'Clínica Dental' }}
           </div>
        </div>
 
        <!-- Tarjeta Flotante de Foto y Rol -->
-       <div class="absolute -bottom-16 left-6 md:left-10 flex items-end gap-6">
+       <div class="absolute -bottom-10 md:-bottom-12 left-6 md:left-10 flex items-end gap-5 md:gap-6">
           <div class="relative group cursor-pointer" @click="triggerUpload">
               <!-- Avatar con borde blanco grueso -->
               <div class="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-white shadow-xl bg-white flex items-center justify-center relative z-10 transition-transform hover:scale-105">
@@ -196,9 +196,10 @@ onMounted(() => {
               <input ref="fileInput" type="file" class="hidden" accept="image/*" @change="handleFileChange" />
           </div>
 
-          <div class="mb-2 md:mb-4">
-             <h1 class="text-2xl md:text-3xl font-bold text-gray-800">{{ form.fullName }}</h1>
-             <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full uppercase tracking-wider inline-block mt-1 shadow-sm">
+          <!-- Texto de Nombre y Rol alineado a la base de la foto -->
+          <div class="pb-2 md:pb-3">
+             <h1 class="text-2xl md:text-3xl font-bold text-gray-800 drop-shadow-sm">{{ form.fullName }}</h1>
+             <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full uppercase tracking-wider inline-block mt-1.5 shadow-sm">
                 {{ authStore.user?.role }}
              </span>
           </div>
@@ -286,12 +287,18 @@ onMounted(() => {
                           <div>
                               <label class="label">Especialidad</label>
                               <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                  <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                                </div>
                                 <input v-model="form.specialty" type="text" class="input pl-10" placeholder="Ej: Ortodoncista">
                               </div>
                           </div>
                           <div>
                               <label class="label">COP / Licencia</label>
                               <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                  <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" /></svg>
+                                </div>
                                 <input v-model="form.cmp" type="text" class="input pl-10" placeholder="Ej: 12345">
                               </div>
                           </div>
