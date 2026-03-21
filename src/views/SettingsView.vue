@@ -11,6 +11,7 @@ const authStore = useAuthStore();
     
     <div class="border-b border-gray-200 mb-6">
       <nav class="-mb-px flex space-x-8 overflow-x-auto">
+        
         <RouterLink 
           to="/settings/profile"
           class="py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap flex items-center gap-2"
@@ -21,6 +22,7 @@ const authStore = useAuthStore();
         </RouterLink>
 
         <RouterLink 
+          v-if="authStore.user?.role === 'admin'"
           to="/settings/users"
           class="py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap"
           active-class="!border-primary !text-primary"
@@ -28,7 +30,6 @@ const authStore = useAuthStore();
           Usuarios
         </RouterLink>
 
-        <!-- NUEVO ENLACE: MI PÁGINA WEB -->
         <RouterLink 
           v-if="authStore.user?.role === 'admin'"
           to="/settings/website"
@@ -40,33 +41,44 @@ const authStore = useAuthStore();
         </RouterLink>
 
         <RouterLink 
+          v-if="authStore.user?.role === 'admin'"
           to="/settings/appearance"
           class="py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap"
           active-class="!border-primary !text-primary"
         >
           Apariencia
         </RouterLink>
+
+       <!-- INTEGRACIONES: Oculto temporalmente con comentarios HTML -->
+        <!-- 
         <RouterLink 
+          v-if="authStore.user?.role === 'admin'"
           to="/settings/integrations"
           class="py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap"
           active-class="!border-primary !text-primary"
         >
           Integraciones
         </RouterLink>
+        -->
+
         <RouterLink 
+          v-if="authStore.user?.role === 'admin'"
           to="/settings/consents"
           class="py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap"
           active-class="!border-primary !text-primary"
         >
           Consentimientos
         </RouterLink>
+
         <RouterLink 
+          v-if="authStore.user?.role === 'admin'"
           to="/settings/audit"
           class="py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap"
           active-class="!border-primary !text-primary"
         >
           Auditoría
         </RouterLink>
+
       </nav>
     </div>
     

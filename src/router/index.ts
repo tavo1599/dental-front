@@ -169,12 +169,20 @@ if (!isAppSubdomain) {
         {
           path: 'settings',
           component: () => import('../views/SettingsView.vue'),
-          redirect: '/settings/users',
+          // REDIRECCIÓN DINÁMICA MODIFICADA AQUÍ
+          redirect: () => {
+            const authStore = useAuthStore();
+            if (authStore.user?.role === 'admin') {
+              return { name: 'settings-users' };
+            }
+            return { name: 'settings-profile' };
+          },
           children: [
             {
               path: 'users',
               name: 'settings-users',
               component: () => import('../views/settings/UserManagementView.vue'),
+              meta: { requiresAdmin: true }, // PROTECCIÓN AGREGADA AQUÍ
             },
             {
               path: 'integrations',
