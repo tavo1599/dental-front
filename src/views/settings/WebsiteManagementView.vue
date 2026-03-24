@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+// ¡NUEVO!: Importamos 'watch'
+import { ref, onMounted, computed, watch } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useToast } from 'vue-toastification';
 import apiClient from '@/services/api';
@@ -53,7 +54,7 @@ const finalUrl = computed(() => {
 });
 
 // Cargar datos actuales
-const loadCurrentSettings = async () => {
+const loadCurrentSettings = () => {
   // Verificamos user y tenant
   if (authStore.user && authStore.user.tenant) {
      const tenant = authStore.user.tenant;
@@ -126,9 +127,18 @@ const saveSettings = async () => {
   }
 };
 
+// 1. Ejecutar al cargar si los datos ya están listos
 onMounted(() => {
   loadCurrentSettings();
 });
+
+// 2. ¡LA SOLUCIÓN! Vigilar cambios en el usuario (Para cuando se presiona F5 o Refrescar)
+watch(() => authStore.user, (newUser) => {
+  if (newUser && newUser.tenant) {
+    loadCurrentSettings();
+  }
+}, { deep: true });
+
 </script>
 
 <template>
