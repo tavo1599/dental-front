@@ -47,12 +47,7 @@ const aboutImageStyle = computed(() => {
                     </div>
                  </div>
 
-                 <div class="mt-10">
-                    <a href="#contacto" class="text-primary font-bold hover:underline flex items-center gap-2 group">
-                       Ven a conocernos 
-                       <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                    </a>
-                 </div>
+                 
              </div>
 
              <!-- Columna Imagen -->
