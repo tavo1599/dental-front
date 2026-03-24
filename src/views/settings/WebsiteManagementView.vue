@@ -60,8 +60,17 @@ const loadCurrentSettings = () => {
      const tenant = authStore.user.tenant;
      form.value.domainSlug = tenant.domainSlug || '';
      
-     // Obtenemos la config existente o un objeto vacío
-     const config = tenant.websiteConfig || {} as any;
+     // PARSEO ROBUSTO: Evita que el JSON llegue como "String" desde PostgreSQL
+     let config: any = {};
+     try {
+         if (tenant.websiteConfig) {
+             config = typeof tenant.websiteConfig === 'string' 
+                 ? JSON.parse(tenant.websiteConfig) 
+                 : tenant.websiteConfig;
+         }
+     } catch (e) {
+         console.error("Error decodificando websiteConfig:", e);
+     }
 
      // Mapeo manual seguro
      form.value.websiteConfig = { 
@@ -70,7 +79,7 @@ const loadCurrentSettings = () => {
         primaryColor: config.primaryColor || '#2563EB',
         secondaryColor: config.secondaryColor || '#1E40AF',
         
-        welcomeMessage: config.welcomeMessage || `Bienvenidos a ${tenant.name}`,
+        welcomeMessage: config.welcomeMessage || `Bienvenidos a ${tenant.name || ''}`,
         subTitle: config.subTitle || '',
         aboutUs: config.aboutUs || '',
         
@@ -127,17 +136,18 @@ const saveSettings = async () => {
   }
 };
 
-// 1. Ejecutar al cargar si los datos ya están listos
+// 1. Ejecutar al cargar si los datos ya están listos en memoria
 onMounted(() => {
   loadCurrentSettings();
 });
 
 // 2. ¡LA SOLUCIÓN! Vigilar cambios en el usuario (Para cuando se presiona F5 o Refrescar)
+// Con 'immediate: true', Vue se asegura de revisar esto en el microsegundo que carga.
 watch(() => authStore.user, (newUser) => {
   if (newUser && newUser.tenant) {
     loadCurrentSettings();
   }
-}, { deep: true });
+}, { deep: true, immediate: true });
 
 </script>
 
