@@ -54,70 +54,73 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-    
-    <!-- HEADER DE LA TABLA -->
-    <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-      <div>
-        <h2 class="text-lg font-bold text-gray-800">Registro de Auditoría</h2>
-        <p class="text-sm text-gray-500">Historial de acciones críticas del sistema.</p>
-      </div>
-      <button @click="fetchAuditLogs" class="text-gray-500 hover:text-primary transition-colors" title="Actualizar">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-      </button>
-    </div>
-
-    <!-- CONTENIDO (LOADING O TABLA) -->
-    <div class="p-6">
-      <div v-if="isLoading" class="flex justify-center py-10">
-        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
-      </div>
+  <div>
+    <!-- CONTENEDOR DE LA TABLA -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       
-      <div v-else-if="logs.length === 0" class="text-center py-10 text-gray-500">
-        No hay registros de auditoría disponibles.
+      <!-- HEADER DE LA TABLA -->
+      <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+        <div>
+          <h2 class="text-lg font-bold text-gray-800">Registro de Auditoría</h2>
+          <p class="text-sm text-gray-500">Historial de acciones críticas del sistema.</p>
+        </div>
+        <button @click="fetchAuditLogs" class="text-gray-500 hover:text-primary transition-colors" title="Actualizar">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+        </button>
       </div>
 
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-left text-sm text-gray-600">
-          <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th scope="col" class="px-4 py-3 font-semibold">Fecha y Hora</th>
-              <th scope="col" class="px-4 py-3 font-semibold">Usuario</th>
-              <th scope="col" class="px-4 py-3 font-semibold">Acción</th>
-              <th scope="col" class="px-4 py-3 font-semibold text-center">Módulo</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Iteramos sobre 'paginatedLogs' y usamos solo los campos que existen en tu BD -->
-            <tr v-for="log in paginatedLogs" :key="log.id" class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-              <td class="px-4 py-3 whitespace-nowrap text-gray-500">
-                {{ formatDate(log.timestamp) }}
-              </td>
-              <td class="px-4 py-3 font-medium text-gray-800">
-                {{ log.user?.fullName || 'Sistema' }}
-              </td>
-              <td class="px-4 py-3">
-                <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full font-mono">
-                  {{ log.action }}
-                </span>
-              </td>
-              <!-- Dejamos un guión fijo porque tu modelo no tiene un campo 'module' -->
-              <td class="px-4 py-3 text-gray-400 text-center">
-                -
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+      <!-- CONTENIDO (LOADING O TABLA) -->
+      <div class="p-6">
+        <div v-if="isLoading" class="flex justify-center py-10">
+          <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+        </div>
+        
+        <div v-else-if="logs.length === 0" class="text-center py-10 text-gray-500">
+          No hay registros de auditoría disponibles.
+        </div>
 
-    <!-- FOOTER: CONTROLES DE PAGINACIÓN -->
-    <div v-if="!isLoading && logs.length > 0" class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div v-else class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-gray-600">
+            <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th scope="col" class="px-4 py-3 font-semibold">Fecha y Hora</th>
+                <th scope="col" class="px-4 py-3 font-semibold">Usuario</th>
+                <th scope="col" class="px-4 py-3 font-semibold">Acción</th>
+                <th scope="col" class="px-4 py-3 font-semibold text-center">Módulo</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <!-- EFECTO CEBRA APLICADO AQUÍ -->
+              <tr v-for="log in paginatedLogs" :key="log.id" class="odd:bg-white even:bg-gray-50 hover:bg-blue-50/50 transition-colors">
+                <td class="px-4 py-3 whitespace-nowrap text-gray-500">
+                  {{ formatDate(log.timestamp) }}
+                </td>
+                <td class="px-4 py-3 font-medium text-gray-800">
+                  {{ log.user?.fullName || 'Sistema' }}
+                </td>
+                <td class="px-4 py-3">
+                  <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full font-mono">
+                    {{ log.action }}
+                  </span>
+                </td>
+                <!-- Dejamos un guión fijo porque tu modelo no tiene un campo 'module' -->
+                <td class="px-4 py-3 text-gray-400 text-center">
+                  -
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div> <!-- FIN CONTENEDOR TABLA -->
+
+    <!-- FOOTER: CONTROLES DE PAGINACIÓN (BLOQUE INDEPENDIENTE) -->
+    <div v-if="!isLoading && logs.length > 0" class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
       
       <div class="text-sm text-gray-500">
-        Mostrando <span class="font-medium text-gray-800">{{ (currentPage - 1) * itemsPerPage + 1 }}</span> a 
-        <span class="font-medium text-gray-800">{{ Math.min(currentPage * itemsPerPage, logs.length) }}</span> 
-        de <span class="font-medium text-gray-800">{{ logs.length }}</span> resultados
+        Mostrando <span class="font-bold text-gray-800">{{ (currentPage - 1) * itemsPerPage + 1 }}</span> a 
+        <span class="font-bold text-gray-800">{{ Math.min(currentPage * itemsPerPage, logs.length) }}</span> 
+        de <span class="font-bold text-gray-800">{{ logs.length }}</span> resultados
       </div>
       
       <div class="flex items-center space-x-2">

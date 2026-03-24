@@ -98,7 +98,7 @@ function handlePatientSaved() {
     </div>
 
     <!-- CONTENEDOR DE DATOS -->
-    <div class="bg-white rounded-lg shadow-md border border-gray-200">
+    <div class="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
       
       <!-- LOADING -->
       <div v-if="isLoading && patients.length === 0" class="p-8 text-center text-gray-500">
@@ -128,7 +128,7 @@ function handlePatientSaved() {
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
-              <tr v-for="patient in paginatedPatients" :key="patient.id" class="hover:bg-gray-50 transition-colors">
+              <tr v-for="patient in paginatedPatients" :key="patient.id" class="odd:bg-white even:bg-gray-50 hover:bg-blue-50/50 transition-colors">
                 <td class="py-4 px-6 font-medium text-gray-900">{{ patient.fullName }}</td>
                 <td class="py-4 px-6 text-gray-500">{{ patient.dni }}</td>
                 <td class="py-4 px-6 text-gray-500">{{ patient.phone }}</td>
@@ -157,7 +157,7 @@ function handlePatientSaved() {
                 <p class="text-sm text-gray-500">DNI: {{ patient.dni }}</p>
               </div>
               <div class="bg-blue-50 text-blue-700 text-xs font-bold px-2 py-1 rounded">
-                 PCT
+                PCT
               </div>
             </div>
 
@@ -192,38 +192,43 @@ function handlePatientSaved() {
             </div>
           </div>
         </div>
-
       </div>
+    </div> <!-- FIN DEL CONTENEDOR DE LA TABLA -->
     
-      <!-- PAGINACIÓN -->
-      <div v-if="totalPages > 1" class="flex flex-col sm:flex-row justify-between items-center p-4 border-t border-gray-200 gap-4">
-        
-        <!-- Información (Oculta en móvil muy pequeño) -->
-        <span class="text-sm text-gray-500 order-2 sm:order-1">
-          Página <span class="font-medium">{{ currentPage }}</span> de <span class="font-medium">{{ totalPages }}</span>
-        </span>
-        
-        <!-- Botones -->
-        <div class="flex gap-2 order-1 sm:order-2 w-full sm:w-auto">
-          <button 
-            @click="prevPage" 
-            :disabled="currentPage === 1"
-            class="flex-1 sm:flex-none px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Anterior
-          </button>
-          <button 
-            @click="nextPage" 
-            :disabled="currentPage === totalPages"
-            class="flex-1 sm:flex-none px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Siguiente
-          </button>
-        </div>
+    <!-- ========================================== -->
+    <!-- NUEVA PAGINACIÓN (Bloque Independiente)    -->
+    <!-- ========================================== -->
+    <div v-if="filteredPatients.length > 0" class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <div class="text-sm text-gray-500">
+          Mostrando <span class="font-bold text-gray-800">{{ (currentPage - 1) * pageSize + 1 }}</span> a 
+          <span class="font-bold text-gray-800">{{ Math.min(currentPage * pageSize, filteredPatients.length) }}</span> 
+          de <span class="font-bold text-gray-800">{{ filteredPatients.length }}</span> resultados
       </div>
-
+      
+      <div class="flex items-center space-x-2">
+          <button 
+              @click="prevPage" 
+              :disabled="currentPage === 1"
+              class="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+              Anterior
+          </button>
+          
+          <span class="text-sm text-gray-600 px-2">
+              Página <span class="font-bold">{{ currentPage }}</span> de {{ totalPages }}
+          </span>
+          
+          <button 
+              @click="nextPage" 
+              :disabled="currentPage === totalPages"
+              class="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+              Siguiente
+          </button>
+      </div>
     </div>
 
+    <!-- MODALES -->
     <Modal :isOpen="isModalOpen" @close="isModalOpen = false">
       <template #header>
         {{ patientToEdit ? 'Editar Paciente' : 'Registrar Nuevo Paciente' }}

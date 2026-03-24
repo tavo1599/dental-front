@@ -25,6 +25,7 @@ const form = ref({
     // Contacto
     whatsappNumber: '',
     schedule: '', // Horario
+    mapsUrl: '',
     
     // Redes
     facebookUrl: '',
@@ -70,6 +71,7 @@ const loadCurrentSettings = async () => {
         
         whatsappNumber: config.whatsappNumber || '',
         schedule: config.schedule || '',
+        mapsUrl: config.mapsUrl || '',
         
         facebookUrl: config.facebookUrl || '',
         instagramUrl: config.instagramUrl || '',
@@ -255,6 +257,12 @@ onMounted(() => {
                     <div>
                         <label class="label">Horario de Atención</label>
                         <input v-model="form.websiteConfig.schedule" type="text" class="input" placeholder="Ej: Lun - Vie: 9am - 8pm, Sáb: 9am - 1pm">
+                    </div>
+                    
+                    <div>
+                        <label class="label">Ubicación en Google Maps (Link o Iframe)</label>
+                        <input v-model="form.websiteConfig.mapsUrl" type="text" class="input" placeholder='Ej: https://goo.gl/maps/... o <iframe src="...">'>
+                        <p class="text-[10px] text-gray-400 mt-1">Pega el link de tu ubicación o el código HTML de "Insertar mapa".</p>
                     </div>
 
                     <hr class="border-gray-100 my-2">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { useExpensesStore } from '@/stores/expenses';
 import { storeToRefs } from 'pinia';
 import Modal from '@/components/Modal.vue';
@@ -15,6 +15,22 @@ const isModalOpen = ref(false);
 const isConfirmModalOpen = ref(false);
 const formData = ref<Partial<Expense>>({});
 const expenseToDelete = ref<Expense | null>(null);
+
+// --- ESTADOS DEL PAGINADOR ---
+const currentPage = ref(1);
+const itemsPerPage = 10;
+
+// --- LÓGICA DE PAGINACIÓN ---
+const totalPages = computed(() => Math.ceil(expenses.value.length / itemsPerPage));
+
+const paginatedExpenses = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return expenses.value.slice(start, end);
+});
+
+const nextPage = () => { if (currentPage.value < totalPages.value) currentPage.value++; };
+const prevPage = () => { if (currentPage.value > 1) currentPage.value--; };
 
 onMounted(() => {
   expensesStore.fetchExpenses();
@@ -44,6 +60,8 @@ async function handleSave(data: any) {
     success = await expensesStore.editExpense(data.id, data);
   } else {
     success = await expensesStore.addExpense(data);
+    // Si agregamos uno nuevo, es buena idea ir a la página 1 para verlo
+    currentPage.value = 1;
   }
   if (success) {
     isModalOpen.value = false;
@@ -53,6 +71,10 @@ async function handleSave(data: any) {
 async function handleDelete() {
   if (expenseToDelete.value) {
     await expensesStore.removeExpense(expenseToDelete.value.id);
+    // Verificar si la página actual quedó vacía después de borrar
+    if (paginatedExpenses.value.length === 0 && currentPage.value > 1) {
+        currentPage.value--;
+    }
   }
   isConfirmModalOpen.value = false;
 }
@@ -62,7 +84,6 @@ const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-PE', { timeZone: 'UTC' });
 }
 
-// Helper para traducir categorías visualmente
 const formatCategory = (cat: string) => {
     const map: Record<string, string> = {
         [ExpenseCategory.SALARIES]: 'Salarios',
@@ -79,7 +100,6 @@ const formatCategory = (cat: string) => {
 <template>
   <div class="p-4 md:p-6">
     
-    <!-- HEADER RESPONSIVO -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
       <h1 class="text-2xl md:text-3xl font-bold text-text-dark">Gestión de Gastos</h1>
       <button 
@@ -93,41 +113,35 @@ const formatCategory = (cat: string) => {
       </button>
     </div>
 
-    <!-- CONTENIDO -->
     <div>
         
-        <!-- LOADING -->
         <div v-if="isLoading && expenses.length === 0" class="text-center py-12 text-gray-500">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
             Cargando gastos...
         </div>
 
-        <!-- EMPTY STATE -->
         <div v-else-if="expenses.length === 0" class="text-center py-12 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
              <p>No hay gastos registrados.</p>
         </div>
 
         <div v-else>
-            <!-- ========================================== -->
-            <!-- VISTA ESCRITORIO (TABLA) - 'hidden md:block' -->
-            <!-- ========================================== -->
             <div class="hidden md:block bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
                 <table class="w-full text-left">
-                    <thead class="bg-gray-50 border-b border-gray-200">
+                    <thead class="bg-gray-100 border-b border-gray-200">
                     <tr>
-                        <th class="py-3 px-6 font-semibold text-gray-600 text-xs uppercase tracking-wider">Fecha</th>
-                        <th class="py-3 px-6 font-semibold text-gray-600 text-xs uppercase tracking-wider">Descripción</th>
-                        <th class="py-3 px-6 font-semibold text-gray-600 text-xs uppercase tracking-wider">Categoría</th>
-                        <th class="py-3 px-6 font-semibold text-gray-600 text-xs uppercase tracking-wider text-right">Monto</th>
-                        <th class="py-3 px-6 font-semibold text-gray-600 text-xs uppercase tracking-wider text-center">Acciones</th>
+                        <th class="py-3 px-6 font-bold text-gray-700 text-xs uppercase tracking-wider">Fecha</th>
+                        <th class="py-3 px-6 font-bold text-gray-700 text-xs uppercase tracking-wider">Descripción</th>
+                        <th class="py-3 px-6 font-bold text-gray-700 text-xs uppercase tracking-wider">Categoría</th>
+                        <th class="py-3 px-6 font-bold text-gray-700 text-xs uppercase tracking-wider text-right">Monto</th>
+                        <th class="py-3 px-6 font-bold text-gray-700 text-xs uppercase tracking-wider text-center">Acciones</th>
                     </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
-                    <tr v-for="expense in expenses" :key="expense.id" class="hover:bg-gray-50 transition-colors">
+                    <tr v-for="expense in paginatedExpenses" :key="expense.id" class="odd:bg-white even:bg-gray-50 hover:bg-blue-50/50 transition-colors">
                         <td class="py-4 px-6 text-gray-700">{{ formatDate(expense.date) }}</td>
                         <td class="py-4 px-6 font-medium text-text-dark">{{ expense.description }}</td>
                         <td class="py-4 px-6">
-                            <span class="bg-gray-100 text-gray-700 py-1 px-3 rounded-full text-xs font-bold uppercase tracking-wide">
+                            <span class="bg-gray-200 text-gray-700 py-1 px-3 rounded-full text-xs font-bold uppercase tracking-wide">
                                 {{ formatCategory(expense.category) }}
                             </span>
                         </td>
@@ -141,11 +155,8 @@ const formatCategory = (cat: string) => {
                 </table>
             </div>
 
-            <!-- ========================================== -->
-            <!-- VISTA MÓVIL (TARJETAS) - 'md:hidden' -->
-            <!-- ========================================== -->
             <div class="md:hidden space-y-4">
-                <div v-for="expense in expenses" :key="expense.id" class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                <div v-for="expense in paginatedExpenses" :key="expense.id" class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                     
                     <div class="flex justify-between items-start mb-2">
                         <div class="text-sm text-gray-500 font-medium">{{ formatDate(expense.date) }}</div>
@@ -178,10 +189,39 @@ const formatCategory = (cat: string) => {
                 </div>
             </div>
 
+            <div v-if="expenses.length > 0" class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                <div class="text-sm text-gray-500">
+                    Mostrando <span class="font-bold text-gray-800">{{ (currentPage - 1) * itemsPerPage + 1 }}</span> a 
+                    <span class="font-bold text-gray-800">{{ Math.min(currentPage * itemsPerPage, expenses.length) }}</span> 
+                    de <span class="font-bold text-gray-800">{{ expenses.length }}</span> resultados
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    <button 
+                        @click="prevPage" 
+                        :disabled="currentPage === 1"
+                        class="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        Anterior
+                    </button>
+                    
+                    <span class="text-sm text-gray-600 px-2">
+                        Página <span class="font-bold">{{ currentPage }}</span> de {{ totalPages }}
+                    </span>
+                    
+                    <button 
+                        @click="nextPage" 
+                        :disabled="currentPage === totalPages"
+                        class="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        Siguiente
+                    </button>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <!-- MODALES -->
     <Modal :isOpen="isModalOpen" @close="isModalOpen = false">
       <template #header>{{ formData.id ? 'Editar Gasto' : 'Nuevo Gasto' }}</template>
       <template #default>

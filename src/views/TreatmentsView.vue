@@ -139,7 +139,7 @@ function handleDeleteTreatment() {
       </div>
       
       <!-- ESTADO VACÍO (Si no hay datos o la búsqueda no trae nada) -->
-      <div v-else-if="filteredTreatments.length === 0" class="text-center py-12 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+      <div v-else-if="filteredTreatments.length === 0" class="text-center py-12 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg bg-white">
         <p>No se encontraron tratamientos.</p>
       </div>
 
@@ -159,7 +159,8 @@ function handleDeleteTreatment() {
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
-              <tr v-for="treatment in paginatedTreatments" :key="treatment.id" class="hover:bg-gray-50 transition-colors">
+              <!-- EFECTO CEBRA APLICADO -->
+              <tr v-for="treatment in paginatedTreatments" :key="treatment.id" class="odd:bg-white even:bg-gray-50 hover:bg-blue-50/50 transition-colors">
                 <td class="py-4 px-6 font-medium text-text-dark">{{ treatment.name }}</td>
                 <td class="py-4 px-6 text-sm text-text-light">{{ treatment.description || '-' }}</td>
                 <td class="py-4 px-6 font-bold text-gray-700">S/. {{ Number(treatment.price).toFixed(2) }}</td>
@@ -212,27 +213,35 @@ function handleDeleteTreatment() {
         </div>
 
         <!-- ========================================== -->
-        <!-- PAGINACIÓN (Común para ambas vistas) -->
+        <!-- NUEVA PAGINACIÓN (Bloque Independiente) -->
         <!-- ========================================== -->
-        <div v-if="totalPages > 1" class="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4 border-t pt-4">
-          <span class="text-sm text-gray-500 order-2 sm:order-1">
-            Página <strong>{{ currentPage }}</strong> de <strong>{{ totalPages }}</strong>
-          </span>
-          <div class="flex gap-2 w-full sm:w-auto order-1 sm:order-2">
-            <button 
-              @click="prevPage" 
-              :disabled="currentPage === 1"
-              class="flex-1 sm:flex-none px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Anterior
-            </button>
-            <button 
-              @click="nextPage" 
-              :disabled="currentPage === totalPages"
-              class="flex-1 sm:flex-none px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Siguiente
-            </button>
+        <div v-if="filteredTreatments.length > 0" class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div class="text-sm text-gray-500">
+              Mostrando <span class="font-bold text-gray-800">{{ (currentPage - 1) * pageSize + 1 }}</span> a 
+              <span class="font-bold text-gray-800">{{ Math.min(currentPage * pageSize, filteredTreatments.length) }}</span> 
+              de <span class="font-bold text-gray-800">{{ filteredTreatments.length }}</span> resultados
+          </div>
+          
+          <div class="flex items-center space-x-2">
+              <button 
+                  @click="prevPage" 
+                  :disabled="currentPage === 1"
+                  class="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                  Anterior
+              </button>
+              
+              <span class="text-sm text-gray-600 px-2">
+                  Página <span class="font-bold">{{ currentPage }}</span> de {{ totalPages }}
+              </span>
+              
+              <button 
+                  @click="nextPage" 
+                  :disabled="currentPage === totalPages"
+                  class="px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                  Siguiente
+              </button>
           </div>
         </div>
 

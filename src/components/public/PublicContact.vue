@@ -12,12 +12,26 @@ const getLogoUrl = () => {
     return `${import.meta.env.VITE_API_BASE_URL}${url}`;
 };
 
-// Generar enlace a Google Maps
+// Generar enlace a Google Maps (si es un link normal o la dirección)
 const mapsLink = computed(() => {
-    // Si tenemos coordenadas, usamos eso (futura implementación)
-    // Por ahora usamos la dirección como query
+    const configuredUrl = props.tenantData?.websiteConfig?.mapsUrl;
+    // Si el usuario configuró un link normal (y no un código HTML)
+    if (configuredUrl && !configuredUrl.includes('<iframe')) {
+        return configuredUrl;
+    }
+    
+    // Si no hay link, usamos la dirección como búsqueda por defecto
     const address = props.tenantData?.address || '';
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+});
+
+// Extraer Iframe si el usuario pegó el código "Insertar mapa" de Google
+const mapsIframe = computed(() => {
+    const configuredStr = props.tenantData?.websiteConfig?.mapsUrl;
+    if (configuredStr && configuredStr.includes('<iframe')) {
+        return configuredStr;
+    }
+    return null;
 });
 </script>
 
@@ -38,10 +52,10 @@ const mapsLink = computed(() => {
                     Comprometidos con tu sonrisa y bienestar dental, utilizando tecnología de punta y un trato humano.
                   </p>
                   
-                  <!-- Redes Sociales usando SVGs Oficiales en Línea (Sin imágenes externas) -->
+                  <!-- Redes Sociales usando SVGs Oficiales en Línea -->
                   <div class="flex gap-3">
                       <a v-if="tenantData?.websiteConfig?.facebookUrl" :href="tenantData.websiteConfig.facebookUrl" target="_blank" class="social-btn facebook" title="Facebook">
-                          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/></svg>
+                          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/></svg>
                       </a>
                       
                       <a v-if="tenantData?.websiteConfig?.instagramUrl" :href="tenantData.websiteConfig.instagramUrl" target="_blank" class="social-btn instagram" title="Instagram">
@@ -87,13 +101,19 @@ const mapsLink = computed(() => {
                   </div>
               </div>
 
-              <!-- Columna 4: Mapa -->
+              <!-- Columna 4: Mapa Dinámico -->
               <div class="lg:col-span-1">
                   <h4 class="text-white font-bold mb-6 uppercase text-xs tracking-wider">Encuéntranos</h4>
-                  <a :href="mapsLink" target="_blank" class="block group relative rounded-xl overflow-hidden h-40 bg-gray-800 border border-gray-700">
-                      <!-- Mapa estático o placeholder -->
+                  
+                  <!-- Si el usuario pegó el código Iframe (Insertar Mapa de Google) -->
+                  <div v-if="mapsIframe" class="w-full h-40 rounded-xl overflow-hidden bg-gray-800 border border-gray-700 iframe-container" v-html="mapsIframe">
+                  </div>
+
+                  <!-- Si solo hay link o usamos el buscador por dirección -->
+                  <a v-else :href="mapsLink" target="_blank" class="block group relative rounded-xl overflow-hidden h-40 bg-gray-800 border border-gray-700">
+                      <!-- Placeholder estático si no hay iframe -->
                       <div class="absolute inset-0 flex items-center justify-center bg-[url('https://maps.googleapis.com/maps/api/staticmap?center=40.714728,-73.998672&zoom=12&size=400x400&maptype=roadmap&sensor=false')] bg-cover bg-center opacity-50 group-hover:opacity-70 transition-opacity">
-                         <!-- Fallback visual si no carga mapa -->
+                         <!-- Fallback visual -->
                          <div class="bg-gray-800 p-2 rounded-full">
                             <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                          </div>
@@ -127,4 +147,11 @@ const mapsLink = computed(() => {
 .social-btn.instagram:hover { @apply bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]; }
 .social-btn.tiktok:hover { @apply bg-black border border-white/20; }
 .social-btn.youtube:hover { @apply bg-[#FF0000]; }
+
+/* Asegurar que el iframe de Google Maps ocupe el 100% de su contenedor */
+:deep(.iframe-container iframe) {
+    width: 100% !important;
+    height: 100% !important;
+    border: none !important;
+}
 </style>

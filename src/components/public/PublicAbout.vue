@@ -57,13 +57,15 @@ const aboutImageStyle = computed(() => {
 
              <!-- Columna Imagen -->
              <div class="order-1 lg:order-2">
-                 <div class="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white aspect-[4/3] group">
+                 <!-- Fondo bg-gray-100 por si la imagen es vertical y deja espacios a los lados -->
+                 <div class="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white aspect-square lg:aspect-[4/3] group bg-gray-100">
+                     
+                     <!-- bg-contain y bg-no-repeat obligan a mostrar la foto COMPLETA sin cortar arriba o abajo -->
                      <div 
-                        class="absolute inset-0 bg-cover bg-center transform transition-transform duration-700 group-hover:scale-105"
+                        class="absolute inset-0 bg-contain bg-no-repeat bg-center transform transition-transform duration-700 group-hover:scale-105"
                         :style="{ backgroundImage: aboutImageStyle }"
                      ></div>
-                     <!-- Overlay sutil -->
-                     <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+                     
                  </div>
              </div>
          </div>
