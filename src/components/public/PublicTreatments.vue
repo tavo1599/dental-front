@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+
 const props = defineProps<{
   treatments: any[];
+  tenantData?: any;
 }>();
+
+const theme = computed(() => props.tenantData?.websiteConfig?.theme || 'modern');
 
 // Helper para iconos SVG
 const getIconPath = (item: any) => {
@@ -36,9 +41,19 @@ const getIconPath = (item: any) => {
          
          <!-- Título de Sección -->
          <div class="text-center mb-16 max-w-2xl mx-auto">
-             <span class="text-primary font-bold uppercase tracking-wider text-xs mb-2 block">Tratamientos</span>
-             <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6">Soluciones Integrales para tu Sonrisa</h2>
-             <div class="h-1 w-24 bg-gradient-to-r from-primary to-transparent mx-auto rounded-full"></div>
+             <span class="text-primary font-bold uppercase tracking-wider text-xs mb-2 block" :class="{'font-serif': theme === 'classic'}">Especialidades</span>
+             <h2 class="font-extrabold text-gray-900 mb-6 transition-all duration-300"
+                 :class="{
+                     'text-3xl md:text-4xl': theme === 'modern',
+                     'text-3xl md:text-5xl font-serif': theme === 'classic',
+                     'text-3xl md:text-4xl font-light tracking-tight': theme === 'minimal'
+                 }">Soluciones Integrales para tu Sonrisa</h2>
+             <div class="h-1 bg-gradient-to-r mx-auto rounded-full transition-all duration-300"
+                  :class="{
+                      'w-24 from-primary to-transparent': theme === 'modern',
+                      'w-16 bg-primary': theme === 'classic',
+                      'w-12 bg-gray-300': theme === 'minimal'
+                  }"></div>
          </div>
 
          <!-- Grid de Tratamientos Moderno -->
@@ -46,15 +61,25 @@ const getIconPath = (item: any) => {
              <div 
                 v-for="(item, index) in treatments" 
                 :key="index"
-                class="bg-white p-8 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 group relative overflow-hidden"
+                class="p-8 transition-all duration-300 group relative overflow-hidden"
+                :class="{
+                    'bg-white rounded-2xl shadow-sm hover:shadow-xl border border-gray-100': theme === 'modern',
+                    'bg-white rounded-none border-b-4 border-gray-200 hover:border-primary shadow-sm': theme === 'classic',
+                    'bg-gray-50 rounded-3xl hover:bg-gray-100 border-0': theme === 'minimal'
+                }"
              >
-                <!-- Acento de color en hover -->
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                <!-- Acento de color en hover (Solo Moderno) -->
+                <div v-if="theme === 'modern'" class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
 
                 <!-- Contenido -->
                 <div class="flex items-start gap-5">
                     <!-- Icono Izquierda -->
-                    <div class="flex-shrink-0 w-14 h-14 bg-primary/10 text-primary rounded-xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                    <div class="flex-shrink-0 flex items-center justify-center transition-colors duration-300"
+                         :class="{
+                             'w-14 h-14 bg-primary/10 text-primary rounded-xl group-hover:bg-primary group-hover:text-white': theme === 'modern',
+                             'w-12 h-12 text-primary border border-primary/20 rounded-full': theme === 'classic',
+                             'w-14 h-14 bg-white text-primary rounded-2xl shadow-sm': theme === 'minimal'
+                         }">
                         <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="getIconPath(item)" />
                         </svg>
@@ -62,8 +87,14 @@ const getIconPath = (item: any) => {
                     
                     <!-- Texto -->
                     <div>
-                        <h4 class="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors">{{ item.title }}</h4>
-                        <p class="text-gray-600 text-sm leading-relaxed">{{ item.description }}</p>
+                        <h4 class="text-xl font-bold text-gray-900 mb-2 group-hover:text-primary transition-colors"
+                            :class="{'font-serif': theme === 'classic'}">
+                            {{ item.title }}
+                        </h4>
+                        <p class="text-gray-600 text-sm leading-relaxed"
+                           :class="{'italic font-serif': theme === 'classic'}">
+                            {{ item.description }}
+                        </p>
                     </div>
                 </div>
 

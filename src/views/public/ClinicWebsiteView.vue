@@ -183,11 +183,11 @@ onMounted(() => {
       <PublicHero :tenant-data="tenantData" :whatsapp-link="whatsappLink" />
 
       <!-- 2. SECCIÓN: POR QUÉ ELEGIRNOS -->
-      <PublicFeatures class="animate-on-scroll opacity-0" />
+      <PublicFeatures :tenant-data="tenantData" class="animate-on-scroll opacity-0" />
 
       <!-- 3. TRATAMIENTOS -->
       <div class="bg-white pb-20 relative z-20"> 
-          <PublicTreatments :treatments="treatments" class="animate-on-scroll opacity-0 !bg-white" />
+          <PublicTreatments :tenant-data="tenantData" :treatments="treatments" class="animate-on-scroll opacity-0 !bg-white" />
       </div>
 
       <!-- Separador Onda hacia Doctores -->
@@ -201,6 +201,7 @@ onMounted(() => {
       <div class="bg-slate-50">
         <PublicDoctors 
            v-if="tenantData.websiteConfig?.showStaff"
+           :tenant-data="tenantData"
            :doctors="publicDoctors" 
            class="animate-on-scroll opacity-0 !bg-slate-50"
         />

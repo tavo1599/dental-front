@@ -13,6 +13,9 @@ const activeTab = ref('general'); // 'general', 'content', 'images', 'social'
 const form = ref({
   domainSlug: '',
   websiteConfig: {
+    // Diseño / Tema
+    theme: 'modern', // 'modern', 'classic', 'minimal'
+
     // Estilos
     primaryColor: '#2563EB',
     secondaryColor: '#1E40AF',
@@ -25,7 +28,7 @@ const form = ref({
     // Contacto
     whatsappNumber: '',
     schedule: '', // Horario
-    mapsUrl: '',
+    mapsUrl: '', // Google Maps
     
     // Redes
     facebookUrl: '',
@@ -57,11 +60,12 @@ const loadCurrentSettings = async () => {
      form.value.domainSlug = tenant.domainSlug || '';
      
      // Obtenemos la config existente o un objeto vacío
-     // Usamos 'as any' en config para facilitar el acceso si el tipo es estricto
      const config = tenant.websiteConfig || {} as any;
 
-     // Mapeo manual seguro (Evita errores de undefined vs string)
+     // Mapeo manual seguro
      form.value.websiteConfig = { 
+        theme: config.theme || 'modern',
+
         primaryColor: config.primaryColor || '#2563EB',
         secondaryColor: config.secondaryColor || '#1E40AF',
         
@@ -81,7 +85,6 @@ const loadCurrentSettings = async () => {
         heroImageUrl: config.heroImageUrl || '',
         aboutUsImageUrl: config.aboutUsImageUrl || '',
         
-        // Para booleanos usamos comprobación estricta de undefined
         showStaff: config.showStaff !== undefined ? config.showStaff : true
      };
   }
@@ -183,7 +186,52 @@ onMounted(() => {
                         <p class="text-[10px] text-gray-400 mt-1 pl-1">Solo letras minúsculas, números y guiones (-).</p>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <!-- NUEVA SECCIÓN: SELECTOR DE PLANTILLA -->
+                    <div class="pt-2 border-t border-gray-100">
+                        <label class="label mb-3">Diseño del Sitio (Plantilla)</label>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <!-- Plantilla Moderna -->
+                            <div @click="form.websiteConfig.theme = 'modern'" :class="['border-2 rounded-xl p-3 cursor-pointer hover:border-primary transition-all relative', form.websiteConfig.theme === 'modern' ? 'border-primary bg-blue-50/30' : 'border-gray-200']">
+                                <div v-if="form.websiteConfig.theme === 'modern'" class="absolute -top-2 -right-2 bg-primary text-white rounded-full p-0.5">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                </div>
+                                <div class="h-16 bg-gray-100 rounded-lg mb-2 overflow-hidden flex flex-col">
+                                    <div class="h-3 bg-white border-b"></div>
+                                    <div class="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300"></div>
+                                </div>
+                                <p class="text-[11px] font-bold text-center text-gray-700">Moderno</p>
+                            </div>
+
+                            <!-- Plantilla Clásica -->
+                            <div @click="form.websiteConfig.theme = 'classic'" :class="['border-2 rounded-xl p-3 cursor-pointer hover:border-primary transition-all relative', form.websiteConfig.theme === 'classic' ? 'border-primary bg-blue-50/30' : 'border-gray-200']">
+                                <div v-if="form.websiteConfig.theme === 'classic'" class="absolute -top-2 -right-2 bg-primary text-white rounded-full p-0.5">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                </div>
+                                <div class="h-16 bg-gray-100 rounded-sm mb-2 overflow-hidden flex flex-col shadow-inner">
+                                     <div class="h-3 bg-white border-b flex justify-between px-1 items-center"><div class="w-2 h-1 bg-gray-300"></div><div class="w-4 h-1 bg-gray-300"></div></div>
+                                    <div class="flex-1 flex bg-gray-200">
+                                         <div class="w-1/2 bg-gray-300"></div>
+                                         <div class="w-1/2 bg-gray-100"></div>
+                                    </div>
+                                </div>
+                                <p class="text-[11px] font-bold text-center text-gray-700">Clásico Elegante</p>
+                            </div>
+
+                            <!-- Plantilla Minimalista -->
+                            <div @click="form.websiteConfig.theme = 'minimal'" :class="['border-2 rounded-xl p-3 cursor-pointer hover:border-primary transition-all relative', form.websiteConfig.theme === 'minimal' ? 'border-primary bg-blue-50/30' : 'border-gray-200']">
+                                <div v-if="form.websiteConfig.theme === 'minimal'" class="absolute -top-2 -right-2 bg-primary text-white rounded-full p-0.5">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                </div>
+                                <div class="h-16 bg-white border border-gray-200 rounded-3xl mb-2 overflow-hidden flex flex-col p-2 items-center justify-center">
+                                    <div class="w-8 h-8 rounded-full bg-gray-100 mb-1"></div>
+                                    <div class="w-10 h-1 bg-gray-200 rounded-full"></div>
+                                </div>
+                                <p class="text-[11px] font-bold text-center text-gray-700">Minimalista</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 border-t border-gray-100 pt-4">
                         <div>
                            <label class="label">Color Principal</label>
                            <div class="flex gap-2 items-center">
@@ -250,7 +298,7 @@ onMounted(() => {
                     <div>
                         <label class="label">WhatsApp (Para botón de citas)</label>
                         <div class="relative">
-                            <input v-model="form.websiteConfig.whatsappNumber" type="text" class="input pl-12" placeholder="51999999999">
+                            <input v-model="form.websiteConfig.whatsappNumber" type="text" class="input !pl-12" placeholder="51999999999">
                         </div>
                     </div>
                     
@@ -258,7 +306,8 @@ onMounted(() => {
                         <label class="label">Horario de Atención</label>
                         <input v-model="form.websiteConfig.schedule" type="text" class="input" placeholder="Ej: Lun - Vie: 9am - 8pm, Sáb: 9am - 1pm">
                     </div>
-                    
+
+                    <!-- CAMPO GOOGLE MAPS -->
                     <div>
                         <label class="label">Ubicación en Google Maps (Link o Iframe)</label>
                         <input v-model="form.websiteConfig.mapsUrl" type="text" class="input" placeholder='Ej: https://goo.gl/maps/... o <iframe src="...">'>
@@ -271,19 +320,19 @@ onMounted(() => {
                     <div class="grid grid-cols-1 gap-3">
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-600 font-bold text-xs">FB</div>
-                            <input v-model="form.websiteConfig.facebookUrl" type="text" class="input pl-10" placeholder="facebook.com/tuclinica">
+                            <input v-model="form.websiteConfig.facebookUrl" type="text" class="input !pl-10" placeholder="facebook.com/tuclinica">
                         </div>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-pink-500 font-bold text-xs">IG</div>
-                            <input v-model="form.websiteConfig.instagramUrl" type="text" class="input pl-10" placeholder="instagram.com/tuclinica">
+                            <input v-model="form.websiteConfig.instagramUrl" type="text" class="input !pl-10" placeholder="instagram.com/tuclinica">
                         </div>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-black font-bold text-xs">TK</div>
-                            <input v-model="form.websiteConfig.tiktokUrl" type="text" class="input pl-10" placeholder="tiktok.com/@tuclinica">
+                            <input v-model="form.websiteConfig.tiktokUrl" type="text" class="input !pl-10" placeholder="tiktok.com/@tuclinica">
                         </div>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-red-600 font-bold text-xs">YT</div>
-                            <input v-model="form.websiteConfig.youtubeUrl" type="text" class="input pl-10" placeholder="youtube.com/c/tuclinica">
+                            <input v-model="form.websiteConfig.youtubeUrl" type="text" class="input !pl-10" placeholder="youtube.com/c/tuclinica">
                         </div>
                     </div>
                 </div>
@@ -305,80 +354,128 @@ onMounted(() => {
                     </div>
                 </div>
                 
-                <div class="bg-white h-[650px] overflow-y-auto border-x-4 border-b-4 border-gray-800 rounded-b-2xl shadow-2xl relative scroll-smooth">
+                <div class="bg-white h-[650px] overflow-y-auto border-x-4 border-b-4 border-gray-800 rounded-b-2xl shadow-2xl relative scroll-smooth transition-all duration-500"
+                     :class="{
+                        'rounded-b-sm': form.websiteConfig.theme === 'classic',
+                        'bg-gray-50': form.websiteConfig.theme === 'minimal'
+                     }">
                     
-                    <!-- MOCKUP DEL SITIO WEB -->
+                    <!-- MOCKUP DEL SITIO WEB DINÁMICO SEGÚN EL TEMA -->
                     
                     <!-- Navbar -->
-                    <div class="h-14 border-b flex items-center justify-between px-6 sticky top-0 bg-white/90 backdrop-blur z-10">
-                        <span class="font-bold text-lg" :style="{ color: form.websiteConfig.primaryColor }">{{ authStore.user?.tenant?.name || 'LOGO' }}</span>
-                        <div class="flex gap-3">
-                            <div class="w-12 h-2 bg-gray-200 rounded"></div>
-                            <div class="w-12 h-2 bg-gray-200 rounded"></div>
-                            <div class="w-20 h-6 rounded text-[10px] text-white flex items-center justify-center font-bold" :style="{ backgroundColor: form.websiteConfig.primaryColor }">Agendar</div>
+                    <div class="h-14 border-b flex items-center justify-between px-6 sticky top-0 bg-white/90 backdrop-blur z-10 transition-all duration-500"
+                         :class="{'justify-center': form.websiteConfig.theme === 'minimal', 'border-b-2': form.websiteConfig.theme === 'classic'}">
+                        <span class="font-bold text-lg transition-colors duration-500" 
+                              :class="{'tracking-widest uppercase text-sm': form.websiteConfig.theme === 'classic'}"
+                              :style="{ color: form.websiteConfig.primaryColor }">
+                              {{ authStore.user?.tenant?.name || 'LOGO' }}
+                        </span>
+                        <div v-if="form.websiteConfig.theme !== 'minimal'" class="flex gap-3 items-center">
+                            <div class="w-10 h-2 bg-gray-200 rounded"></div>
+                            <div class="w-10 h-2 bg-gray-200 rounded"></div>
+                            <div class="w-16 h-6 rounded text-[10px] text-white flex items-center justify-center font-bold transition-all duration-500" 
+                                 :class="{'rounded-full': form.websiteConfig.theme === 'modern', 'rounded-sm': form.websiteConfig.theme === 'classic'}"
+                                 :style="{ backgroundColor: form.websiteConfig.primaryColor }">Agendar</div>
                         </div>
                     </div>
 
                     <!-- Hero -->
-                    <div class="relative h-64 bg-gray-100 flex items-center justify-center text-center px-8 bg-cover bg-center" 
-                         :style="{ backgroundImage: form.websiteConfig.heroImageUrl ? `url(${form.websiteConfig.heroImageUrl})` : '', backgroundColor: '#f3f4f6' }">
+                    <div class="relative h-64 flex items-center text-center px-8 bg-cover bg-center transition-all duration-500" 
+                         :class="{
+                            'justify-center bg-gray-100': form.websiteConfig.theme === 'modern',
+                            'justify-start text-left': form.websiteConfig.theme === 'classic',
+                            'justify-center bg-white h-48': form.websiteConfig.theme === 'minimal'
+                         }"
+                         :style="{ backgroundImage: form.websiteConfig.theme !== 'minimal' && form.websiteConfig.heroImageUrl ? `url(${form.websiteConfig.heroImageUrl})` : '', backgroundColor: form.websiteConfig.theme === 'minimal' ? '#fff' : '#f3f4f6' }">
                         
-                        <div v-if="!form.websiteConfig.heroImageUrl" class="absolute inset-0 flex items-center justify-center opacity-10 font-bold text-4xl text-gray-300 pointer-events-none">IMAGEN PORTADA</div>
-                        <div class="absolute inset-0 bg-black/40"></div> <!-- Overlay -->
+                        <div v-if="form.websiteConfig.theme !== 'minimal' && !form.websiteConfig.heroImageUrl" class="absolute inset-0 flex items-center justify-center opacity-10 font-bold text-4xl text-gray-300 pointer-events-none">IMAGEN PORTADA</div>
+                        <div v-if="form.websiteConfig.theme !== 'minimal'" class="absolute inset-0 bg-black/50"></div>
                         
-                        <div class="relative z-10 text-white">
-                            <h1 class="text-2xl font-bold mb-2 leading-tight">{{ form.websiteConfig.welcomeMessage || 'Tu Título Principal' }}</h1>
-                            <p class="text-sm opacity-90 mb-4">{{ form.websiteConfig.subTitle || 'Tu subtítulo aquí' }}</p>
-                            <button class="px-5 py-2 rounded-full font-bold text-xs shadow-lg transition-transform hover:scale-105" :style="{ backgroundColor: form.websiteConfig.primaryColor }">
-                                Reservar Cita
-                            </button>
+                        <div class="relative z-10 transition-all duration-500" 
+                             :class="{
+                                'text-white': form.websiteConfig.theme !== 'minimal', 
+                                'text-gray-900 w-full': form.websiteConfig.theme === 'minimal',
+                                'max-w-xs': form.websiteConfig.theme === 'classic'
+                             }">
+                            <h1 class="font-bold mb-2 leading-tight transition-all duration-500"
+                                :class="{
+                                    'text-2xl': form.websiteConfig.theme === 'modern',
+                                    'text-3xl serif': form.websiteConfig.theme === 'classic',
+                                    'text-xl font-light tracking-wide text-gray-800': form.websiteConfig.theme === 'minimal'
+                                }">
+                                {{ form.websiteConfig.welcomeMessage || 'Tu Título Principal' }}
+                            </h1>
+                            <p class="text-sm opacity-90 mb-4 transition-all duration-500"
+                               :class="{'text-gray-500': form.websiteConfig.theme === 'minimal', 'font-serif italic': form.websiteConfig.theme === 'classic'}">
+                                {{ form.websiteConfig.subTitle || 'Tu subtítulo aquí' }}
+                            </p>
+                            
+                            <!-- Botón Hero -->
+                            <div :class="{'flex justify-center': form.websiteConfig.theme !== 'classic'}">
+                                <button class="px-5 py-2 font-bold text-xs shadow-lg transition-all duration-500 text-white" 
+                                        :class="{
+                                            'rounded-full': form.websiteConfig.theme === 'modern',
+                                            'rounded-sm': form.websiteConfig.theme === 'classic',
+                                            'rounded-xl shadow-sm': form.websiteConfig.theme === 'minimal'
+                                        }"
+                                        :style="{ backgroundColor: form.websiteConfig.primaryColor }">
+                                    Reservar Cita
+                                </button>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Servicios (Mock) -->
-                    <div class="py-8 px-6 bg-white text-center">
-                        <h3 class="text-xs font-bold text-gray-400 uppercase mb-4">Nuestros Servicios</h3>
-                        <div class="flex justify-center gap-4">
-                            <div class="w-20 h-24 bg-gray-50 rounded border border-gray-100 flex flex-col items-center justify-center gap-2 p-2">
+                    <div class="py-8 px-6 text-center transition-all duration-500"
+                         :class="{'bg-white': form.websiteConfig.theme !== 'minimal', 'bg-gray-50': form.websiteConfig.theme === 'minimal'}">
+                        <h3 class="text-xs font-bold uppercase mb-4 transition-colors duration-500"
+                            :class="{'text-gray-400': form.websiteConfig.theme !== 'classic', 'text-gray-800 border-b pb-2 inline-block': form.websiteConfig.theme === 'classic'}">
+                            Nuestros Servicios
+                        </h3>
+                        <div class="flex justify-center gap-4 transition-all duration-500">
+                            <div class="w-20 h-24 border border-gray-100 flex flex-col items-center justify-center gap-2 p-2 transition-all duration-500"
+                                 :class="{
+                                    'bg-gray-50 rounded': form.websiteConfig.theme === 'modern',
+                                    'bg-white shadow-sm rounded-none border-b-2' : form.websiteConfig.theme === 'classic',
+                                    'bg-white rounded-3xl shadow-sm border-0' : form.websiteConfig.theme === 'minimal'
+                                 }">
                                 <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center text-[10px]">🦷</div>
                                 <div class="w-10 h-1.5 bg-gray-200 rounded"></div>
                             </div>
-                            <div class="w-20 h-24 bg-gray-50 rounded border border-gray-100 flex flex-col items-center justify-center gap-2 p-2">
+                            <div class="w-20 h-24 border border-gray-100 flex flex-col items-center justify-center gap-2 p-2 transition-all duration-500"
+                                 :class="{
+                                    'bg-gray-50 rounded': form.websiteConfig.theme === 'modern',
+                                    'bg-white shadow-sm rounded-none border-b-2' : form.websiteConfig.theme === 'classic',
+                                    'bg-white rounded-3xl shadow-sm border-0' : form.websiteConfig.theme === 'minimal'
+                                 }">
                                 <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center text-[10px]">✨</div>
                                 <div class="w-10 h-1.5 bg-gray-200 rounded"></div>
                             </div>
-                            <div class="w-20 h-24 bg-gray-50 rounded border border-gray-100 flex flex-col items-center justify-center gap-2 p-2">
+                            <div class="w-20 h-24 border border-gray-100 flex flex-col items-center justify-center gap-2 p-2 transition-all duration-500"
+                                 :class="{
+                                    'bg-gray-50 rounded': form.websiteConfig.theme === 'modern',
+                                    'bg-white shadow-sm rounded-none border-b-2' : form.websiteConfig.theme === 'classic',
+                                    'bg-white rounded-3xl shadow-sm border-0' : form.websiteConfig.theme === 'minimal'
+                                 }">
                                 <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center text-[10px]">🔧</div>
                                 <div class="w-10 h-1.5 bg-gray-200 rounded"></div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Equipo (Mock) -->
-                    <div v-if="form.websiteConfig.showStaff" class="py-8 px-6 bg-gray-50 text-center border-t border-gray-100">
-                         <h3 class="text-xs font-bold text-gray-400 uppercase mb-4">Nuestro Equipo</h3>
-                         <div class="flex justify-center gap-6">
-                             <div class="flex flex-col items-center">
-                                 <div class="w-12 h-12 rounded-full bg-gray-300 mb-2"></div>
-                                 <div class="w-16 h-2 bg-gray-300 rounded mb-1"></div>
-                                 <div class="w-10 h-1.5 bg-gray-200 rounded"></div>
-                             </div>
-                             <div class="flex flex-col items-center">
-                                 <div class="w-12 h-12 rounded-full bg-gray-300 mb-2"></div>
-                                 <div class="w-16 h-2 bg-gray-300 rounded mb-1"></div>
-                                 <div class="w-10 h-1.5 bg-gray-200 rounded"></div>
-                             </div>
-                         </div>
-                    </div>
-
                     <!-- Footer (Mock) -->
-                    <div class="bg-gray-900 text-white p-6 text-center text-xs">
+                    <div class="p-6 text-center text-xs transition-all duration-500"
+                         :class="{
+                            'bg-gray-900 text-white': form.websiteConfig.theme === 'modern',
+                            'bg-slate-800 text-gray-300 border-t-4': form.websiteConfig.theme === 'classic',
+                            'bg-white text-gray-500 border-t border-gray-100': form.websiteConfig.theme === 'minimal'
+                         }"
+                         :style="{ borderColor: form.websiteConfig.theme === 'classic' ? form.websiteConfig.primaryColor : ''}">
                         <p class="font-bold mb-2">{{ authStore.user?.tenant?.name }}</p>
-                        <p class="text-gray-500 mb-4">{{ form.websiteConfig.schedule || 'Horario...' }}</p>
+                        <p class="opacity-70 mb-4">{{ form.websiteConfig.schedule || 'Horario...' }}</p>
                         <div class="flex justify-center gap-3 opacity-60">
-                             <div v-if="form.websiteConfig.facebookUrl" class="w-6 h-6 bg-gray-700 rounded-full"></div>
-                             <div v-if="form.websiteConfig.instagramUrl" class="w-6 h-6 bg-gray-700 rounded-full"></div>
-                             <div v-if="form.websiteConfig.tiktokUrl" class="w-6 h-6 bg-gray-700 rounded-full"></div>
+                             <div v-if="form.websiteConfig.facebookUrl" class="w-6 h-6 rounded-full" :class="form.websiteConfig.theme === 'minimal' ? 'bg-gray-200' : 'bg-gray-700'"></div>
+                             <div v-if="form.websiteConfig.instagramUrl" class="w-6 h-6 rounded-full" :class="form.websiteConfig.theme === 'minimal' ? 'bg-gray-200' : 'bg-gray-700'"></div>
                         </div>
                     </div>
 
@@ -399,4 +496,7 @@ onMounted(() => {
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+
+/* Estilos extra para la previsualización del tema clásico */
+.serif { font-family: 'Georgia', serif; }
 </style>
